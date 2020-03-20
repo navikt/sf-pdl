@@ -1,0 +1,64 @@
+apiVersion: "nais.io/v1alpha1"
+kind: "Application"
+metadata:
+  name: sf-pdl
+  namespace: default
+  labels:
+    team: teamcrm
+spec:
+  webproxy: true
+  image: {{ image }}
+  port: 8080
+  replicas:
+    min: 1
+    max: 1
+  liveness:
+    path: /isAlive
+    initialDelay: 5
+    periodSeconds: 5
+    failureThreshold: 30
+  readiness:
+    path: /isReady
+    initialDelay: 5
+    periodSeconds: 5
+    failureThreshold: 30
+  prometheus:
+    enabled: true
+    path: /metrics
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 4096Mi
+    requests:
+      cpu: 100m
+      memory: 2048Mi
+  vault:
+    enabled: true
+    paths:
+      - mountPath: /var/run/secrets/nais.io/vault
+        kvPath: /kv/prod/sbs/sf-pdl/default
+      - mountPath: /var/run/secrets/nais.io/serviceuser
+        kvPath: /serviceuser/data/prod/srvpdlsf
+  env:
+    - name: KAFKA_BROKERS
+      value: SASL_SSL://a01apvl00145.adeo.no:8443,SASL_SSL://a01apvl00146.adeo.no:8443,SASL_SSL://a01apvl00147.adeo.no:8443,SASL_SSL://a01apvl00148.adeo.no:8443,SASL_SSL://a01apvl00149.adeo.no:8443,SASL_SSL://a01apvl00150.adeo.no:8443
+    - name: KAFKA_SCREG
+      value: https://kafka-schema-registry.nais.adeo.no
+    - name: KAFKA_CLIENTID
+      value: sf-pdl
+    - name: KAFKA_SECURITY
+      value: 'TRUE'
+    - name: KAFKA_SECPROT
+      value: SASL_SSL
+    - name: KAFKA_SASLMEC
+      value: PLAIN
+    - name: KAFKA_TOPIC_PDL
+      value: aapen-person-pdl-dokument-v1
+    - name: KAFKA_TOPIC_SF
+      value: aapen-sf-objects-v1
+    - name: SF_OAUTHURL
+      value: 'https://login.salesforce.com/services/oauth2/token'
+    - name: SF_RESTENDPOINT
+      value: '/services/data/v47.0/composite/sobjects'
+    - name: MS_BETWEEN_WORK
+      value: '600000'

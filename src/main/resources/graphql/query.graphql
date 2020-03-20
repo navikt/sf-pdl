@@ -1,0 +1,29 @@
+query($ident: ID!) {
+    hentIdenter(ident: $ident, historikk: false, grupper: [FOLKEREGISTERIDENT]){
+        identer{ident }
+    }
+    hentPerson(ident: $ident) {
+        doedsfall { doedsdato }
+        adressebeskyttelse(historikk: false) {
+            gradering
+            folkeregistermetadata{ opphoerstidspunkt}
+        }
+        bostedsadresse(historikk: false) {
+            vegadresse {kommunenummer}
+            matrikkeladresse{kommunenummer}
+            ukjentBosted{bostedskommune}
+        }
+        sikkerhetstiltak {
+            beskrivelse
+            gyldigTilOgMed
+        }
+        navn(historikk: false) {
+            fornavn
+            mellomnavn
+            etternavn
+            metadata {
+                master
+            }
+        }
+    }
+}
