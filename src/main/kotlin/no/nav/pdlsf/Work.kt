@@ -1,6 +1,5 @@
 package no.nav.pdlsf
 
-import io.confluent.kafka.serializers.KafkaAvroDeserializer
 import kotlinx.serialization.ImplicitReflectionSerializer
 import kotlinx.serialization.UnstableDefault
 import mu.KotlinLogging
@@ -8,9 +7,6 @@ import no.nav.pdlsf.proto.PdlSfValuesProto.AccountValue
 import no.nav.pdlsf.proto.PdlSfValuesProto.PersonValue
 import no.nav.pdlsf.proto.PdlSfValuesProto.SfObjectEventKey
 import org.apache.kafka.clients.consumer.ConsumerConfig
-import org.apache.kafka.clients.producer.ProducerConfig
-import org.apache.kafka.clients.producer.ProducerRecord
-import org.apache.kafka.common.serialization.ByteArraySerializer
 
 private val log = KotlinLogging.logger {}
 
@@ -28,7 +24,6 @@ internal fun work(params: Params) {
     getKafkaConsumerByConfig<ByteArray, ByteArray>(
             mapOf(
                     ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG to params.kafkaBrokers,
-                    "schema.registry.url" to params.kafkaSchemaRegistry,
                     ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to ByteArray::class.java,
                     ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to ByteArray::class.java,
                     ConsumerConfig.GROUP_ID_CONFIG to params.kafkaClientID,
@@ -43,7 +38,7 @@ internal fun work(params: Params) {
             },
             listOf(params.kafkaTopicSf), fromBeginning = true
     ) { cRecords ->
-        log.info { "Start building up Cache of existing SF Objects compaction log" }
+        log.debug { "Start building up Cache of existing SF Objects compaction log" }
         if (!cRecords.isEmpty) {
             cRecords.forEach { record ->
                 val aktoerId = SfObjectEventKey.parseFrom(record.key()).aktoerId
@@ -53,15 +48,16 @@ internal fun work(params: Params) {
                     else -> log.error { "Unknown  Salesforce Object Type in Key" }
                 }
             }
-            ConsumerStates.IsFinished // TODO::
+            ConsumerStates.IsOkNoCommit
         } else {
             log.info { "Kafka events completed for now - leaving kafka consumer loop" }
             ConsumerStates.IsFinished
         }
     }
+        log.debug { "Finished building up Cache of existing SF Objects compaction log size person ${personCache.size} size ${accountCache.size}" }
 
     // Get persons from PDL topic
-    getKafkaConsumerByConfig<String, String>(
+    /*  getKafkaConsumerByConfig<String, String>(
         mapOf(
             ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG to params.kafkaBrokers,
             "schema.registry.url" to params.kafkaSchemaRegistry,
@@ -142,9 +138,9 @@ internal fun work(params: Params) {
             ConsumerStates.IsFinished
         }
     }
-
+*/
     // Write SF Object to SF topic
-    getKafkaProducerByConfig<ByteArray, ByteArray>(
+/*    getKafkaProducerByConfig<ByteArray, ByteArray>(
             mapOf(
                     ProducerConfig.BOOTSTRAP_SERVERS_CONFIG to params.kafkaBrokers,
                     ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG to ByteArraySerializer::class.java,
@@ -165,5 +161,5 @@ internal fun work(params: Params) {
         accountKafkaPayload.forEach { m ->
             this.send(ProducerRecord(params.kafkaTopicPdl, m.key, m.value))
         }
-    }
+    }*/
 }

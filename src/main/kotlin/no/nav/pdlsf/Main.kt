@@ -11,10 +11,6 @@ fun main() {
 
     log.info { "Checking environment variables" }
     ParamsFactory.p.let { params ->
-//        if (!params.sfDetailsComplete()) {
-//            log.error { "SF details are incomplete - " }
-//            return
-//        }
 
         log.info { "Proxy details: ${params.httpsProxy}" }
 
