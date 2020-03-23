@@ -79,12 +79,12 @@ internal fun work(params: Params) {
         log.info { "Start building up map of persons in PDL compaction log" }
         if (!cRecords.isEmpty) {
             cRecords.forEach { cr ->
-                log.info {"Size ${cRecords.count()}"}
+                log.info { "Size ${cRecords.count()}" }
                 when (val v = cr.value()) {
                     null -> {
                         log.info { "Tombestone" }
                         Unit
-                    }// TODO:: Tombestone
+                    } // TODO:: Tombestone
                     is String -> if (v.isNotEmpty()) {
                         when (val query = v.getQueryFromJson()) {
                             is InvalidTopicQuery -> Unit
