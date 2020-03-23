@@ -53,7 +53,7 @@ internal fun work(params: Params) {
                     else -> log.error { "Unknown  Salesforce Object Type in Key" }
                 }
             }
-            ConsumerStates.IsOkNoCommit
+            ConsumerStates.IsFinished // TODO::
         } else {
             log.info { "Kafka events completed for now - leaving kafka consumer loop" }
             ConsumerStates.IsFinished
@@ -160,10 +160,10 @@ internal fun work(params: Params) {
     ) {
         log.info { "Send protobuf SF objects to topic" }
         personKafkaPayload.forEach { m ->
-            this.send(ProducerRecord("Topic", m.key, m.value))
+            this.send(ProducerRecord(params.kafkaTopicPdl, m.key, m.value))
         }
         accountKafkaPayload.forEach { m ->
-            this.send(ProducerRecord("Topic", m.key, m.value))
+            this.send(ProducerRecord(params.kafkaTopicPdl, m.key, m.value))
         }
     }
 }
