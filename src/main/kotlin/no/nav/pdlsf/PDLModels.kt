@@ -48,7 +48,7 @@ open class LocalDateTimeSerializer(private val formatter: DateTimeFormatter) : K
 
 internal fun isNotOpphoert(folkeregistermetadata: Folkeregistermetadata): Boolean {
     return runCatching { LocalDateTime.now().isBefore(folkeregistermetadata.opphoerstidspunkt) }
-            .onFailure { log.warn { "Verify isNotOpphoert faild with value ${folkeregistermetadata.opphoerstidspunkt} - ${it.localizedMessage}" } }
+            // TODO :: Comment in .onFailure { log.warn { "Verify isNotOpphoert faild with value ${folkeregistermetadata.opphoerstidspunkt} - ${it.localizedMessage}" } }
             .getOrDefault(true)
 }
 
@@ -90,7 +90,7 @@ fun String.getQueryFromJson(): TopicQueryBase = runCatching {
 }
         .onFailure {
             Metrics.invalidQuery.inc()
-            log.error { "Cannot convert kafka value to query - ${it.localizedMessage}" }
+            // TODO :: Comment in log.error { "Cannot convert kafka value to query - ${it.localizedMessage}" }
         }
         .getOrDefault(InvalidTopicQuery)
 

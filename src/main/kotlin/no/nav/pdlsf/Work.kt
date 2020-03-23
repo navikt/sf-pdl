@@ -133,7 +133,7 @@ internal fun work(params: Params) {
                     }
                 }
             }
-            ConsumerStates.IsOkNoCommit
+            ConsumerStates.IsFinished
         } else {
             log.info { "Kafka events completed for now - leaving kafka consumer loop" }
             ConsumerStates.IsFinished
