@@ -14,7 +14,7 @@ import org.apache.kafka.common.serialization.ByteArraySerializer
 
 private val log = KotlinLogging.logger {}
 
-@UseExperimental(UnstableDefault::class)
+@OptIn(UnstableDefault::class)
 @ImplicitReflectionSerializer
 internal fun work(params: Params) {
     log.info { "bootstrap work session starting" }
@@ -86,58 +86,54 @@ internal fun work(params: Params) {
                 when (val v = cr.value()) {
                     null -> Unit // TODO:: Tombestone
                     is String -> if (v.isNotEmpty()) {
-                    when (val query = v.getQueryFromJson()) {
-                        is InvalidTopicQuery -> Unit
-                        is TopicQuery -> {
-                            if (query.isAlive && query.inRegion("54")) {
-                                log.debug { "Valid Query Object - $query" }
-                                when (val res = queryGraphQlSFDetails(cr.key())) {
-                                    is QueryErrorResponse -> { } // TODO:: Something  HTTP 200, logisk error
-                                    is InvalidQueryResponse -> { } // TODO:: Something Shit hit the fan
-                                    is QueryResponse -> {
-                                        log.info { "Create protobuf objects" }
-                                        val accountKey = SfObjectEventKey.newBuilder().apply {
-                                            this.aktoerId = cr.key()
-                                            this.sfObjectType = SfObjectEventKey.SfObjectType.ACCOUNT
-                                        }.build().toByteArray()
+                        when (val query = v.getQueryFromJson()) {
+                            is InvalidTopicQuery -> Unit
+                            is TopicQuery -> {
+                                if (query.isAlive && query.inRegion("54")) {
+                                    log.debug { "Valid Query Object - $query" }
+                                    when (val res = queryGraphQlSFDetails(cr.key())) {
+                                        is QueryErrorResponse -> {
+                                        } // TODO:: Something  HTTP 200, logisk error
+                                        is InvalidQueryResponse -> {
+                                        } // TODO:: Something Shit hit the fan
+                                        is QueryResponse -> {
+                                            log.info { "Create protobuf objects" }
+                                            val accountKey = SfObjectEventKey.newBuilder().apply {
+                                                this.aktoerId = cr.key()
+                                                this.sfObjectType = SfObjectEventKey.SfObjectType.ACCOUNT
+                                            }.build().toByteArray()
 
-                                        val personKey = SfObjectEventKey.newBuilder().apply {
-                                            this.aktoerId = cr.key()
-                                            this.sfObjectType = SfObjectEventKey.SfObjectType.PERSON
-                                        }.build().toByteArray()
+                                            val personKey = SfObjectEventKey.newBuilder().apply {
+                                                this.aktoerId = cr.key()
+                                                this.sfObjectType = SfObjectEventKey.SfObjectType.PERSON
+                                            }.build().toByteArray()
 
-                                        val accountValue = AccountValue.newBuilder().apply {
-                                            this.identifikasjonsnummer = res.data.hentIdenter?.something // TODO::
-                                            this.fornavn = res.data.hentPerson?.navn?.first()?.fornavn
-                                            this.mellomnavn = res.data.hentPerson?.navn?.first()?.mellomnavn
-                                            this.etternavn = res.data.hentPerson?.navn?.first()?.etternavn
-                                        }.build()
+                                            val accountValue = AccountValue.newBuilder().apply {
+                                                this.identifikasjonsnummer = res.data.hentIdenter?.something // TODO::
+                                                this.fornavn = res.data.hentPerson?.navn?.first()?.fornavn
+                                                this.mellomnavn = res.data.hentPerson?.navn?.first()?.mellomnavn
+                                                this.etternavn = res.data.hentPerson?.navn?.first()?.etternavn
+                                            }.build()
 
-                                        val personValue = PersonValue.newBuilder().apply {
-                                            this.identifikasjonsnummer = res.data.hentIdenter?.something // TODO::
-                                            this.gradering = runCatching { res.data.hentPerson?.adressebeskyttelse?.first()?.gradering?.name }.getOrDefault(Gradering.UGRADERT.name)?.let { PersonValue.Gradering.valueOf(it) }
-                                            this.sikkerhetstiltak = res.data.hentPerson?.sikkerhetstiltak?.first()?.beskrivelse
-                                            this.kommunenummer = res.data.hentPerson?.bostedsadresse?.findKommunenummer()
-                                            this.region = res.data.hentPerson?.bostedsadresse?.findKommunenummer()?.substring(0, 2)
-                                        }.build()
+                                            val personValue = PersonValue.newBuilder().apply {
+                                                this.identifikasjonsnummer = res.data.hentIdenter?.something // TODO::
+                                                this.gradering = runCatching { res.data.hentPerson?.adressebeskyttelse?.first()?.gradering?.name }.getOrDefault(Gradering.UGRADERT.name)?.let { PersonValue.Gradering.valueOf(it) }
+                                                this.sikkerhetstiltak = res.data.hentPerson?.sikkerhetstiltak?.first()?.beskrivelse
+                                                this.kommunenummer = res.data.hentPerson?.bostedsadresse?.findKommunenummer()
+                                                this.region = res.data.hentPerson?.bostedsadresse?.findKommunenummer()?.substring(0, 2)
+                                            }.build()
 
-                                        log.info { "Compare cache to find new and updated persons from pdl" }
-                                        accountCache[cr.key()].let { hash ->
-                                            hash?.let { h -> if (h != accountCache.hashCode()) accountKafkaPayload[accountKey] = accountValue.toByteArray() }
-                                                    ?: { accountKafkaPayload[accountKey] = accountValue.toByteArray() }
-                                        }
-                                        personCache[cr.key()].let { hash ->
-                                            hash?.let { h -> if (h != accountCache.hashCode()) personKafkaPayload[personKey] = personValue.toByteArray() }
-                                                    ?: { personKafkaPayload[personKey] = personValue.toByteArray() }
+                                            log.info { "Compare cache to find new and updated persons from pdl" }
+                                            if (accountCache[cr.key()]?.let { h -> h != accountCache.hashCode() } != false) accountKafkaPayload[accountKey] = accountValue.toByteArray()
+                                            if (personCache[cr.key()]?.let { h -> h != personCache.hashCode() } != false) personKafkaPayload[personKey] = personValue.toByteArray()
                                         }
                                     }
+                                } else {
+                                    Metrics.filterNoHit.inc()
                                 }
-                            } else {
-                                Metrics.filterNoHit.inc()
                             }
                         }
                     }
-                }
                 }
             }
             ConsumerStates.IsOkNoCommit
