@@ -1,5 +1,6 @@
 package no.nav.pdlsf
 
+import io.confluent.kafka.serializers.KafkaAvroDeserializer
 import kotlinx.serialization.ImplicitReflectionSerializer
 import kotlinx.serialization.UnstableDefault
 import mu.KotlinLogging
@@ -21,7 +22,7 @@ internal fun work(params: Params) {
     val personCache: MutableMap<String, Int> = mutableMapOf()
 
     // Get Cachefrom SF topic
-    getKafkaConsumerByConfig<ByteArray, ByteArray>(
+/*    getKafkaConsumerByConfig<ByteArray, ByteArray>(
             mapOf(
                     ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG to params.kafkaBrokers,
                     ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to ByteArray::class.java,
@@ -54,10 +55,10 @@ internal fun work(params: Params) {
             ConsumerStates.IsFinished
         }
     }
-        log.debug { "Finished building up Cache of existing SF Objects compaction log size person ${personCache.size} size ${accountCache.size}" }
+        log.debug { "Finished building up Cache of existing SF Objects compaction log size person ${personCache.size} */
 
     // Get persons from PDL topic
-    /*  getKafkaConsumerByConfig<String, String>(
+    getKafkaConsumerByConfig<String, String>(
         mapOf(
             ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG to params.kafkaBrokers,
             "schema.registry.url" to params.kafkaSchemaRegistry,
@@ -138,7 +139,6 @@ internal fun work(params: Params) {
             ConsumerStates.IsFinished
         }
     }
-*/
     // Write SF Object to SF topic
 /*    getKafkaProducerByConfig<ByteArray, ByteArray>(
             mapOf(
