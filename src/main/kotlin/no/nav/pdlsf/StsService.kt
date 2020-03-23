@@ -6,6 +6,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.parse
 import mu.KotlinLogging
+import org.http4k.core.ContentType
 import org.http4k.core.Method
 import org.http4k.core.Request
 import org.http4k.core.Status
@@ -17,6 +18,7 @@ private var cachedToken: StsAccessToken? = null
 private fun fetchNewToken(): StsAccessTokenBase = Http.client.invoke(
         (Request(Method.GET, ParamsFactory.p.stslUrl)
                 .header("Authorization", "Basic ${ParamsFactory.p.credentials()}")
+                .header("Content-type", ContentType.APPLICATION_FORM_URLENCODED.toHeaderValue())
                 .query("grant_type", "client_credentials"))
                 .query("scope", "openid")
 ).let { response ->

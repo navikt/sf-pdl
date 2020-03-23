@@ -59,7 +59,7 @@ spec:
     - name: PDL_GRAPHQL_URL
       value: 'https://pdl-api.nais.preprod.local/graphql'
     - name: STS_REST_URL
-      value: 'http://security-token-service.default.svc.nais.local/rest/v1/sts/token'
+      value: 'https://security-token-service.nais.preprod.local/rest/v1/sts/token'
     - name: MS_BETWEEN_WORK
       value: '600000'
 
