@@ -27,7 +27,7 @@ private fun executeGraphQlQuery(
 ).let { response ->
     when (response.status) {
         Status.OK -> {
-            log.debug { response.bodyString() }
+            log.debug { "GraphQL response ${response.bodyString()}" }
             runCatching {
                 val queryResponse = QueryResponse.fromJson(response.bodyString())
                 val result = if (queryResponse is QueryResponse) {

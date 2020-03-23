@@ -23,7 +23,7 @@ object Bootstrap {
         ServerState.reset()
         Metrics.sessionReset()
         work(params) // ServerState will be updated according to any issues
-        // wait(params)
+        wait(params)
 
         if (!ShutdownHook.isActive()) conditionalSchedule(params)
     }

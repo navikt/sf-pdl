@@ -25,7 +25,7 @@ data class Params(
 
         // other details
     val httpsProxy: String = System.getenv("HTTPS_PROXY") ?: "",
-    val msBetweenWork: Long = System.getenv("MS_BETWEEN_WORK")?.toLong() ?: 30 * 60 * 1_000,
+    val msBetweenWork: Long = System.getenv("MS_BETWEEN_WORK")?.toLong() ?: 30 * 60 * 1_000*15,
     val pdlGraphQlUrl: String = System.getenv("PDL_GRAPHQL_URL") ?: "",
     val stslUrl: String = System.getenv("STS_REST_URL") ?: ""
 

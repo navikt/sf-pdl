@@ -79,14 +79,17 @@ internal fun work(params: Params) {
         log.info { "Start building up map of persons in PDL compaction log" }
         if (!cRecords.isEmpty) {
             cRecords.forEach { cr ->
-
+                log.info {"Size ${cRecords.count()}"}
                 when (val v = cr.value()) {
-                    null -> Unit // TODO:: Tombestone
+                    null -> {
+                        log.info { "Tombestone" }
+                        Unit
+                    }// TODO:: Tombestone
                     is String -> if (v.isNotEmpty()) {
                         when (val query = v.getQueryFromJson()) {
                             is InvalidTopicQuery -> Unit
                             is TopicQuery -> {
-                                if (query.isAlive && query.inRegion("54")) {
+                                if (query.isAlive) { // && query.inRegion("54")) {
                                     log.debug { "Valid Query Object - $query" }
                                     when (val res = queryGraphQlSFDetails(cr.key())) {
                                         is QueryErrorResponse -> {
