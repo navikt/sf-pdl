@@ -43,6 +43,7 @@ internal fun work(params: Params) {
             },
             listOf(params.kafkaTopicSf), fromBeginning = true
     ) { cRecords ->
+        log.info { "Start building up Cache of existing SF Objects compaction log" }
         if (!cRecords.isEmpty) {
             cRecords.forEach { record ->
                 val aktoerId = SfObjectEventKey.parseFrom(record.key()).aktoerId
@@ -78,6 +79,7 @@ internal fun work(params: Params) {
         },
         listOf(params.kafkaTopicPdl), fromBeginning = true
     ) { cRecords ->
+        log.info { "Start building up map of persons in PDL compaction log" }
         if (!cRecords.isEmpty) {
             cRecords.forEach { cr ->
 
@@ -93,7 +95,7 @@ internal fun work(params: Params) {
                                     is QueryErrorResponse -> { } // TODO:: Something  HTTP 200, logisk error
                                     is InvalidQueryResponse -> { } // TODO:: Something Shit hit the fan
                                     is QueryResponse -> {
-
+                                        log.info { "Create protobuf objects" }
                                         val accountKey = SfObjectEventKey.newBuilder().apply {
                                             this.aktoerId = cr.key()
                                             this.sfObjectType = SfObjectEventKey.SfObjectType.ACCOUNT
@@ -119,7 +121,7 @@ internal fun work(params: Params) {
                                             this.region = res.data.hentPerson?.bostedsadresse?.findKommunenummer()?.substring(0, 2)
                                         }.build()
 
-                                        // Add new and updated
+                                        log.info { "Compare cache to find new and updated persons from pdl" }
                                         accountCache[cr.key()].let { hash ->
                                             hash?.let { h -> if (h != accountCache.hashCode()) accountKafkaPayload[accountKey] = accountValue.toByteArray() }
                                                     ?: { accountKafkaPayload[accountKey] = accountValue.toByteArray() }
@@ -160,6 +162,7 @@ internal fun work(params: Params) {
                 else map
             }
     ) {
+        log.info { "Send protobuf SF objects to topic" }
         personKafkaPayload.forEach { m ->
             this.send(ProducerRecord("Topic", m.key, m.value))
         }
