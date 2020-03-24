@@ -57,7 +57,7 @@ spec:
     - name: KAFKA_TOPIC_SF
       value: privat-pdl-sfobjects-v1
     - name: PDL_GRAPHQL_URL
-      value: 'https://pdl-api.nais.preprod.local/graphql'
+      value: 'http://pdl-api.default.svc.nais.local/graphql'
     - name: STS_REST_URL
       value: 'http://security-token-service.default.svc.nais.local/rest/v1/sts/token'
     - name: MS_BETWEEN_WORK
