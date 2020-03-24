@@ -18,7 +18,7 @@ private var cachedToken: StsAccessToken? = null
 private fun fetchNewToken(): StsAccessTokenBase = Http.client.invoke(
         (Request(Method.GET, ParamsFactory.p.stslUrl)
                 .header("Authorization", "Basic ${ParamsFactory.p.credentials()}")
-                .header("Content-type", ContentType.APPLICATION_FORM_URLENCODED.toHeaderValue())
+                .header("Content-Type", ContentType.APPLICATION_FORM_URLENCODED.toHeaderValue())
                 .query("grant_type", "client_credentials"))
                 .query("scope", "openid")
                 .body("")
