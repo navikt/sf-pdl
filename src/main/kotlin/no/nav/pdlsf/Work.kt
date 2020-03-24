@@ -79,7 +79,6 @@ internal fun work(params: Params) {
         log.info { "Start building up map of persons in PDL compaction log" }
         if (!cRecords.isEmpty) {
             cRecords.forEach { cr ->
-                log.info { "Size ${cRecords.count()}" }
                 when (val v = cr.value()) {
                     null -> {
                         log.info { "Tombestone" }
@@ -93,7 +92,7 @@ internal fun work(params: Params) {
                                     log.debug { "Valid Query Object - $query" }
                                     when (val res = queryGraphQlSFDetails(cr.key())) {
                                         is QueryErrorResponse -> {
-                                        } // TODO:: Something  HTTP 200, logisk error
+                                        } // TODO:: Something  HTTP 200, logisk error fra pdl
                                         is InvalidQueryResponse -> {
                                         } // TODO:: Something Shit hit the fan
                                         is QueryResponse -> {
