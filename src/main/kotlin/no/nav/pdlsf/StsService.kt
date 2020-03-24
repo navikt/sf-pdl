@@ -21,7 +21,6 @@ private fun fetchNewToken(): StsAccessTokenBase = Http.client.invoke(
                 .header("Content-Type", ContentType.APPLICATION_FORM_URLENCODED.toHeaderValue())
                 .query("grant_type", "client_credentials"))
                 .query("scope", "openid")
-                .body("")
 ).let { response ->
     when (response.status) {
         Status.OK -> json.parse<StsAccessToken>(response.bodyString())

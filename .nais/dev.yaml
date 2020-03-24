@@ -62,4 +62,3 @@ spec:
       value: 'http://security-token-service.default.svc.nais.local/rest/v1/sts/token'
     - name: MS_BETWEEN_WORK
       value: '600000'
-
