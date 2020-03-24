@@ -3,7 +3,6 @@ package no.nav.pdlsf
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import kotlinx.serialization.ContextualSerialization
 import kotlinx.serialization.Decoder
 import kotlinx.serialization.Encoder
 import kotlinx.serialization.ImplicitReflectionSerializer
@@ -255,7 +254,7 @@ data class QueryErrorResponse(
 @Serializable
 data class QueryRequest(
     val query: String,
-    @ContextualSerialization val variables: Variables, // Spennende å se om den fungerer, fungerer det ikke kan vi bare sette Map<String, String>
+    val variables: Map<String, String>, // @ContextualSerialization val variables: Variables          Spennende å se om den fungerer, fungerer det ikke kan vi bare sette Map<String, String>
     val operationName: String? = null
 ) {
     data class Variables(

@@ -12,7 +12,7 @@ private const val GRAPHQL_QUERY = "/graphql/query.graphql"
 @ImplicitReflectionSerializer
 private fun executeGraphQlQuery(
     query: String,
-    variables: Map<String, Any>
+    variables: Map<String, String>
 ): QueryResponseBase = Http.client.invoke(
         org.http4k.core.Request(Method.POST, ParamsFactory.p.pdlGraphQlUrl)
                 .header("Tema", "GEN")
@@ -22,7 +22,7 @@ private fun executeGraphQlQuery(
                 .header("Content-Type", "application/json")
                 .body(json.stringify(QueryRequest(
                         query = query,
-                        variables = QueryRequest.Variables(variables)
+                        variables = variables
                 )))
 ).let { response ->
     when (response.status) {
