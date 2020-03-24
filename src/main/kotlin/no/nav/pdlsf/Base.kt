@@ -25,7 +25,7 @@ fun ApacheClient.proxy(): HttpHandler = when {
                 .setDefaultRequestConfig(
                         RequestConfig.custom()
                                 .setProxy(HttpHost(up.host, up.port, up.scheme))
-                                .setRedirectsEnabled(true)
+                                .setRedirectsEnabled(false)
                                 .setCookieSpec(CookieSpecs.IGNORE_COOKIES)
                                 .build())
                 .build()

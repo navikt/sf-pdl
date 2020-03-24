@@ -25,6 +25,7 @@ private fun executeGraphQlQuery(
                         variables = variables
                 )))
 ).let { response ->
+    log.debug { response.toString() }
     when (response.status) {
         Status.OK -> {
             log.debug { "GraphQL response ${response.bodyString()}" }
