@@ -2,7 +2,7 @@ package no.nav.pdlsf
 
 import java.io.File
 import java.io.FileNotFoundException
-import org.apache.commons.codec.binary.Base64.encodeBase64
+import java.util.Base64
 
 object ParamsFactory {
     val p: Params by lazy { Params() }
@@ -31,7 +31,7 @@ data class Params(
 
 )
 
-fun Params.credentials(): ByteArray = encodeBase64("$kafkaUser:$kafkaPassword".toByteArray(Charsets.UTF_8))
+fun Params.credentials(): String = Base64.getEncoder().encodeToString("$kafkaUser:$kafkaPassword".toByteArray(Charsets.UTF_8))
 
 fun Params.kafkaSecurityEnabled(): Boolean = kafkaSecurity == "TRUE"
 
