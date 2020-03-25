@@ -76,7 +76,7 @@ internal fun work(params: Params) {
         },
         listOf(params.kafkaTopicPdl), fromBeginning = true
     ) { cRecords ->
-        log.info { "Start building up map of persons in PDL compaction log" }
+        log.info { "Start building up map of persons and accounts kafka payload from PDL compaction log" }
         if (!cRecords.isEmpty) {
             cRecords.forEach { cr ->
                 when (val v = cr.value()) {
@@ -88,7 +88,7 @@ internal fun work(params: Params) {
                         when (val query = v.getQueryFromJson()) {
                             is InvalidTopicQuery -> Unit
                             is TopicQuery -> {
-                                if (query.isAlive) { // && query.inRegion("54")) {
+                                if (query.isAlive && query.inRegion("54")) { // && query.inRegion("54")) {
                                     log.debug { "Valid Query Object - $query" }
                                     when (val res = queryGraphQlSFDetails(cr.key())) {
                                         is QueryErrorResponse -> {
@@ -135,7 +135,8 @@ internal fun work(params: Params) {
                     }
                 }
             }
-            ConsumerStates.IsFinished
+            log.info { "Finish building up map of persons and accounts kafka payload from PDL compaction log. Account objects ${accountKafkaPayload.size}, person objects ${personKafkaPayload.size}" }
+            ConsumerStates.IsOkNoCommit
         } else {
             log.info { "Kafka events completed for now - leaving kafka consumer loop" }
             ConsumerStates.IsFinished
