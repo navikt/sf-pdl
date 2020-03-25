@@ -63,7 +63,6 @@ spec:
     - name: PDL_GRAPHQL_URL
       value: 'https://api-gw-q2.oera.no/pdl-api/graphql'
     - name: STS_REST_URL
-      value: 'https://api-gw-q1.oera.no/rest/v1/sts/token'
+      value: 'https://api-gw-q1.oera.no/security-token-service/rest/v1/sts/token'
     - name: MS_BETWEEN_WORK
       value: '600000'
-
