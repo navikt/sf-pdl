@@ -85,6 +85,7 @@ internal fun work(params: Params) {
                         Unit
                     } // TODO:: Tombestone
                     is String -> if (v.isNotEmpty()) {
+                        log.info { cr.value() }
                         when (val query = v.getQueryFromJson()) {
                             is InvalidTopicQuery -> Unit
                             is TopicQuery -> {
@@ -135,7 +136,7 @@ internal fun work(params: Params) {
                     }
                 }
             }
-            ConsumerStates.IsOkNoCommit
+            ConsumerStates.IsFinished
         } else {
             log.info { "Kafka events completed for now - leaving kafka consumer loop" }
             ConsumerStates.IsFinished

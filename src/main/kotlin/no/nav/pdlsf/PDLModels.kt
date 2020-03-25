@@ -84,12 +84,12 @@ internal fun List<Person.Bostedsadresse>.findGjelendeBostedsadresse(): Person.Bo
 @UnstableDefault
 @ImplicitReflectionSerializer
 fun String.getQueryFromJson(): TopicQueryBase = runCatching {
-    Metrics.sucessfulValueToQuery.inc()
-    Json.nonstrict.parse<TopicQuery>(this)
+    Json.nonstrict.parse<TopicQuery>(this).also {
+        Metrics.sucessfulValueToQuery.inc()
+    }
 }
         .onFailure {
             Metrics.invalidQuery.inc()
-            // TODO :: Comment in log.error { "Cannot convert kafka value to query - ${it.localizedMessage}" }
         }
         .getOrDefault(InvalidTopicQuery)
 
