@@ -15,6 +15,7 @@ private fun executeGraphQlQuery(
     variables: Map<String, String>
 ): QueryResponseBase = Http.client.invoke(
         org.http4k.core.Request(Method.POST, ParamsFactory.p.pdlGraphQlUrl)
+                .header("x-nav-apiKey", ParamsFactory.p.pdlGraphQlApiKey)
                 .header("Tema", "GEN")
                 .header("Authorization", "Bearer ${getStsToken()}")
                 .header("Nav-Consumer-Token", "Bearer ${getStsToken()}")

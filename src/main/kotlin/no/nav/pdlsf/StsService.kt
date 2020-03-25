@@ -16,7 +16,8 @@ private var cachedToken: StsAccessToken? = null
 
 @ImplicitReflectionSerializer
 private fun fetchNewToken(): StsAccessTokenBase = Http.client.invoke(
-        (Request(Method.GET, ParamsFactory.p.stslUrl)
+        (Request(Method.GET, ParamsFactory.p.stsUrl)
+                .header("x-nav-apiKey", ParamsFactory.p.stsApiKey)
                 .header("Authorization", "Basic ${ParamsFactory.p.credentials()}")
                 .header("Content-Type", ContentType.APPLICATION_FORM_URLENCODED.toHeaderValue())
                 .query("grant_type", "client_credentials"))
