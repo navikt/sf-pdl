@@ -76,7 +76,7 @@ internal fun work(params: Params) {
         },
         listOf(params.kafkaTopicPdl), fromBeginning = true
     ) { cRecords ->
-        log.info { "Start building up map of persons and accounts kafka payload from PDL compaction log" }
+//        log.info { "Start building up map of persons and accounts kafka payload from PDL compaction log" }
         if (!cRecords.isEmpty) {
             cRecords.forEach { cr ->
                 when (val v = cr.value()) {
