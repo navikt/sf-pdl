@@ -85,7 +85,7 @@ internal fun work(params: Params) {
                         Unit
                     } // TODO:: Tombestone
                     is String -> if (v.isNotEmpty()) {
-                        log.info { cr.value() }
+                        log.info { v }
                         when (val query = v.getQueryFromJson()) {
                             is InvalidTopicQuery -> Unit
                             is TopicQuery -> {
@@ -93,11 +93,14 @@ internal fun work(params: Params) {
                                     log.debug { "Valid Query Object - $query" }
                                     when (val res = queryGraphQlSFDetails(cr.key())) {
                                         is QueryErrorResponse -> {
+                                            log.info { "QueryErrorResponse - $v " }
                                         } // TODO:: Something  HTTP 200, logisk error fra pdl
                                         is InvalidQueryResponse -> {
+                                            log.info { "InvalidQueryResponse - $v " }
                                         } // TODO:: Something Shit hit the fan
                                         is QueryResponse -> {
                                             log.info { "Create protobuf objects" }
+                                            log.info { "GrapgQl response - $res" }
                                             val accountKey = SfObjectEventKey.newBuilder().apply {
                                                 this.aktoerId = cr.key()
                                                 this.sfObjectType = SfObjectEventKey.SfObjectType.ACCOUNT

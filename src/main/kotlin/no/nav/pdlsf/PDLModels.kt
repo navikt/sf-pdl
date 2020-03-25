@@ -84,9 +84,7 @@ internal fun List<Person.Bostedsadresse>.findGjelendeBostedsadresse(): Person.Bo
 @UnstableDefault
 @ImplicitReflectionSerializer
 fun String.getQueryFromJson(): TopicQueryBase = runCatching {
-    Json.nonstrict.parse<TopicQuery>(this).also {
-        Metrics.sucessfulValueToQuery.inc()
-    }
+    Json.nonstrict.parse<TopicQuery>(this)
 }
         .onFailure {
             Metrics.invalidQuery.inc()

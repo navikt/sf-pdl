@@ -14,3 +14,7 @@ target/
 # Gradle
 .gradle/
 out/
+
+
+#Scratch
+Scratch*.kt
