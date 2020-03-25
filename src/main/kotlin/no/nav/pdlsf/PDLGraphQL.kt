@@ -41,7 +41,7 @@ private fun executeGraphQlQuery(
             }.getOrDefault(InvalidQueryResponse)
         }
         else -> {
-            log.error { "Request failed - ${response.status.description}(${response.status.code})" }
+            log.error { "Request failed - ${response.toMessage()}" }
             InvalidQueryResponse
         }
     }

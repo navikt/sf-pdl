@@ -27,8 +27,7 @@ private fun fetchNewToken(): StsAccessTokenBase = Http.client.invoke(
     when (response.status) {
         Status.OK -> json.parse<StsAccessToken>(response.bodyString())
         else -> {
-            log.error { response.toMessage() }
-            log.error { "Authorization request failed - ${response.status.description}(${response.status.code})" }
+            log.error { "Authorization request failed - ${response.toMessage()}" }
             InvalidStsAccessToken
         }
     }
