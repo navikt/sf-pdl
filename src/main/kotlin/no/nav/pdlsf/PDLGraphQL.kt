@@ -25,10 +25,8 @@ private fun executeGraphQlQuery(
                         query = query,
                         variables = variables
                 )))
-).let { response ->
-    log.debug { "GraphQL response" }
-    log.debug { response.toMessage() }
-    log.debug { response.toString() }
+).also { log.debug { "Respone ${it.toMessage() }" }
+}.let { response ->
     when (response.status) {
         Status.OK -> {
             log.debug { "GraphQL response ${response.bodyString()}" }
@@ -40,7 +38,9 @@ private fun executeGraphQlQuery(
                     queryResponse
                 }
                 result
-            }.getOrDefault(InvalidQueryResponse)
+            }
+                    .onFailure { "Failed handlin graphql response - ${it.localizedMessage}" }
+                    .getOrDefault(InvalidQueryResponse)
         }
         else -> {
             log.error { "Request failed - ${response.toMessage()}" }
