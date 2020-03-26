@@ -159,8 +159,8 @@ data class QueryResponse(
 ) : QueryResponseBase() {
     @Serializable
     data class Data(
-        val hentPerson: HentPerson?,
-        val hentIdenter: HentIdenter?
+        val hentPerson: HentPerson,
+        val hentIdenter: HentIdenter
     ) {
         @Serializable
         data class HentPerson(
@@ -201,8 +201,13 @@ data class QueryResponse(
         }
         @Serializable
         data class HentIdenter(
-            val something: String // TODO::
-        )
+            val identer: List<Ident>
+        ) {
+            @Serializable
+            data class Ident(
+                val ident: String
+            )
+        }
     }
 
     @Serializable
