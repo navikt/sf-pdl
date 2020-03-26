@@ -50,7 +50,54 @@ private fun executeGraphQlQuery(
 }
 
 @ImplicitReflectionSerializer
+private fun executeGraphQlQueryStringResponse(
+    query: String,
+    variables: Map<String, String>
+): String = Http.client.invoke(
+        org.http4k.core.Request(Method.POST, ParamsFactory.p.pdlGraphQlUrl)
+                .header("x-nav-apiKey", ParamsFactory.p.pdlGraphQlApiKey)
+                .header("Tema", "GEN")
+                .header("Authorization", "Bearer ${(getStsToken() as StsAccessToken).accessToken}")
+                .header("Nav-Consumer-Token", "Bearer ${(getStsToken() as StsAccessToken).accessToken}")
+                .header("Cache-Control", "no-cache")
+                .header("Content-Type", "application/json")
+                .body(json.stringify(QueryRequest(
+                        query = query,
+                        variables = variables
+                )))
+).let { response ->
+    when (response.status) {
+        Status.OK -> {
+            log.debug { "GraphQL response ${response.bodyString()}" }
+            response.bodyString()
+        }
+        else -> {
+            log.error { "PDL GraphQl request failed - ${response.toMessage()}" }
+            ""
+        }
+    }
+}
+
+@ImplicitReflectionSerializer
 fun queryGraphQlSFDetails(ident: String): QueryResponseBase {
-        val query = getStringFromResource(GRAPHQL_QUERY).trim()
-        return executeGraphQlQuery(query, mapOf("ident" to ident))
+    val query = getStringFromResource(GRAPHQL_QUERY).trim()
+    val stringResponse = executeGraphQlQueryStringResponse(query, mapOf("ident" to ident))
+    log.info { "GaphQL response string - $stringResponse" }
+    return if (!stringResponse.isNullOrEmpty()) {
+        runCatching {
+            val queryResponse = QueryResponse.fromJson(stringResponse)
+            val result = if (queryResponse is QueryResponse) {
+                queryResponse.errors?.let { errors -> QueryErrorResponse(errors) } ?: queryResponse
+            } else {
+                queryResponse
+            }
+            log.debug { "GraphQL result $result" }
+            result
+        }
+                .onFailure { "Failed handling graphql response - ${it.localizedMessage}" }
+                .getOrDefault(InvalidQueryResponse)
+    } else {
+        InvalidQueryResponse
+    }
+    // return executeGraphQlQuery(query, mapOf("ident" to ident))
 }
