@@ -116,18 +116,18 @@ internal fun work(params: Params) {
                                             }.build().toByteArray()
 
                                             val accountValue = AccountValue.newBuilder().apply {
-                                                this.identifikasjonsnummer = res.data.hentIdenter?.something // TODO::
-                                                this.fornavn = res.data.hentPerson?.navn?.first()?.fornavn
-                                                this.mellomnavn = res.data.hentPerson?.navn?.first()?.mellomnavn
-                                                this.etternavn = res.data.hentPerson?.navn?.first()?.etternavn
+                                                this.identifikasjonsnummer = queryResponseBase.data.hentIdenter?.something // TODO::
+                                                this.fornavn = queryResponseBase.data.hentPerson?.navn?.first()?.fornavn
+                                                this.mellomnavn = queryResponseBase.data.hentPerson?.navn?.first()?.mellomnavn
+                                                this.etternavn = queryResponseBase.data.hentPerson?.navn?.first()?.etternavn
                                             }.build()
 
                                             val personValue = PersonValue.newBuilder().apply {
-                                                this.identifikasjonsnummer = res.data.hentIdenter?.something // TODO::
-                                                this.gradering = runCatching { res.data.hentPerson?.adressebeskyttelse?.first()?.gradering?.name }.getOrDefault(Gradering.UGRADERT.name)?.let { PersonValue.Gradering.valueOf(it) }
-                                                this.sikkerhetstiltak = res.data.hentPerson?.sikkerhetstiltak?.first()?.beskrivelse
-                                                this.kommunenummer = res.data.hentPerson?.bostedsadresse?.findKommunenummer()
-                                                this.region = res.data.hentPerson?.bostedsadresse?.findKommunenummer()?.substring(0, 2)
+                                                this.identifikasjonsnummer = queryResponseBase.data.hentIdenter?.something // TODO::
+                                                this.gradering = runCatching { queryResponseBase.data.hentPerson?.adressebeskyttelse?.first()?.gradering?.name }.getOrDefault(Gradering.UGRADERT.name)?.let { PersonValue.Gradering.valueOf(it) }
+                                                this.sikkerhetstiltak = queryResponseBase.data.hentPerson?.sikkerhetstiltak?.first()?.beskrivelse
+                                                this.kommunenummer = queryResponseBase.data.hentPerson?.bostedsadresse?.findKommunenummer()
+                                                this.region = queryResponseBase.data.hentPerson?.bostedsadresse?.findKommunenummer()?.substring(0, 2)
                                             }.build()
 
                                             log.info { "Compare cache to find new and updated persons from pdl" }
