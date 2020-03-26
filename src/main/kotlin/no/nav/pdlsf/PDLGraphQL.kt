@@ -23,7 +23,7 @@ private fun executeGraphQlQuery(
                 .header("Content-Type", "application/json")
                 .body(json.stringify(QueryRequest(
                         query = query,
-                        variables = variables 
+                        variables = variables
                 )))
 ).also { log.debug { "Respone ${it.toMessage() }" }
 }.let { response ->
