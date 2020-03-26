@@ -100,7 +100,7 @@ internal fun work(params: Params) {
                                             log.info { "QueryErrorResponse - $queryResponseBase" }
                                         } // TODO:: Something  HTTP 200, logisk error fra pdl
                                         is InvalidQueryResponse -> {
-                                            log.warn { "InvalidQueryResponse - $queryResponseBase " }
+                                            log.warn { "InvalidQueryResponse i when sløyfe - $queryResponseBase " }
                                         } // TODO:: Something Shit hit the fan
                                         is QueryResponse -> {
                                             log.info { "Create protobuf objects" }
@@ -143,7 +143,7 @@ internal fun work(params: Params) {
                     }
                 }
             }
-            ConsumerStates.IsFinished
+            ConsumerStates.IsOkNoCommit
         } else {
             log.info { "Kafka events completed for now - leaving kafka consumer loop" }
             ConsumerStates.IsFinished
