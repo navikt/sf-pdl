@@ -25,8 +25,7 @@ private fun executeGraphQlQuery(
                         query = query,
                         variables = variables
                 )))
-).also { log.debug { "Respone ${it.toMessage() }" }
-}.let { response ->
+).let { response ->
     when (response.status) {
         Status.OK -> {
             log.debug { "GraphQL response ${response.bodyString()}" }
@@ -37,13 +36,14 @@ private fun executeGraphQlQuery(
                 } else {
                     queryResponse
                 }
+                log.debug { "GraphQL result $result" }
                 result
             }
-                    .onFailure { "Failed handlin graphql response - ${it.localizedMessage}" }
+                    .onFailure { "Failed handling graphql response - ${it.localizedMessage}" }
                     .getOrDefault(InvalidQueryResponse)
         }
         else -> {
-            log.error { "Request failed - ${response.toMessage()}" }
+            log.error { "PDL GraphQl request failed - ${response.toMessage()}" }
             InvalidQueryResponse
         }
     }

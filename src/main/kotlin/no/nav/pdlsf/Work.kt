@@ -92,17 +92,19 @@ internal fun work(params: Params) {
                             }
                             is TopicQuery -> {
 //                                if (query.isAlive) { // && query.inRegion("54")) {
-                                    log.debug { "Valid TopicQuery - $query" }
-                                    when (val res = queryGraphQlSFDetails(cr.key())) {
+                                log.debug { "Query graphQL for key  - ${cr.key()}" }
+                                val queryResponseBase = queryGraphQlSFDetails(cr.key())
+                                log.debug { queryResponseBase.toString() }
+                                when (queryResponseBase) {
                                         is QueryErrorResponse -> {
-                                            log.info { "QueryErrorResponse - $res" }
+                                            log.info { "QueryErrorResponse - $queryResponseBase" }
                                         } // TODO:: Something  HTTP 200, logisk error fra pdl
                                         is InvalidQueryResponse -> {
-                                            log.warn { "InvalidQueryResponse - $res " }
+                                            log.warn { "InvalidQueryResponse - $queryResponseBase " }
                                         } // TODO:: Something Shit hit the fan
                                         is QueryResponse -> {
                                             log.info { "Create protobuf objects" }
-                                            log.info { "GrapgQl response - $res" }
+                                            log.info { "GrapgQl response - $queryResponseBase" }
                                             val accountKey = SfObjectEventKey.newBuilder().apply {
                                                 this.aktoerId = cr.key()
                                                 this.sfObjectType = SfObjectEventKey.SfObjectType.ACCOUNT
