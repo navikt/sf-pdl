@@ -17,13 +17,13 @@ private fun executeGraphQlQuery(
         org.http4k.core.Request(Method.POST, ParamsFactory.p.pdlGraphQlUrl)
                 .header("x-nav-apiKey", ParamsFactory.p.pdlGraphQlApiKey)
                 .header("Tema", "GEN")
-                .header("Authorization", "Bearer ${getStsToken()}")
-                .header("Nav-Consumer-Token", "Bearer ${getStsToken()}")
+                .header("Authorization", "Bearer ${(getStsToken() as StsAccessToken).accessToken}")
+                .header("Nav-Consumer-Token", "Bearer ${(getStsToken() as StsAccessToken).accessToken}")
                 .header("Cache-Control", "no-cache")
                 .header("Content-Type", "application/json")
                 .body(json.stringify(QueryRequest(
                         query = query,
-                        variables = variables
+                        variables = variables 
                 )))
 ).also { log.debug { "Respone ${it.toMessage() }" }
 }.let { response ->
