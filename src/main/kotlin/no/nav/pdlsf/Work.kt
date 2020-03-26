@@ -87,24 +87,24 @@ internal fun work(params: Params) {
                     is String -> if (v.isNotEmpty()) {
                         when (val query = v.getQueryFromJson()) {
                             is InvalidTopicQuery -> {
-                                log.warn { "InvalidTopicQuery - $v" }
+                                log.debug { "InvalidTopicQuery - $v" } // TODO :: REMOVE
                                 Unit
                             }
                             is TopicQuery -> {
 //                                if (query.isAlive) { // && query.inRegion("54")) {
                                 log.debug { "Query graphQL for key  - ${cr.key()}" }
                                 val queryResponseBase = queryGraphQlSFDetails(cr.key())
-                                log.debug { queryResponseBase.toString() }
+                                log.debug { queryResponseBase.toString() } // TODO :: REMOVE
                                 when (queryResponseBase) {
                                         is QueryErrorResponse -> {
-                                            log.info { "QueryErrorResponse - $queryResponseBase" }
+                                            log.debug { "QueryErrorResponse - $queryResponseBase" } // TODO :: REMOVE
                                         } // TODO:: Something  HTTP 200, logisk error fra pdl
                                         is InvalidQueryResponse -> {
-                                            log.warn { "InvalidQueryResponse i when sløyfe - $queryResponseBase " }
+                                            log.debug { "InvalidQueryResponse i when sløyfe - $queryResponseBase " } // TODO :: REMOVE
                                         } // TODO:: Something Shit hit the fan
                                         is QueryResponse -> {
                                             log.info { "Create protobuf objects" }
-                                            log.info { "GrapgQl response - $queryResponseBase" }
+                                            log.debug { "GrapgQl response - $queryResponseBase" } // TODO :: REMOVE
                                             val accountKey = SfObjectEventKey.newBuilder().apply {
                                                 this.aktoerId = cr.key()
                                                 this.sfObjectType = SfObjectEventKey.SfObjectType.ACCOUNT
@@ -116,18 +116,18 @@ internal fun work(params: Params) {
                                             }.build().toByteArray()
 
                                             val accountValue = AccountValue.newBuilder().apply {
-                                                this.identifikasjonsnummer = queryResponseBase.data.hentIdenter?.something // TODO::
-                                                this.fornavn = queryResponseBase.data.hentPerson?.navn?.first()?.fornavn
-                                                this.mellomnavn = queryResponseBase.data.hentPerson?.navn?.first()?.mellomnavn
-                                                this.etternavn = queryResponseBase.data.hentPerson?.navn?.first()?.etternavn
+                                                this.identifikasjonsnummer = queryResponseBase.data.hentIdenter.identer.first().ident // TODO::
+                                                this.fornavn = queryResponseBase.data.hentPerson.navn.first().fornavn
+                                                this.mellomnavn = queryResponseBase.data.hentPerson.navn.first()?.mellomnavn
+                                                this.etternavn = queryResponseBase.data.hentPerson.navn.first().etternavn
                                             }.build()
 
                                             val personValue = PersonValue.newBuilder().apply {
-                                                this.identifikasjonsnummer = queryResponseBase.data.hentIdenter?.something // TODO::
-                                                this.gradering = runCatching { queryResponseBase.data.hentPerson?.adressebeskyttelse?.first()?.gradering?.name }.getOrDefault(Gradering.UGRADERT.name)?.let { PersonValue.Gradering.valueOf(it) }
-                                                this.sikkerhetstiltak = queryResponseBase.data.hentPerson?.sikkerhetstiltak?.first()?.beskrivelse
-                                                this.kommunenummer = queryResponseBase.data.hentPerson?.bostedsadresse?.findKommunenummer()
-                                                this.region = queryResponseBase.data.hentPerson?.bostedsadresse?.findKommunenummer()?.substring(0, 2)
+                                                this.identifikasjonsnummer = queryResponseBase.data.hentIdenter.identer.first().ident // TODO::
+                                                this.gradering = runCatching { queryResponseBase.data.hentPerson.adressebeskyttelse?.first()?.gradering?.name }.getOrDefault(Gradering.UGRADERT.name)?.let { PersonValue.Gradering.valueOf(it) }
+                                                this.sikkerhetstiltak = queryResponseBase.data.hentPerson.sikkerhetstiltak?.first()?.beskrivelse
+                                                this.kommunenummer = queryResponseBase.data.hentPerson.bostedsadresse.findKommunenummer()
+                                                this.region = queryResponseBase.data.hentPerson.bostedsadresse.findKommunenummer().substring(0, 2)
                                             }.build()
 
                                             log.info { "Compare cache to find new and updated persons from pdl" }

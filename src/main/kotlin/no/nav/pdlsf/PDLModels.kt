@@ -166,7 +166,7 @@ data class QueryResponse(
         data class HentPerson(
             val adressebeskyttelse: List<Adressebeskyttelse>?,
             val bostedsadresse: Bostedsadresse,
-            val navn: List<Navn>?,
+            val navn: List<Navn>,
             val sikkerhetstiltak: List<Sikkerhetstiltak>?
         ) {
             @Serializable

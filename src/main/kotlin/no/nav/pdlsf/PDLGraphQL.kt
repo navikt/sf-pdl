@@ -68,7 +68,7 @@ private fun executeGraphQlQueryStringResponse(
 ).let { response ->
     when (response.status) {
         Status.OK -> {
-            log.debug { "GraphQL response ${response.bodyString()}" }
+            log.debug { "GraphQL response ${response.bodyString()}" } // TODO :: REMOVE
             response.bodyString()
         }
         else -> {
@@ -82,7 +82,7 @@ private fun executeGraphQlQueryStringResponse(
 fun queryGraphQlSFDetails(ident: String): QueryResponseBase {
     val query = getStringFromResource(GRAPHQL_QUERY).trim()
     val stringResponse = executeGraphQlQueryStringResponse(query, mapOf("ident" to ident))
-    log.info { "GaphQL response string - $stringResponse" }
+    log.debug { "GaphQL response string - $stringResponse" } // TODO :: REMOVE
     return if (!stringResponse.isNullOrEmpty()) {
         runCatching {
             val queryResponse = QueryResponse.fromJson(stringResponse)
@@ -94,7 +94,10 @@ fun queryGraphQlSFDetails(ident: String): QueryResponseBase {
             log.debug { "GraphQL result $result" }
             result
         }
-                .onFailure { "Failed handling graphql response - ${it.localizedMessage}" }
+                .onFailure {
+                    log.debug { "GaphQL response string - $stringResponse" } // TODO :: REMOVE
+                    log.error { "Failed handling graphql response - ${it.localizedMessage}" }
+                }
                 .getOrDefault(InvalidQueryResponse)
     } else {
         InvalidQueryResponse
