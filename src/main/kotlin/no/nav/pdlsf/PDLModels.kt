@@ -87,7 +87,7 @@ fun String.getQueryFromJson(): TopicQueryBase = runCatching {
     Json.nonstrict.parse<TopicQuery>(this)
 }
         .onFailure {
-            log.error { "Failed serialaize TopicQuery - ${it.localizedMessage}" }
+            log.error { "Failed serialize TopicQuery - ${it.localizedMessage}" }
         }
         .getOrDefault(InvalidTopicQuery)
 

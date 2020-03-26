@@ -82,21 +82,23 @@ internal fun work(params: Params) {
                 when (val v = cr.value()) {
                     null -> {
                         log.info { "Tombestone" }
-                        Unit
-                    } // TODO:: Tombestone
+                        Unit // TODO:: Tombestone
+                    }
                     is String -> if (v.isNotEmpty()) {
-                        log.info { v }
                         when (val query = v.getQueryFromJson()) {
-                            is InvalidTopicQuery -> Unit
+                            is InvalidTopicQuery -> {
+                                log.warn { "InvalidTopicQuery - $v" }
+                                Unit
+                            }
                             is TopicQuery -> {
 //                                if (query.isAlive) { // && query.inRegion("54")) {
-                                    log.debug { "Valid Query Object - $query" }
+                                    log.debug { "Valid TopicQuery - $query" }
                                     when (val res = queryGraphQlSFDetails(cr.key())) {
                                         is QueryErrorResponse -> {
                                             log.info { "QueryErrorResponse - $res" }
                                         } // TODO:: Something  HTTP 200, logisk error fra pdl
                                         is InvalidQueryResponse -> {
-                                            log.info { "InvalidQueryResponse - $res " }
+                                            log.warn { "InvalidQueryResponse - $res " }
                                         } // TODO:: Something Shit hit the fan
                                         is QueryResponse -> {
                                             log.info { "Create protobuf objects" }
