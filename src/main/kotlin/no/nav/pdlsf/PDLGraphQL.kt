@@ -86,12 +86,14 @@ fun queryGraphQlSFDetails(ident: String): QueryResponseBase {
     return if (!stringResponse.isNullOrEmpty()) {
         runCatching {
             val queryResponse = QueryResponse.fromJson(stringResponse)
-            if (queryResponse is QueryResponse) {
+            val result = if (queryResponse is QueryResponse) {
                 val queryResponseBase = if (queryResponse.errors.isNullOrEmpty()) queryResponse else QueryErrorResponse(queryResponse.errors)
                 queryResponseBase
             } else {
                 InvalidQueryResponse
             }
+            log.debug { "GraphQL result $result" }
+            result
         }
         .onFailure {
             log.debug { "GaphQL response string - $stringResponse" } // TODO :: REMOVE

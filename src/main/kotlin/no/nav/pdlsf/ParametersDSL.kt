@@ -11,11 +11,11 @@ object ParamsFactory {
 // TODO:: Read parameters from vault
 data class Params(
         // kafka details
-    val kafkaBrokers: String = System.getenv("KAFKA_BROKERS")?.toString() ?: "",
+    val kafkaBrokers: String = System.getenv("KAFKA_BROKERS")?.toString() ?: "localhost:9092",
     val kafkaSchemaRegistry: String = System.getenv("KAFKA_SCREG")?.toString() ?: "",
-    val kafkaClientID: String = System.getenv("KAFKA_CLIENTID")?.toString() ?: "",
+    val kafkaClientID: String = System.getenv("KAFKA_CLIENTID")?.toString() ?: "sf-pdl-v1",
     val kafkaProducerTimeout: Int = System.getenv("KAFKA_PRODUCERTIMEOUT")?.toInt() ?: 31_000,
-    val kafkaSecurity: String = System.getenv("KAFKA_SECURITY")?.toString()?.toUpperCase() ?: "",
+    val kafkaSecurity: String = System.getenv("KAFKA_SECURITY")?.toString()?.toUpperCase() ?: "FALSE",
     val kafkaSecProt: String = System.getenv("KAFKA_SECPROT")?.toString() ?: "",
     val kafkaSaslMec: String = System.getenv("KAFKA_SASLMEC")?.toString() ?: "",
     val kafkaUser: String = ("/var/run/secrets/nais.io/serviceuser/username".readFile() ?: "username"),

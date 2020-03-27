@@ -8,6 +8,9 @@ import no.nav.pdlsf.proto.PdlSfValuesProto.AccountValue
 import no.nav.pdlsf.proto.PdlSfValuesProto.PersonValue
 import no.nav.pdlsf.proto.PdlSfValuesProto.SfObjectEventKey
 import org.apache.kafka.clients.consumer.ConsumerConfig
+import org.apache.kafka.clients.producer.ProducerConfig
+import org.apache.kafka.clients.producer.ProducerRecord
+import org.apache.kafka.common.serialization.ByteArraySerializer
 
 private val log = KotlinLogging.logger {}
 
@@ -81,7 +84,7 @@ internal fun work(params: Params) {
         },
         listOf(params.kafkaTopicPdl), fromBeginning = true
     ) { cRecords ->
-        log.info { "Start building up map of persons and accounts kafka payload from PDL compaction log" }
+        log.info { "Start building up map of persons and accounts kafka payload from PDL compaction log, size  - ${cRecords.count()}" }
         if (!cRecords.isEmpty) {
             cRecords.forEach { cr ->
                 when (val v = cr.value()) {
@@ -156,7 +159,7 @@ internal fun work(params: Params) {
     }
         log.info { "Finish building up map of persons and accounts kafka payload from PDL compaction log. Account objects ${accountKafkaPayload.size}, person objects ${personKafkaPayload.size}" }
     // Write SF Object to SF topic
-/*    getKafkaProducerByConfig<ByteArray, ByteArray>(
+    getKafkaProducerByConfig<ByteArray, ByteArray>(
             mapOf(
                     ProducerConfig.BOOTSTRAP_SERVERS_CONFIG to params.kafkaBrokers,
                     ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG to ByteArraySerializer::class.java,
@@ -177,5 +180,5 @@ internal fun work(params: Params) {
         accountKafkaPayload.forEach { m ->
             this.send(ProducerRecord(params.kafkaTopicPdl, m.key, m.value))
         }
-    }*/
+    }
 }
