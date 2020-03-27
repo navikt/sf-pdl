@@ -22,7 +22,7 @@ internal fun work(params: Params) {
     val personCache: MutableMap<String, Int> = mutableMapOf()
 
     // Get Cachefrom SF topic
-/*    getKafkaConsumerByConfig<ByteArray, ByteArray>(
+    getKafkaConsumerByConfig<ByteArray, ByteArray>(
             mapOf(
                     ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG to params.kafkaBrokers,
                     ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to ByteArray::class.java,
@@ -44,8 +44,12 @@ internal fun work(params: Params) {
             cRecords.forEach { record ->
                 val aktoerId = SfObjectEventKey.parseFrom(record.key()).aktoerId
                 when (SfObjectEventKey.parseFrom(record.key()).sfObjectType) {
-                    SfObjectEventKey.SfObjectType.PERSON -> { personCache[aktoerId] = PersonValue.parseFrom(record.value()).hashCode() }
-                    SfObjectEventKey.SfObjectType.ACCOUNT -> { accountCache[aktoerId] = AccountValue.parseFrom(record.value()).hashCode() }
+                    SfObjectEventKey.SfObjectType.PERSON -> {
+                        personCache[aktoerId] = PersonValue.parseFrom(record.value()).hashCode()
+                    }
+                    SfObjectEventKey.SfObjectType.ACCOUNT -> {
+                        accountCache[aktoerId] = AccountValue.parseFrom(record.value()).hashCode()
+                    }
                     else -> log.error { "Unknown  Salesforce Object Type in Key" }
                 }
             }
@@ -55,7 +59,7 @@ internal fun work(params: Params) {
             ConsumerStates.IsFinished
         }
     }
-        log.debug { "Finished building up Cache of existing SF Objects compaction log size person ${personCache.size} */
+    log.debug { "Finished building up Cache of existing SF Objects compaction log size person ${personCache.size} " }
 
     // Get persons from PDL topic
     getKafkaConsumerByConfig<String, String>(
