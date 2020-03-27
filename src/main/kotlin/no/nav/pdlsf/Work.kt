@@ -93,7 +93,7 @@ internal fun work(params: Params) {
                         Unit // TODO:: Tombestone
                     }
                     else -> if (v.isNotEmpty()) {
-                        when (val query = v.getQueryFromJson()) {
+                        when (val query = v.getTopicQueryFromJsonString()) {
                             is InvalidTopicQuery -> {
                                 log.debug { "InvalidTopicQuery - $v" } // TODO :: REMOVE
                                 Unit

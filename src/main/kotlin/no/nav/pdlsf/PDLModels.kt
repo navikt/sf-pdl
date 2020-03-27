@@ -12,8 +12,6 @@ import kotlinx.serialization.PrimitiveKind
 import kotlinx.serialization.SerialDescriptor
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UnstableDefault
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.parse
 import mu.KotlinLogging
 import org.http4k.core.Status
 
@@ -83,13 +81,25 @@ internal fun List<Person.Bostedsadresse>.findGjelendeBostedsadresse(): Person.Bo
 
 @UnstableDefault
 @ImplicitReflectionSerializer
-fun String.getQueryFromJson(): TopicQueryBase = runCatching {
-    Json.nonstrict.parse<TopicQuery>(this)
+fun String.getTopicQueryFromJsonString(): TopicQueryBase = runCatching {
+    json.parse(TopicQuery.serializer(), this)
+    // Json.nonstrict.parse<TopicQuery>(this)
 }
         .onFailure {
             log.error { "Failed serialize TopicQuery - ${it.localizedMessage}" }
         }
         .getOrDefault(InvalidTopicQuery)
+
+@UnstableDefault
+@ImplicitReflectionSerializer
+fun String.getQueryResponseFromJsonString(): QueryResponseBase = runCatching {
+    json.parse(QueryResponse.serializer(), this)
+    // Json.nonstrict.parse<TopicQuery>(this)
+}
+        .onFailure {
+            log.error { "Failed serialize TopicQuery - ${it.localizedMessage}" }
+        }
+        .getOrDefault(InvalidQueryResponse)
 
 @Serializable
 enum class Endringstype {
@@ -256,11 +266,11 @@ data class QueryResponse(
             else -> Status.INTERNAL_SERVER_ERROR
         }
     }
-    companion object {
-        fun fromJson(data: String): QueryResponseBase = runCatching { json.parse(serializer(), data) }
-                .onFailure { "Parsing of query response failed - ${it.localizedMessage}" }
-                .getOrDefault(InvalidQueryResponse)
-    }
+//    companion object {
+//        fun fromJson(data: String): QueryResponseBase = runCatching { json.parse(serializer(), data) }
+//                .onFailure { "Parsing of query response failed - ${it.localizedMessage}" }
+//                .getOrDefault(InvalidQueryResponse)
+//    }
 }
 
 @Serializable
