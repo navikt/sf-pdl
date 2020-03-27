@@ -20,7 +20,7 @@ internal fun work(params: Params) {
     val personKafkaPayload: MutableMap<ByteArray, ByteArray> = mutableMapOf()
     val accountCache: MutableMap<String, Int> = mutableMapOf()
     val personCache: MutableMap<String, Int> = mutableMapOf()
-
+/*
     // Get Cachefrom SF topic
     getKafkaConsumerByConfig<ByteArray, ByteArray>(
             mapOf(
@@ -60,6 +60,7 @@ internal fun work(params: Params) {
         }
     }
     log.debug { "Finished building up Cache of existing SF Objects compaction log size person ${personCache.size} " }
+*/
 
     // Get persons from PDL topic
     getKafkaConsumerByConfig<String, String>(
