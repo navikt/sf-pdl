@@ -76,7 +76,7 @@ internal fun work(params: Params) {
         },
         listOf(params.kafkaTopicPdl), fromBeginning = true
     ) { cRecords ->
-//        log.info { "Start building up map of persons and accounts kafka payload from PDL compaction log" }
+        log.info { "Start building up map of persons and accounts kafka payload from PDL compaction log" }
         if (!cRecords.isEmpty) {
             cRecords.forEach { cr ->
                 when (val v = cr.value()) {
@@ -84,7 +84,7 @@ internal fun work(params: Params) {
                         log.info { "Tombestone" }
                         Unit // TODO:: Tombestone
                     }
-                    is String -> if (v.isNotEmpty()) {
+                    else -> if (v.isNotEmpty()) {
                         when (val query = v.getQueryFromJson()) {
                             is InvalidTopicQuery -> {
                                 log.debug { "InvalidTopicQuery - $v" } // TODO :: REMOVE
@@ -96,45 +96,45 @@ internal fun work(params: Params) {
                                 val queryResponseBase = queryGraphQlSFDetails(cr.key())
                                 log.debug { queryResponseBase.toString() } // TODO :: REMOVE
                                 when (queryResponseBase) {
-                                        is QueryErrorResponse -> {
-                                            log.debug { "QueryErrorResponse - $queryResponseBase" } // TODO :: REMOVE
-                                        } // TODO:: Something  HTTP 200, logisk error fra pdl
-                                        is InvalidQueryResponse -> {
-                                            log.debug { "InvalidQueryResponse i when sløyfe - $queryResponseBase " } // TODO :: REMOVE
-                                        } // TODO:: Something Shit hit the fan
-                                        is QueryResponse -> {
-                                            log.info { "Create protobuf objects" }
-                                            log.debug { "GrapgQl response - $queryResponseBase" } // TODO :: REMOVE
-                                            val accountKey = SfObjectEventKey.newBuilder().apply {
-                                                this.aktoerId = cr.key()
-                                                this.sfObjectType = SfObjectEventKey.SfObjectType.ACCOUNT
-                                            }.build().toByteArray()
+                                    is QueryErrorResponse -> {
+                                        log.debug { "QueryErrorResponse - $queryResponseBase" } // TODO :: REMOVE
+                                    } // TODO:: Something  HTTP 200, logisk error fra pdl
+                                    is InvalidQueryResponse -> {
+                                        log.debug { "InvalidQueryResponse i when sløyfe - $queryResponseBase " } // TODO :: REMOVE
+                                    } // TODO:: Something Shit hit the fan
+                                    is QueryResponse -> {
+                                        log.info { "Create protobuf objects" }
+                                        log.debug { "GrapgQl response - $queryResponseBase" } // TODO :: REMOVE
+                                        val accountKey = SfObjectEventKey.newBuilder().apply {
+                                            this.aktoerId = cr.key()
+                                            this.sfObjectType = SfObjectEventKey.SfObjectType.ACCOUNT
+                                        }.build().toByteArray()
 
-                                            val personKey = SfObjectEventKey.newBuilder().apply {
-                                                this.aktoerId = cr.key()
-                                                this.sfObjectType = SfObjectEventKey.SfObjectType.PERSON
-                                            }.build().toByteArray()
+                                        val personKey = SfObjectEventKey.newBuilder().apply {
+                                            this.aktoerId = cr.key()
+                                            this.sfObjectType = SfObjectEventKey.SfObjectType.PERSON
+                                        }.build().toByteArray()
 
-                                            val accountValue = AccountValue.newBuilder().apply {
-                                                this.identifikasjonsnummer = queryResponseBase.data.hentIdenter.identer.first().ident // TODO::
-                                                this.fornavn = queryResponseBase.data.hentPerson.navn.first().fornavn
-                                                this.mellomnavn = queryResponseBase.data.hentPerson.navn.first()?.mellomnavn
-                                                this.etternavn = queryResponseBase.data.hentPerson.navn.first().etternavn
-                                            }.build()
+                                        val accountValue = AccountValue.newBuilder().apply {
+                                            this.identifikasjonsnummer = queryResponseBase.data.hentIdenter.identer.first().ident // TODO::
+                                            this.fornavn = queryResponseBase.data.hentPerson.navn.first().fornavn
+                                            this.mellomnavn = queryResponseBase.data.hentPerson.navn.first().mellomnavn
+                                            this.etternavn = queryResponseBase.data.hentPerson.navn.first().etternavn
+                                        }.build()
 
-                                            val personValue = PersonValue.newBuilder().apply {
-                                                this.identifikasjonsnummer = queryResponseBase.data.hentIdenter.identer.first().ident // TODO::
-                                                this.gradering = runCatching { queryResponseBase.data.hentPerson.adressebeskyttelse?.first()?.gradering?.name }.getOrDefault(Gradering.UGRADERT.name)?.let { PersonValue.Gradering.valueOf(it) }
-                                                this.sikkerhetstiltak = queryResponseBase.data.hentPerson.sikkerhetstiltak?.first()?.beskrivelse
-                                                this.kommunenummer = queryResponseBase.data.hentPerson.bostedsadresse.first().findKommunenummer()
-                                                this.region = queryResponseBase.data.hentPerson.bostedsadresse.first().findKommunenummer().substring(0, 2)
-                                            }.build()
+                                        val personValue = PersonValue.newBuilder().apply {
+                                            this.identifikasjonsnummer = queryResponseBase.data.hentIdenter.identer.first().ident // TODO::
+                                            this.gradering = runCatching { queryResponseBase.data.hentPerson.adressebeskyttelse.first().gradering.name }.getOrDefault(Gradering.UGRADERT.name).let { PersonValue.Gradering.valueOf(it) }
+                                            this.sikkerhetstiltak = queryResponseBase.data.hentPerson.sikkerhetstiltak.first().beskrivelse
+                                            this.kommunenummer = queryResponseBase.data.hentPerson.bostedsadresse.first().findKommunenummer()
+                                            this.region = queryResponseBase.data.hentPerson.bostedsadresse.first().findKommunenummer().substring(0, 2)
+                                        }.build()
 
-                                            log.info { "Compare cache to find new and updated persons from pdl" }
-                                            if (accountCache[cr.key()]?.let { h -> h != accountCache.hashCode() } != false) accountKafkaPayload[accountKey] = accountValue.toByteArray()
-                                            if (personCache[cr.key()]?.let { h -> h != personCache.hashCode() } != false) personKafkaPayload[personKey] = personValue.toByteArray()
-                                        }
+                                        log.info { "Compare cache to find new and updated persons from pdl" }
+                                        if (accountCache[cr.key()]?.let { h -> h != accountCache.hashCode() } != false) accountKafkaPayload[accountKey] = accountValue.toByteArray()
+                                        if (personCache[cr.key()]?.let { h -> h != personCache.hashCode() } != false) personKafkaPayload[personKey] = personValue.toByteArray()
                                     }
+                                }
 //                                } else {
 //                                    Metrics.filterNoHit.inc()
 //                                }
