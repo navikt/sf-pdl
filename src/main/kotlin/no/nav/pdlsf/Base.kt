@@ -10,7 +10,12 @@ import org.http4k.client.ApacheClient
 import org.http4k.core.HttpHandler
 
 // internal val json = Json(JsonConfiguration.Stable)
-internal val json = Json(JsonConfiguration(ignoreUnknownKeys = true))
+internal val json = Json(JsonConfiguration(
+        ignoreUnknownKeys = true,
+        encodeDefaults = true,
+        isLenient = true
+    )
+)
 
 object Http {
     val client: HttpHandler by lazy { ApacheClient.proxy() }

@@ -101,17 +101,17 @@ enum class Endringstype {
 
 @Serializable
 data class Vegadresse(
-    val kommunenummer: String?
+    val kommunenummer: String? = null
 )
 
 @Serializable
 data class Matrikkeladresse(
-    val kommunenummer: String?
+    val kommunenummer: String? = null
 )
 
 @Serializable
 data class UkjentBosted(
-    val bostedskommune: String?
+    val bostedskommune: String? = null
 )
 
 @Serializable
@@ -155,7 +155,7 @@ object InvalidQueryResponse : QueryResponseBase()
 @Serializable
 data class QueryResponse(
     val data: Data,
-    val errors: List<Error>?
+    val errors: List<Error>? = emptyList()
 ) : QueryResponseBase() {
     @Serializable
     data class Data(
@@ -164,34 +164,53 @@ data class QueryResponse(
     ) {
         @Serializable
         data class HentPerson(
-            val adressebeskyttelse: List<Adressebeskyttelse>?,
-            val bostedsadresse: Bostedsadresse,
+            val adressebeskyttelse: List<Adressebeskyttelse>,
+            val bostedsadresse: List<Bostedsadresse>,
             val navn: List<Navn>,
-            val sikkerhetstiltak: List<Sikkerhetstiltak>?
+            val sikkerhetstiltak: List<Sikkerhetstiltak>
         ) {
             @Serializable
             data class Adressebeskyttelse(
                 val gradering: Gradering,
                 val folkeregistermetadata: Folkeregistermetadata?
-            )
+            ) {
+                @Serializable
+                data class Folkeregistermetadata(
+                    @Serializable(with = IsoLocalDateTimeSerializer::class)
+                    val opphoerstidspunkt: LocalDateTime?
+                )
+            }
             @Serializable
             data class Bostedsadresse(
-                val vegadresse: Vegadresse?,
-                val matrikkeladresse: Matrikkeladresse?,
-                val ukjentBosted: UkjentBosted?,
-                val folkeregistermetadata: Folkeregistermetadata,
-                val metadata: Metadata
-            )
+                val vegadresse: Vegadresse? = null, // TODO :: fjerne ?
+                val matrikkeladresse: Matrikkeladresse? = null,
+                val ukjentBosted: UkjentBosted? = null
+            ) {
+                @Serializable
+                data class Vegadresse(
+                    val kommunenummer: String
+                )
+                @Serializable
+                data class Matrikkeladresse(
+                    val kommunenummer: String
+                )
+                @Serializable
+                data class UkjentBosted(
+                    val bostedskommune: String
+                )
+            }
             @Serializable
             data class Navn(
                 val fornavn: String,
                 val mellomnavn: String?,
                 val etternavn: String,
-                val forkortetNavn: String?,
-                val orignaltNavn: String?,
-                val folkeregistermetadata: Folkeregistermetadata?,
                 val metadata: Metadata
-            )
+            ) {
+                @Serializable
+                data class Metadata(
+                    val master: String
+                )
+            }
             @Serializable
             data class Sikkerhetstiltak(
                 val beskrivelse: String,
@@ -201,10 +220,10 @@ data class QueryResponse(
         }
         @Serializable
         data class HentIdenter(
-            val identer: List<Ident>
+            val identer: List<Identer>
         ) {
             @Serializable
-            data class Ident(
+            data class Identer(
                 val ident: String
             )
         }

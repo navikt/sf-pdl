@@ -86,21 +86,19 @@ fun queryGraphQlSFDetails(ident: String): QueryResponseBase {
     return if (!stringResponse.isNullOrEmpty()) {
         runCatching {
             val queryResponse = QueryResponse.fromJson(stringResponse)
-            val result = if (queryResponse is QueryResponse) {
-                queryResponse.errors?.let { errors -> QueryErrorResponse(errors) } ?: queryResponse
+            if (queryResponse is QueryResponse) {
+                val queryResponseBase = if (queryResponse.errors.isNullOrEmpty()) queryResponse else QueryErrorResponse(queryResponse.errors)
+                queryResponseBase
             } else {
-                queryResponse
+                InvalidQueryResponse
             }
-            log.debug { "GraphQL result $result" }
-            result
         }
-                .onFailure {
-                    log.debug { "GaphQL response string - $stringResponse" } // TODO :: REMOVE
-                    log.error { "Failed handling graphql response - ${it.localizedMessage}" }
-                }
-                .getOrDefault(InvalidQueryResponse)
+        .onFailure {
+            log.debug { "GaphQL response string - $stringResponse" } // TODO :: REMOVE
+            log.error { "Failed handling graphql response - ${it.localizedMessage}" }
+        }
+        .getOrDefault(InvalidQueryResponse)
     } else {
         InvalidQueryResponse
     }
-    // return executeGraphQlQuery(query, mapOf("ident" to ident))
 }

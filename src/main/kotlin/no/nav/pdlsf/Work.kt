@@ -126,8 +126,8 @@ internal fun work(params: Params) {
                                                 this.identifikasjonsnummer = queryResponseBase.data.hentIdenter.identer.first().ident // TODO::
                                                 this.gradering = runCatching { queryResponseBase.data.hentPerson.adressebeskyttelse?.first()?.gradering?.name }.getOrDefault(Gradering.UGRADERT.name)?.let { PersonValue.Gradering.valueOf(it) }
                                                 this.sikkerhetstiltak = queryResponseBase.data.hentPerson.sikkerhetstiltak?.first()?.beskrivelse
-                                                this.kommunenummer = queryResponseBase.data.hentPerson.bostedsadresse.findKommunenummer()
-                                                this.region = queryResponseBase.data.hentPerson.bostedsadresse.findKommunenummer().substring(0, 2)
+                                                this.kommunenummer = queryResponseBase.data.hentPerson.bostedsadresse.first().findKommunenummer()
+                                                this.region = queryResponseBase.data.hentPerson.bostedsadresse.first().findKommunenummer().substring(0, 2)
                                             }.build()
 
                                             log.info { "Compare cache to find new and updated persons from pdl" }
