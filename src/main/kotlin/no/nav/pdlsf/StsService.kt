@@ -23,7 +23,6 @@ private fun fetchNewToken(): StsAccessTokenBase = Http.client.invoke(
                 .query("grant_type", "client_credentials"))
                 .query("scope", "openid")
 ).let { response ->
-    log.debug { response.toString() }
     when (response.status) {
         Status.OK -> json.parse<StsAccessToken>(response.bodyString())
         else -> {
