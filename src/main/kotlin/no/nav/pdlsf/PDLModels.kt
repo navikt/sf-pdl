@@ -266,27 +266,17 @@ data class QueryResponse(
             else -> Status.INTERNAL_SERVER_ERROR
         }
     }
-//    companion object {
-//        fun fromJson(data: String): QueryResponseBase = runCatching { json.parse(serializer(), data) }
-//                .onFailure { "Parsing of query response failed - ${it.localizedMessage}" }
-//                .getOrDefault(InvalidQueryResponse)
-//    }
 }
 
 @Serializable
 data class QueryErrorResponse(
     val errors: List<QueryResponse.Error>?
-) : QueryResponseBase() {
-
-    fun fromJson(data: String): QueryResponseBase = runCatching { json.parse(serializer(), data) }
-            .onFailure { "Parsing of query response failed - ${it.localizedMessage}" }
-            .getOrDefault(InvalidQueryResponse)
-}
+) : QueryResponseBase()
 
 @Serializable
 data class QueryRequest(
     val query: String,
-    val variables: Map<String, String>, // @ContextualSerialization val variables: Variables          Spennende å se om den fungerer, fungerer det ikke kan vi bare sette Map<String, String>
+    val variables: Map<String, String>,
     val operationName: String? = null
 ) {
     data class Variables(
