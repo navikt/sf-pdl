@@ -97,7 +97,7 @@ fun String.getQueryResponseFromJsonString(): QueryResponseBase = runCatching {
     // Json.nonstrict.parse<TopicQuery>(this)
 }
         .onFailure {
-            log.error { "Failed serialize TopicQuery - ${it.localizedMessage}" }
+            log.error { "Failed serialize GraphQL QueryResponse - ${it.localizedMessage}" }
         }
         .getOrDefault(InvalidQueryResponse)
 
