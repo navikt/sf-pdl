@@ -13,7 +13,7 @@ import kotlinx.serialization.SerialDescriptor
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UnstableDefault
 import mu.KotlinLogging
-import org.http4k.core.Status
+import no.nav.pdlsf.proto.PdlSfValuesProto
 
 private val log = KotlinLogging.logger { }
 
@@ -62,19 +62,6 @@ private fun Person.Bostedsadresse.findKommunenummer(): String {
             ?: "".also { Metrics.ingenAdresse.inc() }
 }
 
-fun QueryResponse.Data.HentPerson.Bostedsadresse.findKommunenummer(): String {
-    return vegadresse?.let { vegadresse ->
-        Metrics.vegadresse.inc()
-        vegadresse.kommunenummer }
-            ?: matrikkeladresse?.let { matrikkeladresse ->
-                Metrics.matrikkeladresse.inc()
-                matrikkeladresse.kommunenummer }
-            ?: ukjentBosted?.let { ukjentBosted ->
-                Metrics.ukjentBosted.inc()
-                ukjentBosted.bostedskommune }
-            ?: "".also { Metrics.ingenAdresse.inc() }
-}
-
 internal fun List<Person.Bostedsadresse>.findGjelendeBostedsadresse(): Person.Bostedsadresse? {
     return this.sortedWith(nullsFirst(compareBy { it.folkeregistermetadata.gyldighetstidspunkt })).firstOrNull { isNotOpphoert(it.folkeregistermetadata) }
 }
@@ -89,17 +76,6 @@ fun String.getTopicQueryFromJsonString(): TopicQueryBase = runCatching {
             log.error { "Failed serialize TopicQuery - ${it.localizedMessage}" }
         }
         .getOrDefault(InvalidTopicQuery)
-
-@UnstableDefault
-@ImplicitReflectionSerializer
-fun String.getQueryResponseFromJsonString(): QueryResponseBase = runCatching {
-    json.parse(QueryResponse.serializer(), this)
-    // Json.nonstrict.parse<TopicQuery>(this)
-}
-        .onFailure {
-            log.error { "Failed serialize GraphQL QueryResponse - ${it.localizedMessage}" }
-        }
-        .getOrDefault(InvalidQueryResponse)
 
 @Serializable
 enum class Endringstype {
@@ -159,131 +135,6 @@ enum class Gradering {
     UGRADERT
 }
 
-sealed class QueryResponseBase
-object InvalidQueryResponse : QueryResponseBase()
-
-@Serializable
-data class QueryResponse(
-    val data: Data,
-    val errors: List<Error>? = emptyList()
-) : QueryResponseBase() {
-    @Serializable
-    data class Data(
-        val hentPerson: HentPerson,
-        val hentIdenter: HentIdenter
-    ) {
-        @Serializable
-        data class HentPerson(
-            val adressebeskyttelse: List<Adressebeskyttelse>,
-            val bostedsadresse: List<Bostedsadresse>,
-            val navn: List<Navn>,
-            val sikkerhetstiltak: List<Sikkerhetstiltak>
-        ) {
-            @Serializable
-            data class Adressebeskyttelse(
-                val gradering: Gradering,
-                val folkeregistermetadata: Folkeregistermetadata?
-            ) {
-                @Serializable
-                data class Folkeregistermetadata(
-                    @Serializable(with = IsoLocalDateTimeSerializer::class)
-                    val opphoerstidspunkt: LocalDateTime?
-                )
-            }
-            @Serializable
-            data class Bostedsadresse(
-                val vegadresse: Vegadresse? = null, // TODO :: fjerne ?
-                val matrikkeladresse: Matrikkeladresse? = null,
-                val ukjentBosted: UkjentBosted? = null
-            ) {
-                @Serializable
-                data class Vegadresse(
-                    val kommunenummer: String
-                )
-                @Serializable
-                data class Matrikkeladresse(
-                    val kommunenummer: String
-                )
-                @Serializable
-                data class UkjentBosted(
-                    val bostedskommune: String
-                )
-            }
-            @Serializable
-            data class Navn(
-                val fornavn: String,
-                val mellomnavn: String?,
-                val etternavn: String,
-                val metadata: Metadata
-            ) {
-                @Serializable
-                data class Metadata(
-                    val master: String
-                )
-            }
-            @Serializable
-            data class Sikkerhetstiltak(
-                val beskrivelse: String,
-                @Serializable(with = IsoLocalDateSerializer::class)
-                val gyldigTilOgMed: LocalDate
-            )
-        }
-        @Serializable
-        data class HentIdenter(
-            val identer: List<Identer>
-        ) {
-            @Serializable
-            data class Identer(
-                val ident: String
-            )
-        }
-    }
-
-    @Serializable
-    data class Error(
-        val extensions: Extensions,
-        val locations: List<Location>,
-        val path: List<String>,
-        val message: String
-    ) {
-        @Serializable
-        data class Extensions(
-            val classification: String,
-            val code: String?
-        )
-        @Serializable
-        data class Location(
-            val column: Int,
-            val line: Int
-        )
-
-        fun mapToHttpCode(): Status = when (this.extensions.code) {
-            "unauthenticated" -> Status.FORBIDDEN
-            "unauthorized" -> Status.UNAUTHORIZED
-            "not_found" -> Status.NOT_FOUND
-            "bad_request" -> Status.BAD_REQUEST
-            "server_error" -> Status.INTERNAL_SERVER_ERROR
-            else -> Status.INTERNAL_SERVER_ERROR
-        }
-    }
-}
-
-@Serializable
-data class QueryErrorResponse(
-    val errors: List<QueryResponse.Error>?
-) : QueryResponseBase()
-
-@Serializable
-data class QueryRequest(
-    val query: String,
-    val variables: Map<String, String>,
-    val operationName: String? = null
-) {
-    data class Variables(
-        val variables: Map<String, Any>
-    )
-}
-
 sealed class TopicQueryBase
 object InvalidTopicQuery : TopicQueryBase()
 
@@ -317,4 +168,71 @@ data class Person(
         @Serializable(with = IsoLocalDateSerializer::class)
         val doedsdato: LocalDate?
     )
+}
+
+internal sealed class ObjectInCacheStatus() {
+    object New : ObjectInCacheStatus()
+    object Updated : ObjectInCacheStatus()
+    object NoChange : ObjectInCacheStatus()
+}
+
+internal fun Map<String, Int>.exists(aktoerId: String, newValueHash: Int): ObjectInCacheStatus =
+        if (!this.containsKey(aktoerId))
+            ObjectInCacheStatus.New
+        else if ((this.containsKey(aktoerId) && this[aktoerId] != newValueHash))
+            ObjectInCacheStatus.Updated
+        else
+            ObjectInCacheStatus.NoChange
+
+data class EventKey(
+    val aktoerId: String,
+    val sfObjectType: PdlSfValuesProto.SfObjectEventKey.SfObjectType
+) {
+    fun toProto(): PdlSfValuesProto.SfObjectEventKey =
+            PdlSfValuesProto.SfObjectEventKey.newBuilder().apply {
+                aktoerId = this@EventKey.aktoerId
+                sfObjectType = this@EventKey.sfObjectType
+            }
+                    .build()
+}
+
+data class PValue(
+    val idententifikasjonsnummer: String = "",
+    val gradering: PdlSfValuesProto.PersonValue.Gradering = PdlSfValuesProto.PersonValue.Gradering.UGRADERT,
+    val sikkerhetstiltak: String = "",
+    val kommunenummer: String = "",
+    val region: String = ""
+) {
+    fun toProto(): PdlSfValuesProto.PersonValue =
+            PdlSfValuesProto.PersonValue.newBuilder().apply {
+                identifikasjonsnummer = this@PValue.idententifikasjonsnummer
+                gradering = this@PValue.gradering
+                sikkerhetstiltak = this@PValue.sikkerhetstiltak
+                kommunenummer = this@PValue.kommunenummer
+                region = this@PValue.region
+            }
+                    .build()
+}
+
+data class AValue(
+    val idententifikasjonsnummer: String = "",
+    val fornavn: String = "",
+    val mellomnavn: String = "",
+    val etternavn: String = ""
+) {
+    fun toProto(): PdlSfValuesProto.AccountValue =
+            PdlSfValuesProto.AccountValue.newBuilder().apply {
+                identifikasjonsnummer = this@AValue.idententifikasjonsnummer
+                fornavn = this@AValue.fornavn
+                mellomnavn = this@AValue.mellomnavn
+                etternavn = this@AValue.etternavn
+            }
+                    .build()
+}
+
+fun createSfObjectEventKey(aktoerId: String, sfObjectType: PdlSfValuesProto.SfObjectEventKey.SfObjectType): PdlSfValuesProto.SfObjectEventKey {
+    return EventKey(
+            aktoerId = aktoerId,
+            sfObjectType = sfObjectType
+    ).toProto()
 }

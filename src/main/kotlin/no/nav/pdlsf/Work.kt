@@ -4,12 +4,9 @@ import io.confluent.kafka.serializers.KafkaAvroDeserializer
 import kotlinx.serialization.ImplicitReflectionSerializer
 import kotlinx.serialization.UnstableDefault
 import mu.KotlinLogging
-import no.nav.pdlsf.proto.PdlSfValuesProto.AccountValue
-import no.nav.pdlsf.proto.PdlSfValuesProto.PersonValue
 import no.nav.pdlsf.proto.PdlSfValuesProto.SfObjectEventKey
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerConfig
-import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.ByteArraySerializer
 
 private val log = KotlinLogging.logger {}
@@ -19,8 +16,6 @@ private val log = KotlinLogging.logger {}
 internal fun work(params: Params) {
     log.info { "bootstrap work session starting" }
 
-    val accountKafkaPayload: MutableMap<ByteArray, ByteArray> = mutableMapOf()
-    val personKafkaPayload: MutableMap<ByteArray, ByteArray> = mutableMapOf()
     val accountCache: MutableMap<String, Int> = mutableMapOf()
     val personCache: MutableMap<String, Int> = mutableMapOf()
 /*
@@ -100,9 +95,7 @@ internal fun work(params: Params) {
                             }
                             is TopicQuery -> {
 //                                if (query.isAlive) { // && query.inRegion("54")) {
-                                log.debug { "Query graphQL for key  - ${cr.key()}" }
-                                val queryResponseBase = queryGraphQlSFDetails(cr.key())
-                                when (queryResponseBase) {
+                                when (val queryResponseBase = queryGraphQlSFDetails(cr.key())) {
                                     is QueryErrorResponse -> {
                                         log.debug { "QueryErrorResponse on aktørId - ${cr.key()}" }
                                     } // TODO:: Something  HTTP 200, logisk error fra pdl
@@ -111,52 +104,20 @@ internal fun work(params: Params) {
                                     } // TODO:: Something Shit hit the fan
                                     is QueryResponse -> {
                                         log.info { "Create protobuf objects" }
-                                        log.debug { "GrapgQl response - $queryResponseBase" } // TODO :: REMOVE
+                                        val accountKey = createSfObjectEventKey(cr.key(), SfObjectEventKey.SfObjectType.ACCOUNT)
+                                        val personKey = createSfObjectEventKey(cr.key(), SfObjectEventKey.SfObjectType.PERSON)
 
-                                        val accountKey = runCatching {
-                                            SfObjectEventKey.newBuilder().apply {
-                                                this.aktoerId = cr.key()
-                                                this.sfObjectType = SfObjectEventKey.SfObjectType.ACCOUNT
-                                            }.build().toByteArray()
+                                        val accountValue = queryResponseBase.toAccountValue()
+                                        val personValue = queryResponseBase.toPersonValue()
+
+                                        log.info { "Compare cache to find new and updated persons from pdl" }
+                                        if (accountCache.exists(cr.key(), accountValue.hashCode()) != ObjectInCacheStatus.NoChange) {
+                                            // TODO :: send to process to topic
                                         }
-                                                .onFailure { log.error { "Error creating protobuf account key - ${it.localizedMessage}" } }
-                                                .getOrThrow()
 
-                                        val personKey = runCatching {
-                                            SfObjectEventKey.newBuilder().apply {
-                                                this.aktoerId = cr.key()
-                                                this.sfObjectType = SfObjectEventKey.SfObjectType.PERSON
-                                            }.build().toByteArray()
+                                        if (personCache.exists(cr.key(), personValue.hashCode()) != ObjectInCacheStatus.NoChange) {
+                                            // TODO :: send to process to topic
                                         }
-                                                .onFailure { log.error { "Error creating protobuf person key - ${it.localizedMessage}" } }
-                                                .getOrThrow()
-
-                                        val accountValue = runCatching {
-                                            AccountValue.newBuilder().apply {
-                                                this.identifikasjonsnummer = queryResponseBase.data.hentIdenter.identer.first().ident // TODO::
-                                                this.fornavn = queryResponseBase.data.hentPerson.navn.first().fornavn
-                                                this.mellomnavn = queryResponseBase.data.hentPerson.navn.first().mellomnavn
-                                                this.etternavn = queryResponseBase.data.hentPerson.navn.first().etternavn
-                                            }.build()
-                                        }
-                                                .onFailure { log.error { "Error creating protobuf account value - ${it.localizedMessage}" } }
-                                                .getOrThrow()
-
-                                        val personValue = runCatching {
-                                            PersonValue.newBuilder().apply {
-                                                this.identifikasjonsnummer = queryResponseBase.data.hentIdenter.identer.first().ident // TODO::
-                                                this.gradering = runCatching { queryResponseBase.data.hentPerson.adressebeskyttelse.first().gradering.name }.getOrDefault(Gradering.UGRADERT.name).let { PersonValue.Gradering.valueOf(it) }
-                                                this.sikkerhetstiltak = queryResponseBase.data.hentPerson.sikkerhetstiltak.first().beskrivelse
-                                                this.kommunenummer = queryResponseBase.data.hentPerson.bostedsadresse.first().findKommunenummer()
-                                                this.region = queryResponseBase.data.hentPerson.bostedsadresse.first().findKommunenummer().substring(0, 2)
-                                            }.build()
-                                        }
-                                                .onFailure { log.error { "Error creating protobuf person value - ${it.localizedMessage}" } }
-                                                .getOrThrow()
-
-                                            log.info { "Compare cache to find new and updated persons from pdl" }
-                                            if (accountCache[cr.key()]?.let { h -> h != accountCache.hashCode() } != false) accountKafkaPayload[accountKey] = accountValue.toByteArray()
-                                            if (personCache[cr.key()]?.let { h -> h != personCache.hashCode() } != false) personKafkaPayload[personKey] = personValue.toByteArray()
                                         }
                                     }
                                 }
@@ -173,7 +134,7 @@ internal fun work(params: Params) {
             ConsumerStates.IsFinished
         }
     }
-        log.info { "Finish building up map of persons and accounts kafka payload from PDL compaction log. Account objects ${accountKafkaPayload.size}, person objects ${personKafkaPayload.size}" }
+        log.info { "Finish building up map of persons and accounts protobuf object and send them to Salesforce topic" }
     // Write SF Object to SF topic
     getKafkaProducerByConfig<ByteArray, ByteArray>(
             mapOf(
@@ -189,12 +150,14 @@ internal fun work(params: Params) {
                 else map
             }
     ) {
-        log.info { "Send protobuf SF objects to topic" }
-        personKafkaPayload.forEach { m ->
-            this.send(ProducerRecord(params.kafkaTopicPdl, m.key, m.value))
-        }
-        accountKafkaPayload.forEach { m ->
-            this.send(ProducerRecord(params.kafkaTopicPdl, m.key, m.value))
-        }
     }
+//    ) {
+//        log.info { "Send protobuf SF objects to topic" }
+//        personKafkaPayload.forEach { m ->
+//            this.send(ProducerRecord(params.kafkaTopicPdl, m.key, m.value))
+//        }
+//        accountKafkaPayload.forEach { m ->
+//            this.send(ProducerRecord(params.kafkaTopicPdl, m.key, m.value))
+//        }
+//    }
 }
