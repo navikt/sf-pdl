@@ -6,8 +6,11 @@ import io.kotlintest.shouldBe
 import io.kotlintest.specs.StringSpec
 import no.nav.common.JAASCredential
 import no.nav.common.KafkaEnvironment
+import no.nav.pdlsf.proto.PdlSfValuesProto
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerConfig
+import org.apache.kafka.common.serialization.ByteArrayDeserializer
+import org.apache.kafka.common.serialization.ByteArraySerializer
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.kafka.common.serialization.StringSerializer
 
@@ -23,12 +26,62 @@ class KafkaDSLTests : StringSpec() {
         users = listOf(kuP1),
         autoStart = true
     )
-        .addProducerToTopic(kuP1.username, topicString)
-        .addProducerToTopic(kuP1.username, topicByteArray)
-        .addConsumerToTopic(kuC1.username, topicString)
-        .addConsumerToTopic(kuC1.username, topicByteArray)
+            .addProducerToTopic(kuP1.username, topicString)
+            .addProducerToTopic(kuP1.username, topicByteArray)
+            .addConsumerToTopic(kuC1.username, topicString)
+            .addConsumerToTopic(kuC1.username, topicByteArray)
+            .setLogCompaction(topicByteArray)
 
     private val dataSet = setOf("event1", "event2", "event3")
+
+    private data class Person(
+        val aktoerID: String,
+        val identifikasjonsnummer: String = aktoerID,
+        val fornavn: String = aktoerID,
+        val mellomnavn: String = aktoerID,
+        val etternavn: String = aktoerID,
+        val gradering: PdlSfValuesProto.PersonValue.Gradering = PdlSfValuesProto.PersonValue.Gradering.UGRADERT,
+        val sikkerhetstiltak: String = aktoerID,
+        val kommunenummer: String = aktoerID,
+        val region: String = aktoerID
+    ) {
+        fun toSFPerson(): Pair<ByteArray, ByteArray> =
+                Pair(
+                        PdlSfValuesProto.SfObjectEventKey.newBuilder().apply {
+                            aktoerId = this@Person.aktoerID
+                            sfObjectTypeValue = PdlSfValuesProto.SfObjectEventKey.SfObjectType.PERSON_VALUE
+                        }
+                                .build()
+                                .toByteArray(),
+                        PdlSfValuesProto.PersonValue.newBuilder().apply {
+                            identifikasjonsnummer = this@Person.identifikasjonsnummer
+                            gradering = this@Person.gradering
+                            sikkerhetstiltak = this@Person.sikkerhetstiltak
+                            kommunenummer = this@Person.kommunenummer
+                            region = this@Person.region
+                        }
+                                .build()
+                                .toByteArray()
+                )
+
+        fun toSFAccount(): Pair<ByteArray, ByteArray> =
+                Pair(
+                        PdlSfValuesProto.SfObjectEventKey.newBuilder().apply {
+                            aktoerId = this@Person.aktoerID
+                            sfObjectTypeValue = PdlSfValuesProto.SfObjectEventKey.SfObjectType.ACCOUNT_VALUE
+                        }
+                                .build()
+                                .toByteArray(),
+                        PdlSfValuesProto.AccountValue.newBuilder().apply {
+                            identifikasjonsnummer = this@Person.identifikasjonsnummer
+                            fornavn = this@Person.fornavn
+                            mellomnavn = this@Person.mellomnavn
+                            etternavn = this@Person.etternavn
+                        }
+                                .build()
+                                .toByteArray()
+                )
+    }
 
     init {
 
@@ -107,7 +160,7 @@ class KafkaDSLTests : StringSpec() {
                     ProducerConfig.CLIENT_ID_CONFIG to "TEST"
                 ).addKafkaSecurity(kuP1.username, kuP1.password)
             ) {
-                listOf("event1", "event2", "event3")
+                dataSet
                     .fold(true) { acc, s -> acc && send(topicString, "", s) } shouldBe true
             } shouldBe true
         }
@@ -152,6 +205,57 @@ class KafkaDSLTests : StringSpec() {
             } shouldBe true
 
             noOfRecs shouldBe dataSet.size
+        }
+
+        "KafkaDSL should be able to produce events to log compaction" {
+
+            getKafkaProducerByConfig<ByteArray, ByteArray>(
+                    mapOf(
+                            ProducerConfig.BOOTSTRAP_SERVERS_CONFIG to ke.brokersURL,
+                            ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG to ByteArraySerializer::class.java,
+                            ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG to ByteArraySerializer::class.java,
+                            ProducerConfig.ACKS_CONFIG to "all",
+                            ProducerConfig.CLIENT_ID_CONFIG to "TEST"
+                    ).addKafkaSecurity(kuP1.username, kuP1.password)
+            ) {
+                (dataSet.map { Person(it).toSFAccount() } + dataSet.map { Person(it).toSFPerson() })
+                        .fold(true) { acc, e -> acc && send(topicByteArray, e.first, e.second) } shouldBe true
+            } shouldBe true
+        }
+
+        "KafkaDSL should be able to consume all entries from log compaction" {
+
+            var noOfRecs = 0
+
+            getKafkaConsumerByConfig<ByteArray, ByteArray>(
+                    mapOf(
+                            ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG to ke.brokersURL,
+                            ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to ByteArrayDeserializer::class.java,
+                            ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to ByteArrayDeserializer::class.java,
+                            ConsumerConfig.GROUP_ID_CONFIG to "TEST",
+                            ConsumerConfig.CLIENT_ID_CONFIG to "TEST",
+                            ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG to "false"
+                    ).addKafkaSecurity(kuC1.username, kuC1.password),
+                    listOf(topicByteArray),
+                    fromBeginning = true
+            ) { cRecords ->
+                noOfRecs += cRecords.count()
+                cRecords
+                        .fold(true) { acc, r ->
+                            acc && when (r.key().protobufSafeParseKey().sfObjectType) {
+                                PdlSfValuesProto.SfObjectEventKey.SfObjectType.PERSON -> {
+                                    dataSet.contains(r.value().protobufSafeParsePerson().identifikasjonsnummer)
+                                }
+                                PdlSfValuesProto.SfObjectEventKey.SfObjectType.ACCOUNT -> {
+                                    dataSet.contains(r.value().protobufSafeParseAccount().identifikasjonsnummer)
+                                }
+                                else -> false
+                            }
+                        } shouldBe true
+                if (!cRecords.isEmpty) ConsumerStates.IsOkNoCommit else ConsumerStates.IsFinished
+            } shouldBe true
+
+            noOfRecs shouldBe (dataSet.size) * 2
         }
     }
 
