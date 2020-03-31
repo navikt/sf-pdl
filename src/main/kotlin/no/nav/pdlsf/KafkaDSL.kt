@@ -9,6 +9,7 @@ import org.apache.kafka.clients.CommonClientConfigs
 import org.apache.kafka.clients.consumer.ConsumerRecords
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.clients.producer.KafkaProducer
+import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.TopicPartition
 import org.apache.kafka.common.config.SaslConfigs
 
@@ -132,3 +133,12 @@ internal fun Map<String, Serializable>.addKafkaSecurity(
 
     mMap.toMap()
 }
+
+internal fun <K, V> KafkaProducer<K, V>.send(topic: String, key: K, value: V): Boolean = this.runCatching {
+    send(ProducerRecord(topic, key, value)).get().hasOffset()
+}
+        .onFailure {
+            ServerState.state = ServerStates.KafkaIssues
+            log.error { "KafkaProducer failure when sending data to kafka - ${it.message}" }
+        }
+        .getOrDefault(false)
