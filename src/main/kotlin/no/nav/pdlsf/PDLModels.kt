@@ -2,7 +2,6 @@ package no.nav.pdlsf
 
 import com.google.protobuf.InvalidProtocolBufferException
 import mu.KotlinLogging
-import no.nav.pdlsf.proto.PersonProto
 import no.nav.pdlsf.proto.PersonProto.PersonKey
 import no.nav.pdlsf.proto.PersonProto.PersonValue
 import org.apache.kafka.clients.consumer.ConsumerConfig
@@ -51,7 +50,7 @@ data class Person(
     val fornavn: String = "",
     val mellomnavn: String = "",
     val etternavn: String = "",
-    val adressebeskyttelse: PersonProto.Adressebeskyttelse.Gradering = PersonProto.Adressebeskyttelse.Gradering.UGRADERT,
+    val adressebeskyttelse: PersonValue.Gradering = PersonValue.Gradering.UGRADERT,
     val sikkerhetstiltak: List<String> = emptyList(),
     val kommunenummer: String = "",
     val region: String = "",
@@ -66,13 +65,10 @@ data class Person(
                 fornavn = this@Person.fornavn
                 mellomnavn = this@Person.mellomnavn
                 etternavn = this@Person.etternavn
-                adressebeskyttelse = PersonProto.Adressebeskyttelse.newBuilder().apply {
-                    gradering = this@Person.adressebeskyttelse
-                }.build()
+                adressebeskyttelse = this@Person.adressebeskyttelse
                 this@Person.sikkerhetstiltak.forEach {
                     addSikkerhetstiltak(it)
                 }
-                // sikkerhetstiltakList. = this@Person.sikkerhetstiltak
                 kommunenummer = this@Person.kommunenummer
                 region = this@Person.region
                 doed = this@Person.doed

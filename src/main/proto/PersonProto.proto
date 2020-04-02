@@ -17,15 +17,6 @@ message PersonValue {
   string fornavn = 2;
   string mellomnavn = 3;
   string etternavn = 4;
-  Adressebeskyttelse adressebeskyttelse = 5;
-  repeated string sikkerhetstiltak = 6;
-  string kommunenummer = 7;
-  string region = 8;
-  bool doed = 9;
-}
-
-message Adressebeskyttelse {
-  Gradering gradering = 1;
 
   // default value will be the one with 0
   enum Gradering {
@@ -34,4 +25,10 @@ message Adressebeskyttelse {
     STRENGT_FORTROLIG = 2;
     STRENGT_FORTROLIG_UTLAND = 3;
   }
+
+  Gradering adressebeskyttelse = 5;
+  repeated string sikkerhetstiltak = 6;
+  string kommunenummer = 7;
+  string region = 8;
+  bool doed = 9;
 }

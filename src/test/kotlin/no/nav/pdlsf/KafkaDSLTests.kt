@@ -40,7 +40,7 @@ class KafkaDSLTests : StringSpec() {
         val fornavn: String = aktoerID,
         val mellomnavn: String = aktoerID,
         val etternavn: String = aktoerID,
-        val gradering: PersonProto.Adressebeskyttelse.Gradering = PersonProto.Adressebeskyttelse.Gradering.UGRADERT,
+        val gradering: PersonProto.PersonValue.Gradering = PersonProto.PersonValue.Gradering.UGRADERT,
         val sikkerhetstiltak: List<String> = listOf(aktoerID),
         val kommunenummer: String = aktoerID,
         val region: String = aktoerID
@@ -54,9 +54,7 @@ class KafkaDSLTests : StringSpec() {
                                 .toByteArray(),
                         PersonProto.PersonValue.newBuilder().apply {
                             identifikasjonsnummer = this@Person.identifikasjonsnummer
-                            adressebeskyttelse = PersonProto.Adressebeskyttelse.newBuilder().apply {
-                                gradering = this@Person.gradering
-                            }.build()
+                            adressebeskyttelse = this@Person.gradering
                             sikkerhetstiltak.forEach { addSikkerhetstiltak(it) }
                             kommunenummer = this@Person.kommunenummer
                             region = this@Person.region

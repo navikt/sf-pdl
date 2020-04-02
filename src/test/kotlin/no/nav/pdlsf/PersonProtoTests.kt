@@ -29,9 +29,9 @@ class PersonProtoTests : StringSpec() {
 
         "Three different gradering should give different hash code" {
             listOf(
-                    Person(adressebeskyttelse = PersonProto.Adressebeskyttelse.Gradering.UGRADERT),
-                    Person(adressebeskyttelse = PersonProto.Adressebeskyttelse.Gradering.FORTROLIG),
-                    Person(adressebeskyttelse = PersonProto.Adressebeskyttelse.Gradering.STRENGT_FORTROLIG)
+                    Person(adressebeskyttelse = PersonProto.PersonValue.Gradering.UGRADERT),
+                    Person(adressebeskyttelse = PersonProto.PersonValue.Gradering.FORTROLIG),
+                    Person(adressebeskyttelse = PersonProto.PersonValue.Gradering.STRENGT_FORTROLIG)
             ).map { it.toPersonProto().second.hashCode() }.toSet() shouldHaveSize(3)
         }
     }

@@ -288,9 +288,9 @@ fun QueryResponse.toPerson(): Person {
             fornavn = this.data.hentPerson.navn.filter { it.metadata.master.equals("FREG") }.first().fornavn,
             mellomnavn = this.data.hentPerson.navn.filter { it.metadata.master.equals("FREG") }.first().mellomnavn.orEmpty(),
             etternavn = this.data.hentPerson.navn.filter { it.metadata.master.equals("FREG") }.first().etternavn,
-            adressebeskyttelse = runCatching { this.data.hentPerson.adressebeskyttelse.first().gradering.name }.getOrDefault(Gradering.UGRADERT.name).let { PersonProto.Adressebeskyttelse.Gradering.valueOf(it) },
+            adressebeskyttelse = runCatching { this.data.hentPerson.adressebeskyttelse.first().gradering.name }.getOrDefault(Gradering.UGRADERT.name).let { PersonProto.PersonValue.Gradering.valueOf(it) },
             sikkerhetstiltak = this.data.hentPerson.sikkerhetstiltak.map { it.beskrivelse }.toList(),
-            kommunenummer = runCatching {this.data.hentPerson.bostedsadresse.first().findKommunenummer()}.getOrDefault(""),
+            kommunenummer = runCatching { this.data.hentPerson.bostedsadresse.first().findKommunenummer() }.getOrDefault(""),
             region = runCatching { this.data.hentPerson.bostedsadresse.first().findKommunenummer().substring(0, 2) }.getOrDefault(""),
             doed = this.data.hentPerson.doedsfall.isNotEmpty()
         )
