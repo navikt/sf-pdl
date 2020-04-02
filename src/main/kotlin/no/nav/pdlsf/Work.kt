@@ -77,9 +77,14 @@ internal fun work(params: Params) {
                                 } // TODO:: Something Shit hit the fan
                                 is QueryResponse -> {
                                     log.info { "Compare cache to find new and updated persons from pdl" }
-                                    val personProto = queryResponseBase.toPerson().toPersonProto()
+                                    val person = queryResponseBase.toPerson()
+                                    log.info { "Person $person" }
+                                    val personProto = person.toPersonProto()
+                                    log.info { "Person proto key ${personProto.first}" }
+                                    log.info { "Person proto value ${personProto.second}" }
                                     if (cache.exists(cr.key(), personProto.second.hashCode()) != ObjectInCacheStatus.NoChange) {
                                         kafkaMessages[personProto.first.toByteArray()] = personProto.second.toByteArray()
+                                        log.info { "Added to kafkaMessages $person" }
                                     }
                                 }
                             }

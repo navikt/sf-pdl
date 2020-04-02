@@ -28,7 +28,7 @@ fun createCache(params: Params): Map<String, Int> {
             },
             listOf(params.kafkaTopicSf), fromBeginning = true
     ) { cRecords ->
-        log.debug { "Start building up Cache of existing SF Objects compaction log" }
+        log.info { "Start building up Cache of existing SF Objects compaction log" }
         if (!cRecords.isEmpty) {
             cRecords.forEach { record ->
                 val aktoerId = PersonKey.parseFrom(record.key()).aktoerId
@@ -36,12 +36,12 @@ fun createCache(params: Params): Map<String, Int> {
             }
             ConsumerStates.IsOkNoCommit
         } else {
-            log.info { "Kafka events completed for now - leaving kafka consumer loop" }
+            log.info { "Kafka events completed for now creating cache - leaving kafka consumer loop" }
             ConsumerStates.IsFinished
         }
     }
 
-    log.debug { "Finished building up Cache of compaction log size person ${cache.size}" }
+    log.info { "Finished building up Cache of compaction log size person ${cache.size}" }
     return cache
 }
 
