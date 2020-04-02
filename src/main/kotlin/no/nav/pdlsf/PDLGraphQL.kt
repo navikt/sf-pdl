@@ -282,7 +282,7 @@ enum class Gradering {
 }
 
 fun QueryResponse.toPerson(): Person {
-    return Person(
+    return runCatching { Person(
             aktoerId = this.data.hentIdenter.identer.first { it.gruppe == QueryResponse.Data.HentIdenter.Identer.IdentGruppe.AKTORID }.ident,
             identifikasjonsnummer = this.data.hentIdenter.identer.first { it.gruppe == QueryResponse.Data.HentIdenter.Identer.IdentGruppe.FOLKEREGISTERIDENT }.ident,
             fornavn = this.data.hentPerson.navn.filter { it.metadata.master.equals("FREG") }.first().fornavn,
@@ -293,7 +293,10 @@ fun QueryResponse.toPerson(): Person {
             kommunenummer = this.data.hentPerson.bostedsadresse.first().findKommunenummer(),
             region = kotlin.runCatching { this.data.hentPerson.bostedsadresse.first().findKommunenummer().substring(0, 2) }.getOrDefault(""),
             doed = this.data.hentPerson.doedsfall.isNotEmpty()
-    )
+        )
+    }
+            .onFailure { log.error { "Error creating Person from a grapQL query response ${it.localizedMessage}" } }
+            .getOrThrow()
 }
 
 fun QueryResponse.Data.HentPerson.Bostedsadresse.findKommunenummer(): String {
