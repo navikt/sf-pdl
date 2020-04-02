@@ -17,6 +17,11 @@ internal fun work(params: Params) {
     log.info { "bootstrap work session starting" }
     // Get Cachefrom SF topic
     val cache = createCache(params)
+    if (ServerState.state == ServerStates.KafkaIssues && cache.isEmpty()) {
+        log.error { "Terminating work session since cache is empty due to kafka issues" }
+        return
+    }
+
     log.info { "Cache created from SF topic ${cache.size}" }
     log.info { "Get kafkaproducer to send protobuf person objects to SF topic" }
     getKafkaProducerByConfig<ByteArray, ByteArray>(

@@ -20,7 +20,6 @@ fun createCache(params: Params): Map<String, Int> {
                     ConsumerConfig.GROUP_ID_CONFIG to params.kafkaClientID,
                     ConsumerConfig.CLIENT_ID_CONFIG to params.kafkaClientID,
                     ConsumerConfig.AUTO_OFFSET_RESET_CONFIG to "earliest",
-                    // ConsumerConfig.MAX_POLL_RECORDS_CONFIG to 100, // 200 is the maximum batch size accepted by salesforce
                     ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG to "false"
             ).let { cMap ->
                 if (params.kafkaSecurityEnabled())
