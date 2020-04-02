@@ -290,8 +290,8 @@ fun QueryResponse.toPerson(): Person {
             etternavn = this.data.hentPerson.navn.filter { it.metadata.master.equals("FREG") }.first().etternavn,
             adressebeskyttelse = runCatching { this.data.hentPerson.adressebeskyttelse.first().gradering.name }.getOrDefault(Gradering.UGRADERT.name).let { PersonProto.Adressebeskyttelse.Gradering.valueOf(it) },
             sikkerhetstiltak = this.data.hentPerson.sikkerhetstiltak.map { it.beskrivelse }.toList(),
-            kommunenummer = this.data.hentPerson.bostedsadresse.first().findKommunenummer(),
-            region = kotlin.runCatching { this.data.hentPerson.bostedsadresse.first().findKommunenummer().substring(0, 2) }.getOrDefault(""),
+            kommunenummer = runCatching {this.data.hentPerson.bostedsadresse.first().findKommunenummer()}.getOrDefault(""),
+            region = runCatching { this.data.hentPerson.bostedsadresse.first().findKommunenummer().substring(0, 2) }.getOrDefault(""),
             doed = this.data.hentPerson.doedsfall.isNotEmpty()
         )
     }
