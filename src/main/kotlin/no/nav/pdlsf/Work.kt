@@ -17,9 +17,8 @@ internal fun work(params: Params) {
     log.info { "bootstrap work session starting" }
     // Get Cachefrom SF topic
     val cache = createCache(params)
-
-    log.info { "Finish building up map of persons and accounts protobuf object and send them to Salesforce topic" }
-    // Write SF Object to SF topic
+    log.info { "Cache created from SF topic ${cache.size}" }
+    log.info { "Get kafkaproducer to send protobuf person objects to SF topic" }
     getKafkaProducerByConfig<ByteArray, ByteArray>(
             mapOf(
                     ProducerConfig.BOOTSTRAP_SERVERS_CONFIG to params.kafkaBrokers,
@@ -35,7 +34,6 @@ internal fun work(params: Params) {
             }
     ) {
 
-        // Get persons from PDL topic
         val kafkaMessages: MutableMap<ByteArray, ByteArray> = mutableMapOf()
 
         getKafkaConsumerByConfig<String, String>(
@@ -47,7 +45,7 @@ internal fun work(params: Params) {
                         ConsumerConfig.GROUP_ID_CONFIG to params.kafkaClientID,
                         ConsumerConfig.CLIENT_ID_CONFIG to params.kafkaClientID,
                         ConsumerConfig.AUTO_OFFSET_RESET_CONFIG to "earliest",
-                        // ConsumerConfig.MAX_POLL_RECORDS_CONFIG to 100, // 200 is the maximum batch size accepted by salesforce
+                        ConsumerConfig.MAX_POLL_RECORDS_CONFIG to 200, // 200 is the maximum batch size accepted by salesforce
                         ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG to "false"
                 ).let { cMap ->
                     if (params.kafkaSecurityEnabled())
@@ -56,7 +54,7 @@ internal fun work(params: Params) {
                 },
                 listOf(params.kafkaTopicPdl), fromBeginning = true
         ) { cRecords ->
-            log.info { "Start building up map of persons and accounts kafka payload from PDL compaction log, size  - ${cRecords.count()}" }
+            log.info { "Start building up map of person from PDL compaction log, size  - ${cRecords.count()}" }
             if (!cRecords.isEmpty) {
                 cRecords.forEach { cr ->
                     when (val v = cr.value()) {
@@ -68,10 +66,10 @@ internal fun work(params: Params) {
                         else -> if (v.isNotEmpty()) {
                             when (val queryResponseBase = queryGraphQlSFDetails(cr.key())) {
                                 is QueryErrorResponse -> {
-                                    log.debug { "QueryErrorResponse on aktørId - ${cr.key()}" }
+                                    log.info { "QueryErrorResponse on aktørId - ${cr.key()}" }
                                 } // TODO:: Something  HTTP 200, logisk error fra pdl
                                 is InvalidQueryResponse -> {
-                                    log.debug { "InvalidQueryResponse on aktørId - ${cr.key()} " }
+                                    log.info { "InvalidQueryResponse on aktørId - ${cr.key()} " }
                                 } // TODO:: Something Shit hit the fan
                                 is QueryResponse -> {
                                     log.info { "Compare cache to find new and updated persons from pdl" }

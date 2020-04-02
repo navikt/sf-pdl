@@ -110,7 +110,7 @@ fun queryGraphQlSFDetails(ident: String): QueryResponseBase {
             result
         }
         .onFailure {
-            log.debug { "GaphQL response string - $stringResponse" } // TODO :: REMOVE
+            log.debug { "GaphQL response string on failure- $stringResponse" } // TODO :: REMOVE
             log.error { "Failed handling graphql response - ${it.localizedMessage}" }
         }
         .getOrDefault(InvalidQueryResponse)
@@ -168,20 +168,14 @@ data class QueryResponse(
         ) {
             @Serializable
             data class Adressebeskyttelse(
-                val gradering: Gradering,
-                val folkeregistermetadata: Folkeregistermetadata?
-            ) {
-                @Serializable
-                data class Folkeregistermetadata(
-                    @Serializable(with = IsoLocalDateTimeSerializer::class)
-                    val opphoerstidspunkt: LocalDateTime?
-                )
-            }
+                val gradering: Gradering
+            )
+
             @Serializable
             data class Bostedsadresse(
-                val vegadresse: Vegadresse? = null, // TODO :: fjerne ?
-                val matrikkeladresse: Matrikkeladresse? = null,
-                val ukjentBosted: UkjentBosted? = null
+                val vegadresse: Vegadresse?,
+                val matrikkeladresse: Matrikkeladresse?,
+                val ukjentBosted: UkjentBosted?
             ) {
                 @Serializable
                 data class Vegadresse(
@@ -215,9 +209,7 @@ data class QueryResponse(
             }
             @Serializable
             data class Sikkerhetstiltak(
-                val beskrivelse: String,
-                @Serializable(with = IsoLocalDateSerializer::class)
-                val gyldigTilOgMed: LocalDate
+                val beskrivelse: String
             )
         }
         @Serializable
