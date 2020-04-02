@@ -22,7 +22,6 @@ internal fun work(params: Params) {
         return
     }
 
-    log.info { "Cache created from SF topic ${cache.size}" }
     log.info { "Get kafkaproducer to send protobuf person objects to SF topic" }
     getKafkaProducerByConfig<ByteArray, ByteArray>(
             mapOf(

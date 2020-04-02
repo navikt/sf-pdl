@@ -6,6 +6,7 @@ import no.nav.pdlsf.proto.PersonProto
 import no.nav.pdlsf.proto.PersonProto.PersonKey
 import no.nav.pdlsf.proto.PersonProto.PersonValue
 import org.apache.kafka.clients.consumer.ConsumerConfig
+import org.apache.kafka.common.serialization.ByteArrayDeserializer
 
 private val log = KotlinLogging.logger { }
 
@@ -15,11 +16,10 @@ fun createCache(params: Params): Map<String, Int> {
     getKafkaConsumerByConfig<ByteArray, ByteArray>(
             mapOf(
                     ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG to params.kafkaBrokers,
-                    ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to ByteArray::class.java,
-                    ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to ByteArray::class.java,
+                    ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to ByteArrayDeserializer::class.java,
+                    ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to ByteArrayDeserializer::class.java,
                     ConsumerConfig.GROUP_ID_CONFIG to params.kafkaClientID,
                     ConsumerConfig.CLIENT_ID_CONFIG to params.kafkaClientID,
-                    ConsumerConfig.AUTO_OFFSET_RESET_CONFIG to "earliest",
                     ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG to "false"
             ).let { cMap ->
                 if (params.kafkaSecurityEnabled())
