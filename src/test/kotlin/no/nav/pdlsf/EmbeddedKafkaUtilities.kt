@@ -1,8 +1,6 @@
 package no.nav.pdlsf
 
-import com.google.protobuf.InvalidProtocolBufferException
 import no.nav.common.KafkaEnvironment
-import no.nav.pdlsf.proto.PdlSfValuesProto
 import org.apache.kafka.clients.admin.AlterConfigOp
 import org.apache.kafka.clients.admin.ConfigEntry
 import org.apache.kafka.common.acl.AccessControlEntry
@@ -53,28 +51,4 @@ internal fun KafkaEnvironment.setLogCompaction(topicName: String) = this.let { k
 
     ke.adminClient?.incrementalAlterConfigs(configReq)
     ke
-}
-
-internal fun ByteArray.protobufSafeParseKey(): PdlSfValuesProto.SfObjectEventKey = this.let { ba ->
-    try {
-        PdlSfValuesProto.SfObjectEventKey.parseFrom(ba)
-    } catch (e: InvalidProtocolBufferException) {
-        PdlSfValuesProto.SfObjectEventKey.getDefaultInstance()
-    }
-}
-
-internal fun ByteArray.protobufSafeParseAccount(): PdlSfValuesProto.AccountValue = this.let { ba ->
-    try {
-        PdlSfValuesProto.AccountValue.parseFrom(ba)
-    } catch (e: InvalidProtocolBufferException) {
-        PdlSfValuesProto.AccountValue.getDefaultInstance()
-    }
-}
-
-internal fun ByteArray.protobufSafeParsePerson(): PdlSfValuesProto.PersonValue = this.let { ba ->
-    try {
-        PdlSfValuesProto.PersonValue.parseFrom(ba)
-    } catch (e: InvalidProtocolBufferException) {
-        PdlSfValuesProto.PersonValue.getDefaultInstance()
-    }
 }

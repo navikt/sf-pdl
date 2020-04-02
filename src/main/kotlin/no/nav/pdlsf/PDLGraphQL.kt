@@ -2,23 +2,32 @@ package no.nav.pdlsf
 
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import kotlinx.serialization.Decoder
+import kotlinx.serialization.Encoder
 import kotlinx.serialization.ImplicitReflectionSerializer
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.PrimitiveDescriptor
+import kotlinx.serialization.PrimitiveKind
+import kotlinx.serialization.SerialDescriptor
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UnstableDefault
 import kotlinx.serialization.stringify
 import mu.KotlinLogging
-import no.nav.pdlsf.proto.PdlSfValuesProto
+import no.nav.pdlsf.proto.PersonProto
 import org.http4k.core.Method
 import org.http4k.core.Status
 
 private val log = KotlinLogging.logger { }
 private const val GRAPHQL_QUERY = "/graphql/query.graphql"
 
+@OptIn(UnstableDefault::class)
+@UnstableDefault
 @ImplicitReflectionSerializer
 private fun executeGraphQlQuery(
     query: String,
     variables: Map<String, String>
-): QueryResponseBase = Http.client.invoke(
+) = Http.client.invoke(
         org.http4k.core.Request(Method.POST, ParamsFactory.p.pdlGraphQlUrl)
                 .header("x-nav-apiKey", ParamsFactory.p.pdlGraphQlApiKey)
                 .header("Tema", "GEN")
@@ -110,6 +119,32 @@ fun queryGraphQlSFDetails(ident: String): QueryResponseBase {
     }
 }
 
+object IsoLocalDateSerializer : LocalDateSerializer(DateTimeFormatter.ISO_LOCAL_DATE)
+
+open class LocalDateSerializer(private val formatter: DateTimeFormatter) : KSerializer<LocalDate> {
+    override val descriptor: SerialDescriptor = PrimitiveDescriptor("LocalDate", PrimitiveKind.STRING) // StringDescriptor.withName("java.time.LocalDate")
+    override fun deserialize(decoder: Decoder): LocalDate {
+        return LocalDate.parse(decoder.decodeString(), formatter)
+    }
+
+    override fun serialize(encoder: Encoder, obj: LocalDate) {
+        encoder.encodeString(obj.format(formatter))
+    }
+}
+
+object IsoLocalDateTimeSerializer : LocalDateTimeSerializer(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+
+open class LocalDateTimeSerializer(private val formatter: DateTimeFormatter) : KSerializer<LocalDateTime> {
+    override val descriptor: SerialDescriptor = PrimitiveDescriptor("LocalDateTime", PrimitiveKind.STRING) // StringDescriptor.withName("java.time.LocalDateTime")
+    override fun deserialize(decoder: Decoder): LocalDateTime {
+        return LocalDateTime.parse(decoder.decodeString(), formatter)
+    }
+
+    override fun serialize(encoder: Encoder, obj: LocalDateTime) {
+        encoder.encodeString(obj.format(formatter))
+    }
+}
+
 sealed class QueryResponseBase
 object InvalidQueryResponse : QueryResponseBase()
 
@@ -127,6 +162,7 @@ data class QueryResponse(
         data class HentPerson(
             val adressebeskyttelse: List<Adressebeskyttelse>,
             val bostedsadresse: List<Bostedsadresse>,
+            val doedsfall: List<Doedsfall>,
             val navn: List<Navn>,
             val sikkerhetstiltak: List<Sikkerhetstiltak>
         ) {
@@ -161,6 +197,11 @@ data class QueryResponse(
                 )
             }
             @Serializable
+            data class Doedsfall(
+                @Serializable(with = IsoLocalDateSerializer::class)
+                val doedsdato: LocalDate
+            )
+            @Serializable
             data class Navn(
                 val fornavn: String,
                 val mellomnavn: String?,
@@ -185,8 +226,14 @@ data class QueryResponse(
         ) {
             @Serializable
             data class Identer(
-                val ident: String
-            )
+                val ident: String,
+                val gruppe: IdentGruppe
+            ) {
+                @Serializable
+                enum class IdentGruppe {
+                    AKTORID, FOLKEREGISTERIDENT, NPID
+                }
+            }
         }
     }
 
@@ -235,23 +282,26 @@ data class QueryRequest(
     )
 }
 
-fun QueryResponse.toPersonValue(): PdlSfValuesProto.PersonValue {
-    return PValue(
-            idententifikasjonsnummer = this.data.hentIdenter.identer.first().ident,
-            gradering = runCatching { this.data.hentPerson.adressebeskyttelse.first().gradering.name }.getOrDefault(Gradering.UGRADERT.name).let { PdlSfValuesProto.PersonValue.Gradering.valueOf(it) },
-            sikkerhetstiltak = this.data.hentPerson.sikkerhetstiltak.first().beskrivelse,
-            kommunenummer = this.data.hentPerson.bostedsadresse.first().findKommunenummer(),
-            region = this.data.hentPerson.bostedsadresse.first().findKommunenummer().substring(0, 2)
-    ).toProto()
+enum class Gradering {
+    STRENGT_FORTROLIG_UTLAND,
+    STRENGT_FORTROLIG,
+    FORTROLIG,
+    UGRADERT
 }
 
-fun QueryResponse.toAccountValue(): PdlSfValuesProto.AccountValue {
-    return AValue(
-            idententifikasjonsnummer = this.data.hentIdenter.identer.first().ident,
-            fornavn = this.data.hentPerson.navn.first().fornavn,
-            mellomnavn = this.data.hentPerson.navn.first().mellomnavn.orEmpty(),
-            etternavn = this.data.hentPerson.navn.first().etternavn
-    ).toProto()
+fun QueryResponse.toPerson(): Person {
+    return Person(
+            aktoerId = this.data.hentIdenter.identer.first { it.gruppe == QueryResponse.Data.HentIdenter.Identer.IdentGruppe.AKTORID }.ident,
+            identifikasjonsnummer = this.data.hentIdenter.identer.first { it.gruppe == QueryResponse.Data.HentIdenter.Identer.IdentGruppe.FOLKEREGISTERIDENT }.ident,
+            fornavn = this.data.hentPerson.navn.filter { it.metadata.master.equals("FREG") }.first().fornavn,
+            mellomnavn = this.data.hentPerson.navn.filter { it.metadata.master.equals("FREG") }.first().mellomnavn.orEmpty(),
+            etternavn = this.data.hentPerson.navn.filter { it.metadata.master.equals("FREG") }.first().etternavn,
+            adressebeskyttelse = runCatching { this.data.hentPerson.adressebeskyttelse.first().gradering.name }.getOrDefault(Gradering.UGRADERT.name).let { PersonProto.Adressebeskyttelse.Gradering.valueOf(it) },
+            sikkerhetstiltak = this.data.hentPerson.sikkerhetstiltak.map { it.beskrivelse }.toList(),
+            kommunenummer = this.data.hentPerson.bostedsadresse.first().findKommunenummer(),
+            region = kotlin.runCatching { this.data.hentPerson.bostedsadresse.first().findKommunenummer().substring(0, 2) }.getOrDefault(""),
+            doed = this.data.hentPerson.doedsfall.isNotEmpty()
+    )
 }
 
 fun QueryResponse.Data.HentPerson.Bostedsadresse.findKommunenummer(): String {
@@ -271,7 +321,6 @@ fun QueryResponse.Data.HentPerson.Bostedsadresse.findKommunenummer(): String {
 @ImplicitReflectionSerializer
 fun String.getQueryResponseFromJsonString(): QueryResponseBase = runCatching {
     json.parse(QueryResponse.serializer(), this)
-    // Json.nonstrict.parse<TopicQuery>(this)
 }
         .onFailure {
             log.error { "Failed serialize GraphQL QueryResponse - ${it.localizedMessage}" }

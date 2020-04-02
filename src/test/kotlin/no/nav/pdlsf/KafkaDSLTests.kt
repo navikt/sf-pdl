@@ -6,7 +6,7 @@ import io.kotlintest.shouldBe
 import io.kotlintest.specs.StringSpec
 import no.nav.common.JAASCredential
 import no.nav.common.KafkaEnvironment
-import no.nav.pdlsf.proto.PdlSfValuesProto
+import no.nav.pdlsf.proto.PersonProto
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
@@ -40,43 +40,26 @@ class KafkaDSLTests : StringSpec() {
         val fornavn: String = aktoerID,
         val mellomnavn: String = aktoerID,
         val etternavn: String = aktoerID,
-        val gradering: PdlSfValuesProto.PersonValue.Gradering = PdlSfValuesProto.PersonValue.Gradering.UGRADERT,
-        val sikkerhetstiltak: String = aktoerID,
+        val gradering: PersonProto.Adressebeskyttelse.Gradering = PersonProto.Adressebeskyttelse.Gradering.UGRADERT,
+        val sikkerhetstiltak: List<String> = listOf(aktoerID),
         val kommunenummer: String = aktoerID,
         val region: String = aktoerID
     ) {
-        fun toSFPerson(): Pair<ByteArray, ByteArray> =
+        fun toPerson(): Pair<ByteArray, ByteArray> =
                 Pair(
-                        PdlSfValuesProto.SfObjectEventKey.newBuilder().apply {
+                        PersonProto.PersonKey.newBuilder().apply {
                             aktoerId = this@Person.aktoerID
-                            sfObjectTypeValue = PdlSfValuesProto.SfObjectEventKey.SfObjectType.PERSON_VALUE
                         }
                                 .build()
                                 .toByteArray(),
-                        PdlSfValuesProto.PersonValue.newBuilder().apply {
+                        PersonProto.PersonValue.newBuilder().apply {
                             identifikasjonsnummer = this@Person.identifikasjonsnummer
-                            gradering = this@Person.gradering
-                            sikkerhetstiltak = this@Person.sikkerhetstiltak
+                            adressebeskyttelse = PersonProto.Adressebeskyttelse.newBuilder().apply {
+                                gradering = this@Person.gradering
+                            }.build()
+                            sikkerhetstiltak.forEach { addSikkerhetstiltak(it) }
                             kommunenummer = this@Person.kommunenummer
                             region = this@Person.region
-                        }
-                                .build()
-                                .toByteArray()
-                )
-
-        fun toSFAccount(): Pair<ByteArray, ByteArray> =
-                Pair(
-                        PdlSfValuesProto.SfObjectEventKey.newBuilder().apply {
-                            aktoerId = this@Person.aktoerID
-                            sfObjectTypeValue = PdlSfValuesProto.SfObjectEventKey.SfObjectType.ACCOUNT_VALUE
-                        }
-                                .build()
-                                .toByteArray(),
-                        PdlSfValuesProto.AccountValue.newBuilder().apply {
-                            identifikasjonsnummer = this@Person.identifikasjonsnummer
-                            fornavn = this@Person.fornavn
-                            mellomnavn = this@Person.mellomnavn
-                            etternavn = this@Person.etternavn
                         }
                                 .build()
                                 .toByteArray()
@@ -218,7 +201,7 @@ class KafkaDSLTests : StringSpec() {
                             ProducerConfig.CLIENT_ID_CONFIG to "TEST"
                     ).addKafkaSecurity(kuP1.username, kuP1.password)
             ) {
-                (dataSet.map { Person(it).toSFAccount() } + dataSet.map { Person(it).toSFPerson() })
+                (dataSet.map { Person(it).toPerson() } + dataSet.map { Person(it).toPerson() })
                         .fold(true) { acc, e -> acc && send(topicByteArray, e.first, e.second) } shouldBe true
             } shouldBe true
         }
@@ -242,15 +225,7 @@ class KafkaDSLTests : StringSpec() {
                 noOfRecs += cRecords.count()
                 cRecords
                         .fold(true) { acc, r ->
-                            acc && when (r.key().protobufSafeParseKey().sfObjectType) {
-                                PdlSfValuesProto.SfObjectEventKey.SfObjectType.PERSON -> {
-                                    dataSet.contains(r.value().protobufSafeParsePerson().identifikasjonsnummer)
-                                }
-                                PdlSfValuesProto.SfObjectEventKey.SfObjectType.ACCOUNT -> {
-                                    dataSet.contains(r.value().protobufSafeParseAccount().identifikasjonsnummer)
-                                }
-                                else -> false
-                            }
+                            acc && dataSet.contains(r.value().protobufSafeParseValue().identifikasjonsnummer)
                         } shouldBe true
                 if (!cRecords.isEmpty) ConsumerStates.IsOkNoCommit else ConsumerStates.IsFinished
             } shouldBe true

@@ -2,7 +2,6 @@ package no.nav.pdlsf
 
 sealed class ServerStates {
     object IsOk : ServerStates()
-    object SalesforceIssues : ServerStates()
     object KafkaIssues : ServerStates()
     object KafkaConsumerIssues : ServerStates()
     object ProtobufIssues : ServerStates()
