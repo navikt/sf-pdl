@@ -27,7 +27,7 @@ private const val GRAPHQL_QUERY = "/graphql/query.graphql"
 private fun executeGraphQlQuery(
     query: String,
     variables: Map<String, String>
-) = Http.client.invoke(
+): QueryResponseBase = Http.client.invoke(
         org.http4k.core.Request(Method.POST, ParamsFactory.p.pdlGraphQlUrl)
                 .header("x-nav-apiKey", ParamsFactory.p.pdlGraphQlApiKey)
                 .header("Tema", "GEN")
@@ -42,19 +42,10 @@ private fun executeGraphQlQuery(
 ).let { response ->
     when (response.status) {
         Status.OK -> {
-            log.debug { "GraphQL response ${response.bodyString()}" }
-            runCatching {
-                val queryResponse = response.bodyString().getQueryResponseFromJsonString()
-                val result = if (queryResponse is QueryResponse) {
-                    queryResponse.errors?.let { errors -> QueryErrorResponse(errors) } ?: queryResponse
-                } else {
-                    queryResponse
-                }
-                log.debug { "GraphQL result $result" }
-                result
-            }
-                    .onFailure { "Failed handling graphql response - ${it.localizedMessage}" }
-                    .getOrDefault(InvalidQueryResponse)
+            log.debug { "GraphQL response string ${response.bodyString()}" } // TODO :: REMOVE
+            val result = response.bodyString().getQueryResponseFromJsonString()
+            log.debug { "GraphQL result $result" }
+            result
         }
         else -> {
             log.error { "PDL GraphQl request failed - ${response.toMessage()}" }
@@ -64,59 +55,31 @@ private fun executeGraphQlQuery(
 }
 
 @ImplicitReflectionSerializer
-private fun executeGraphQlQueryStringResponse(
-    query: String,
-    variables: Map<String, String>
-): String = Http.client.invoke(
-        org.http4k.core.Request(Method.POST, ParamsFactory.p.pdlGraphQlUrl)
-                .header("x-nav-apiKey", ParamsFactory.p.pdlGraphQlApiKey)
-                .header("Tema", "GEN")
-                .header("Authorization", "Bearer ${(getStsToken() as StsAccessToken).accessToken}")
-                .header("Nav-Consumer-Token", "Bearer ${(getStsToken() as StsAccessToken).accessToken}")
-                .header("Cache-Control", "no-cache")
-                .header("Content-Type", "application/json")
-                .body(json.stringify(QueryRequest(
-                        query = query,
-                        variables = variables
-                )))
-).let { response ->
-    when (response.status) {
-        Status.OK -> {
-            log.debug { "GraphQL response ${response.bodyString()}" } // TODO :: REMOVE
-            response.bodyString()
-        }
-        else -> {
-            log.error { "PDL GraphQl request failed - ${response.toMessage()}" }
-            ""
-        }
-    }
-}
-
-@ImplicitReflectionSerializer
-fun queryGraphQlSFDetails(ident: String): QueryResponseBase {
+fun getPersonFromGraphQL(ident: String): PersonBase {
     val query = getStringFromResource(GRAPHQL_QUERY).trim()
-    val stringResponse = executeGraphQlQueryStringResponse(query, mapOf("ident" to ident))
-    log.debug { "GaphQL response string - $stringResponse" } // TODO :: REMOVE
-    return if (stringResponse.isNotEmpty()) {
-        parseGraphQLResponse(stringResponse)
-    } else {
-        InvalidQueryResponse
-    }
-}
+    val response = executeGraphQlQuery(query, mapOf("ident" to ident))
+    log.debug { "GraphQL response - $response" }
 
-@OptIn(UnstableDefault::class)
-@ImplicitReflectionSerializer
-fun parseGraphQLResponse(stringResponse: String): QueryResponseBase {
-    return runCatching {
-        val result = stringResponse.getQueryResponseFromJsonString()
-        log.debug { "GraphQL result $result" }
-        result
-    }
-            .onFailure {
-                log.debug { "GaphQL response string on failure- $stringResponse" } // TODO :: REMOVE
-                log.error { "Failed handling graphql response - ${it.localizedMessage}" }
+    return when (response) {
+        is QueryErrorResponse -> {
+            if (response.errors.first().mapToHttpCode().code == 404) {
+                log.warn { "GraphQL aktørId $ident ikke funnet" }
+                PersonUnknown
+            } else {
+                log.error { "GraphQL aktørId $ident  feilet - ${response.errors.first().message}" }
+                PersonError
             }
-            .getOrDefault(InvalidQueryResponse)
+        }
+        is InvalidQueryResponse -> {
+            log.error { "Unable to pare query response on aktørId - $ident " }
+            PersonInvalid
+        }
+        is QueryResponse -> {
+            val person = response.toPerson()
+            log.debug { "Person $person" }
+            person
+        }
+    }
 }
 
 object IsoLocalDateSerializer : LocalDateSerializer(DateTimeFormatter.ISO_LOCAL_DATE)
@@ -246,23 +209,22 @@ data class QueryResponse(
             val column: Int,
             val line: Int
         )
-
-        fun mapToHttpCode(): Status = when (this.extensions.code) {
-            "unauthenticated" -> Status.FORBIDDEN
-            "unauthorized" -> Status.UNAUTHORIZED
-            "not_found" -> Status.NOT_FOUND
-            "bad_request" -> Status.BAD_REQUEST
-            "server_error" -> Status.INTERNAL_SERVER_ERROR
-            else -> Status.INTERNAL_SERVER_ERROR
-        }
     }
 }
 
 @Serializable
 data class QueryErrorResponse(
-    val errors: List<QueryResponse.Error>?
+    val errors: List<QueryResponse.Error>
 ) : QueryResponseBase()
 
+fun QueryResponse.Error.mapToHttpCode(): Status = when (this.extensions.code) {
+    "unauthenticated" -> Status.FORBIDDEN
+    "unauthorized" -> Status.UNAUTHORIZED
+    "not_found" -> Status.NOT_FOUND
+    "bad_request" -> Status.BAD_REQUEST
+    "server_error" -> Status.INTERNAL_SERVER_ERROR
+    else -> Status.INTERNAL_SERVER_ERROR
+}
 @Serializable
 data class QueryRequest(
     val query: String,
@@ -280,6 +242,18 @@ enum class Gradering {
     FORTROLIG,
     UGRADERT
 }
+
+@UnstableDefault
+@ImplicitReflectionSerializer
+fun String.getQueryResponseFromJsonString(): QueryResponseBase = runCatching {
+    runCatching {
+        json.parse(QueryResponse.serializer(), this)
+    }.getOrNull()?.let { it } ?: json.parse(QueryErrorResponse.serializer(), this)
+}
+        .onFailure {
+            log.error { "Failed serialize GraphQL QueryResponse - ${it.localizedMessage}" }
+        }
+        .getOrDefault(InvalidQueryResponse)
 
 fun QueryResponse.toPerson(): Person {
     return runCatching { Person(
@@ -311,15 +285,3 @@ fun QueryResponse.Data.HentPerson.Bostedsadresse.findKommunenummer(): String {
                 ukjentBosted.bostedskommune }
             ?: "".also { Metrics.ingenAdresse.inc() }
 }
-
-@UnstableDefault
-@ImplicitReflectionSerializer
-fun String.getQueryResponseFromJsonString(): QueryResponseBase = runCatching {
-    runCatching {
-        json.parse(QueryResponse.serializer(), this)
-    }.getOrNull()?.let { it } ?: json.parse(QueryErrorResponse.serializer(), this)
-}
-        .onFailure {
-            log.error { "Failed serialize GraphQL QueryResponse - ${it.localizedMessage}" }
-        }
-        .getOrDefault(InvalidQueryResponse)

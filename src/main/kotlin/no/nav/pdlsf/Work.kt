@@ -61,32 +61,31 @@ internal fun work(params: Params) {
             log.info { "Start building up map of person from PDL compaction log, size  - ${cRecords.count()}" }
             if (!cRecords.isEmpty) {
                 cRecords.forEach { cr ->
-                    when (val v = cr.value()) {
+                    val person: PersonBase = when (val v = cr.value()) {
                         null -> {
                             log.info { "Tombestone" }
-                            // TODO :: Modellere inn Tombestone
-                            Unit
+                            PersonTombestone
                         }
                         else -> if (v.isNotEmpty()) {
-                            when (val queryResponseBase = queryGraphQlSFDetails(cr.key())) {
-                                is QueryErrorResponse -> {
-                                    log.info { "QueryErrorResponse on aktørId - ${cr.key()}" }
-                                } // TODO:: Something  HTTP 200, logisk error fra pdl
-                                is InvalidQueryResponse -> {
-                                    log.info { "InvalidQueryResponse on aktørId - ${cr.key()} " }
-                                } // TODO:: Something Shit hit the fan
-                                is QueryResponse -> {
-                                    log.info { "Compare cache to find new and updated persons from pdl" }
-                                    val person = queryResponseBase.toPerson()
-                                    log.info { "Person $person" }
-                                    val personProto = person.toPersonProto()
-                                    log.info { "Person proto key ${personProto.first}" }
-                                    log.info { "Person proto value ${personProto.second}" }
-                                    if (cache.exists(cr.key(), personProto.second.hashCode()) != ObjectInCacheStatus.NoChange) {
-                                        kafkaMessages[personProto.first.toByteArray()] = personProto.second.toByteArray()
-                                        log.info { "Added to kafkaMessages $person" }
-                                    }
-                                }
+                            getPersonFromGraphQL(cr.key())
+                        } else {
+                            PersonInvalid
+                        }
+                    }
+
+                    when (person) {
+                        is PersonUnknown -> log.info { "Unknown aktørId - ${cr.key()}" }
+                        is PersonInvalid -> log.info { "Error creating person on aktørId - ${cr.key()} " }
+                        is PersonError -> log.info { "Technical error when creating person on aktørId - ${cr.key()} " }
+                        is Person -> {
+                            log.info { "Compare cache to find new and updated persons from pdl" }
+                            log.debug { "Person $person" }
+                            val personProto = person.toPersonProto()
+                            log.info { "Person proto key ${personProto.first}" }
+                            log.info { "Person proto value ${personProto.second}" }
+                            if (cache.exists(cr.key(), personProto.second.hashCode()) != ObjectInCacheStatus.NoChange) {
+                                kafkaMessages[personProto.first.toByteArray()] = personProto.second.toByteArray()
+                                log.info { "Added to kafkaMessages $person" }
                             }
                         }
                     }

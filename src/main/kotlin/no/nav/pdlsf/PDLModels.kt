@@ -44,6 +44,12 @@ fun createCache(params: Params): Map<String, Int> {
     return cache
 }
 
+sealed class PersonBase
+object PersonTombestone : PersonBase()
+object PersonUnknown : PersonBase()
+object PersonInvalid : PersonBase()
+object PersonError : PersonBase()
+
 data class Person(
     val aktoerId: String = "",
     val identifikasjonsnummer: String = "",
@@ -55,7 +61,7 @@ data class Person(
     val kommunenummer: String = "",
     val region: String = "",
     val doed: Boolean = false
-) {
+) : PersonBase() {
 
     fun toPersonProto(): Pair<PersonKey, PersonValue> =
             PersonKey.newBuilder().apply {
