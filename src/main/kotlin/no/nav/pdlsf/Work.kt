@@ -74,23 +74,34 @@ internal fun work(params: Params) {
                     }
 
                     when (person) {
-                        is PersonUnknown -> log.info { "Unknown aktørId - ${cr.key()}" }
-                        is PersonInvalid -> log.info { "Error creating person on aktørId - ${cr.key()} " }
-                        is PersonError -> log.info { "Technical error when creating person on aktørId - ${cr.key()} " }
+                        is PersonUnknown -> {
+                            log.info { "Unknown aktørId - ${cr.key()}" }
+                            // Metrics
+                        }
+                        is PersonInvalid -> {
+                            log.info { "Error creating person on aktørId - ${cr.key()}" }
+                            // Metrics
+                        }
+                        is PersonError -> {
+                            log.info { "Technical error when creating person on aktørId - ${cr.key()}" }
+                            // Metrics
+                        }
                         is Person -> {
-                            log.info { "Compare cache to find new and updated persons from pdl" }
-                            log.debug { "Person $person" }
+                            log.info { "Compare cache to find new and updated persons from pdl aktørId - ${cr.key()}" }
+                            log.debug { "Person from GraphQL $person" }
                             val personProto = person.toPersonProto()
-                            log.info { "Person proto key ${personProto.first}" }
-                            log.info { "Person proto value ${personProto.second}" }
+                            log.debug { "Person proto key ${personProto.first}" }
+                            log.debug { "Person proto value ${personProto.second}" }
+                            // Metrics
                             if (cache.exists(cr.key(), personProto.second.hashCode()) != ObjectInCacheStatus.NoChange) {
                                 kafkaMessages[personProto.first.toByteArray()] = personProto.second.toByteArray()
                                 log.info { "Added to kafkaMessages $person" }
+                                // Metrics
                             }
                         }
                     }
                 }
-                ConsumerStates.IsFinished
+                ConsumerStates.IsOkNoCommit
             } else {
                 log.info { "Kafka events completed for now - leaving kafka consumer loop" }
                 ConsumerStates.IsFinished
