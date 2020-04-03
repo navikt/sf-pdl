@@ -97,26 +97,26 @@ fun queryGraphQlSFDetails(ident: String): QueryResponseBase {
     val query = getStringFromResource(GRAPHQL_QUERY).trim()
     val stringResponse = executeGraphQlQueryStringResponse(query, mapOf("ident" to ident))
     log.debug { "GaphQL response string - $stringResponse" } // TODO :: REMOVE
-    return if (!stringResponse.isNullOrEmpty()) {
-        runCatching {
-            val queryResponse = stringResponse.getQueryResponseFromJsonString()
-            val result = if (queryResponse is QueryResponse) {
-                val queryResponseBase = if (queryResponse.errors.isNullOrEmpty()) queryResponse else QueryErrorResponse(queryResponse.errors)
-                queryResponseBase
-            } else {
-                InvalidQueryResponse
-            }
-            log.debug { "GraphQL result $result" }
-            result
-        }
-        .onFailure {
-            log.debug { "GaphQL response string on failure- $stringResponse" } // TODO :: REMOVE
-            log.error { "Failed handling graphql response - ${it.localizedMessage}" }
-        }
-        .getOrDefault(InvalidQueryResponse)
+    return if (stringResponse.isNotEmpty()) {
+        parseGraphQLResponse(stringResponse)
     } else {
         InvalidQueryResponse
     }
+}
+
+@OptIn(UnstableDefault::class)
+@ImplicitReflectionSerializer
+fun parseGraphQLResponse(stringResponse: String): QueryResponseBase {
+    return runCatching {
+        val result = stringResponse.getQueryResponseFromJsonString()
+        log.debug { "GraphQL result $result" }
+        result
+    }
+            .onFailure {
+                log.debug { "GaphQL response string on failure- $stringResponse" } // TODO :: REMOVE
+                log.error { "Failed handling graphql response - ${it.localizedMessage}" }
+            }
+            .getOrDefault(InvalidQueryResponse)
 }
 
 object IsoLocalDateSerializer : LocalDateSerializer(DateTimeFormatter.ISO_LOCAL_DATE)
@@ -295,7 +295,7 @@ fun QueryResponse.toPerson(): Person {
             doed = this.data.hentPerson.doedsfall.isNotEmpty()
         )
     }
-            .onFailure { log.error { "Error creating Person from a grapQL query response ${it.localizedMessage}" } }
+            .onFailure { log.error { "Error creating Person from a graphQL query response ${it.localizedMessage}" } }
             .getOrThrow()
 }
 
@@ -315,7 +315,9 @@ fun QueryResponse.Data.HentPerson.Bostedsadresse.findKommunenummer(): String {
 @UnstableDefault
 @ImplicitReflectionSerializer
 fun String.getQueryResponseFromJsonString(): QueryResponseBase = runCatching {
-    json.parse(QueryResponse.serializer(), this)
+    runCatching {
+        json.parse(QueryResponse.serializer(), this)
+    }.getOrNull()?.let{it} ?: json.parse(QueryErrorResponse.serializer(), this)
 }
         .onFailure {
             log.error { "Failed serialize GraphQL QueryResponse - ${it.localizedMessage}" }
