@@ -56,7 +56,7 @@ data class Person(
     val fornavn: String = "",
     val mellomnavn: String = "",
     val etternavn: String = "",
-    val adressebeskyttelse: PersonValue.Gradering = PersonValue.Gradering.UGRADERT,
+    val adressebeskyttelse: Gradering = Gradering.UGRADERT,
     val sikkerhetstiltak: List<String> = emptyList(),
     val kommunenummer: String = "",
     val region: String = "",
@@ -71,7 +71,7 @@ data class Person(
                 fornavn = this@Person.fornavn
                 mellomnavn = this@Person.mellomnavn
                 etternavn = this@Person.etternavn
-                adressebeskyttelse = this@Person.adressebeskyttelse
+                adressebeskyttelse = PersonValue.Gradering.valueOf(this@Person.adressebeskyttelse.name)
                 this@Person.sikkerhetstiltak.forEach {
                     addSikkerhetstiltak(it)
                 }

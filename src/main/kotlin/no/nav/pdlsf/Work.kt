@@ -15,7 +15,7 @@ private val log = KotlinLogging.logger {}
 @ImplicitReflectionSerializer
 internal fun work(params: Params) {
     log.info { "bootstrap work session starting" }
-    // Get Cachefrom SF topic
+
     val cache = createCache(params)
     if (ServerState.state == ServerStates.KafkaIssues && cache.isEmpty()) {
         log.error { "Terminating work session since cache is empty due to kafka issues" }
@@ -69,21 +69,21 @@ internal fun work(params: Params) {
                         else -> if (v.isNotEmpty()) {
                             getPersonFromGraphQL(cr.key())
                         } else {
-                            PersonInvalid
+                            PersonInvalid // TODO :: TOMBSTONE ??
                         }
                     }
 
                     when (person) {
                         is PersonUnknown -> {
-                            log.info { "Unknown aktørId - ${cr.key()}" }
+                            // log.info { "Unknown aktørId - ${cr.key()}" }
                             // Metrics
                         }
                         is PersonInvalid -> {
-                            log.info { "Error creating person on aktørId - ${cr.key()}" }
+                            // log.info { "Error creating person on aktørId - ${cr.key()}" }
                             // Metrics
                         }
                         is PersonError -> {
-                            log.info { "Technical error when creating person on aktørId - ${cr.key()}" }
+                            // log.info { "Technical error when creating person on aktørId - ${cr.key()}" }
                             // Metrics
                         }
                         is Person -> {

@@ -4,7 +4,6 @@ import io.kotlintest.matchers.asClue
 import io.kotlintest.matchers.collections.shouldHaveSize
 import io.kotlintest.matchers.numerics.shouldBeExactly
 import io.kotlintest.specs.StringSpec
-import no.nav.pdlsf.proto.PersonProto
 
 class PersonProtoTests : StringSpec() {
 
@@ -29,9 +28,9 @@ class PersonProtoTests : StringSpec() {
 
         "Three different gradering should give different hash code" {
             listOf(
-                    Person(adressebeskyttelse = PersonProto.PersonValue.Gradering.UGRADERT),
-                    Person(adressebeskyttelse = PersonProto.PersonValue.Gradering.FORTROLIG),
-                    Person(adressebeskyttelse = PersonProto.PersonValue.Gradering.STRENGT_FORTROLIG)
+                    Person(adressebeskyttelse = Gradering.UGRADERT),
+                    Person(adressebeskyttelse = Gradering.FORTROLIG),
+                    Person(adressebeskyttelse = Gradering.STRENGT_FORTROLIG)
             ).map { it.toPersonProto().second.hashCode() }.toSet() shouldHaveSize(3)
         }
     }

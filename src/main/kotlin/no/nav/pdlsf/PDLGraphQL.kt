@@ -14,7 +14,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.UnstableDefault
 import kotlinx.serialization.stringify
 import mu.KotlinLogging
-import no.nav.pdlsf.proto.PersonProto
 import org.http4k.core.Method
 import org.http4k.core.Status
 
@@ -71,12 +70,18 @@ fun getPersonFromGraphQL(ident: String): PersonBase {
             }
         }
         is InvalidQueryResponse -> {
-            log.error { "Unable to pare query response on aktørId - $ident " }
+            log.error { "Unable to parse graphql query response on aktørId - $ident " }
             PersonInvalid
         }
         is QueryResponse -> {
             val person = response.toPerson()
-            log.debug { "Person $person" }
+            if (person is PersonInvalid) {
+                log.error { "Unable to parse person from qraphql response on aktørId - $ident " }
+                // Metrics
+            } else {
+                log.debug { "Person $person" }
+                // Merics
+            }
             person
         }
     }
@@ -255,33 +260,49 @@ fun String.getQueryResponseFromJsonString(): QueryResponseBase = runCatching {
         }
         .getOrDefault(InvalidQueryResponse)
 
-fun QueryResponse.toPerson(): Person {
+fun QueryResponse.toPerson(): PersonBase {
     return runCatching { Person(
             aktoerId = this.data.hentIdenter.identer.first { it.gruppe == QueryResponse.Data.HentIdenter.Identer.IdentGruppe.AKTORID }.ident,
             identifikasjonsnummer = this.data.hentIdenter.identer.first { it.gruppe == QueryResponse.Data.HentIdenter.Identer.IdentGruppe.FOLKEREGISTERIDENT }.ident,
-            fornavn = this.data.hentPerson.navn.filter { it.metadata.master.equals("FREG") }.first().fornavn,
-            mellomnavn = this.data.hentPerson.navn.filter { it.metadata.master.equals("FREG") }.first().mellomnavn.orEmpty(),
-            etternavn = this.data.hentPerson.navn.filter { it.metadata.master.equals("FREG") }.first().etternavn,
-            adressebeskyttelse = runCatching { this.data.hentPerson.adressebeskyttelse.first().gradering.name }.getOrDefault(Gradering.UGRADERT.name).let { PersonProto.PersonValue.Gradering.valueOf(it) },
+            fornavn = this.data.hentPerson.navn.filter { it.metadata.master.toUpperCase() == "FREG" }.first().fornavn,
+            mellomnavn = this.data.hentPerson.navn.filter { it.metadata.master.toUpperCase() == "FREG" }.first().mellomnavn.orEmpty(),
+            etternavn = this.data.hentPerson.navn.filter { it.metadata.master.toUpperCase() == "FREG" }.first().etternavn,
+            adressebeskyttelse = this.data.hentPerson.findAdressebeskyttelse(),
             sikkerhetstiltak = this.data.hentPerson.sikkerhetstiltak.map { it.beskrivelse }.toList(),
-            kommunenummer = runCatching { this.data.hentPerson.bostedsadresse.first().findKommunenummer() }.getOrDefault(""),
-            region = runCatching { this.data.hentPerson.bostedsadresse.first().findKommunenummer().substring(0, 2) }.getOrDefault(""),
+            kommunenummer = this.data.hentPerson.findKommunenummer(),
+            region = runCatching { this.data.hentPerson.findKommunenummer().substring(0, 2) }.getOrDefault(""),
             doed = this.data.hentPerson.doedsfall.isNotEmpty()
         )
     }
             .onFailure { log.error { "Error creating Person from a graphQL query response ${it.localizedMessage}" } }
-            .getOrThrow()
+            .getOrDefault(PersonInvalid)
 }
 
-fun QueryResponse.Data.HentPerson.Bostedsadresse.findKommunenummer(): String {
-    return vegadresse?.let { vegadresse ->
-        Metrics.vegadresse.inc()
-        vegadresse.kommunenummer }
-            ?: matrikkeladresse?.let { matrikkeladresse ->
+private fun QueryResponse.Data.HentPerson.findAdressebeskyttelse(): Gradering {
+    return this.adressebeskyttelse.let {
+        if (it.isEmpty()) {
+            Gradering.UGRADERT
+        } else {
+            Gradering.valueOf(it.first().gradering.name)
+        }
+    }
+}
+
+fun QueryResponse.Data.HentPerson.findKommunenummer(): String {
+    return this.bostedsadresse.let { bostedsadresse ->
+        bostedsadresse.first().let {
+            it.vegadresse?.let { vegadresse ->
+                Metrics.vegadresse.inc()
+                vegadresse.kommunenummer
+            } ?: it.matrikkeladresse?.let { matrikkeladresse ->
                 Metrics.matrikkeladresse.inc()
-                matrikkeladresse.kommunenummer }
-            ?: ukjentBosted?.let { ukjentBosted ->
+                matrikkeladresse.kommunenummer
+            } ?: it.ukjentBosted?.let { ukjentBosted ->
                 Metrics.ukjentBosted.inc()
-                ukjentBosted.bostedskommune }
-            ?: "".also { Metrics.ingenAdresse.inc() }
+                ukjentBosted.bostedskommune
+            } ?: "".also {
+                Metrics.ingenAdresse.inc()
+            }
+        }
+    }
 }
