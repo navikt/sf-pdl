@@ -317,7 +317,7 @@ fun QueryResponse.Data.HentPerson.Bostedsadresse.findKommunenummer(): String {
 fun String.getQueryResponseFromJsonString(): QueryResponseBase = runCatching {
     runCatching {
         json.parse(QueryResponse.serializer(), this)
-    }.getOrNull()?.let{it} ?: json.parse(QueryErrorResponse.serializer(), this)
+    }.getOrNull()?.let { it } ?: json.parse(QueryErrorResponse.serializer(), this)
 }
         .onFailure {
             log.error { "Failed serialize GraphQL QueryResponse - ${it.localizedMessage}" }
