@@ -308,8 +308,8 @@ fun String.getQueryResponseFromJsonString(): QueryResponseBase = runCatching {
 
 fun QueryResponse.toPerson(): PersonBase {
     return runCatching { Person(
-            aktoerId = this.data.hentIdenter.identer.first { it.gruppe == QueryResponse.Data.HentIdenter.Identer.IdentGruppe.AKTORID }.ident,
-            identifikasjonsnummer = this.data.hentIdenter.identer.first { it.gruppe == QueryResponse.Data.HentIdenter.Identer.IdentGruppe.FOLKEREGISTERIDENT }.ident,
+            aktoerId = this.data.hentIdenter.findAktoerId(),
+            identifikasjonsnummer = this.data.hentIdenter.findFolkeregisterIdent(),
             fornavn = this.data.hentPerson.findNavn().fornavn,
             mellomnavn = this.data.hentPerson.findNavn().mellomnavn,
             etternavn = this.data.hentPerson.findNavn().etternavn,
@@ -324,6 +324,23 @@ fun QueryResponse.toPerson(): PersonBase {
             .getOrDefault(PersonInvalid)
 }
 
+private fun QueryResponse.Data.HentIdenter.findAktoerId(): String {
+    return this.identer.let {
+        if (it.isEmpty()) {
+            UKJENT_FRA_PDL
+        } else {
+            identer.firstOrNull { it.gruppe == QueryResponse.Data.HentIdenter.Identer.IdentGruppe.AKTORID }?.ident ?: UKJENT_FRA_PDL }
+        }
+    }
+
+private fun QueryResponse.Data.HentIdenter.findFolkeregisterIdent(): String {
+    return this.identer.let {
+        if (it.isEmpty()) {
+            UKJENT_FRA_PDL
+        } else {
+            identer.firstOrNull { it.gruppe == QueryResponse.Data.HentIdenter.Identer.IdentGruppe.FOLKEREGISTERIDENT }?.ident ?: UKJENT_FRA_PDL }
+    }
+}
 private fun QueryResponse.Data.HentPerson.findAdressebeskyttelse(): Gradering {
     return this.adressebeskyttelse.let {
         if (it.isEmpty()) {
