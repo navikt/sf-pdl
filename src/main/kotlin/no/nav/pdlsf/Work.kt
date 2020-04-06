@@ -95,7 +95,7 @@ internal fun work(params: Params) {
                             // Metrics
                             if (cache.exists(cr.key(), personProto.second.hashCode()) != ObjectInCacheStatus.NoChange) {
                                 kafkaMessages[personProto.first.toByteArray()] = personProto.second.toByteArray()
-                                log.info { "Added to kafkaMessages $person" }
+                                log.debug { "Added to kafkaMessages $person" }
                                 // Metrics
                             }
                         }
