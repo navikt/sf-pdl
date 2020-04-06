@@ -264,9 +264,9 @@ fun QueryResponse.toPerson(): PersonBase {
     return runCatching { Person(
             aktoerId = this.data.hentIdenter.identer.first { it.gruppe == QueryResponse.Data.HentIdenter.Identer.IdentGruppe.AKTORID }.ident,
             identifikasjonsnummer = this.data.hentIdenter.identer.first { it.gruppe == QueryResponse.Data.HentIdenter.Identer.IdentGruppe.FOLKEREGISTERIDENT }.ident,
-            fornavn = this.data.hentPerson.navn.filter { it.metadata.master.toUpperCase() == "FREG" }.first().fornavn,
-            mellomnavn = this.data.hentPerson.navn.filter { it.metadata.master.toUpperCase() == "FREG" }.first().mellomnavn.orEmpty(),
-            etternavn = this.data.hentPerson.navn.filter { it.metadata.master.toUpperCase() == "FREG" }.first().etternavn,
+            fornavn = this.data.hentPerson.navn.first { it.metadata.master.toUpperCase() == "FREG" }.fornavn,
+            mellomnavn = this.data.hentPerson.navn.first { it.metadata.master.toUpperCase() == "FREG" }.mellomnavn.orEmpty(),
+            etternavn = this.data.hentPerson.navn.first { it.metadata.master.toUpperCase() == "FREG" }.etternavn,
             adressebeskyttelse = this.data.hentPerson.findAdressebeskyttelse(),
             sikkerhetstiltak = this.data.hentPerson.sikkerhetstiltak.map { it.beskrivelse }.toList(),
             kommunenummer = this.data.hentPerson.findKommunenummer(),
@@ -290,18 +290,23 @@ private fun QueryResponse.Data.HentPerson.findAdressebeskyttelse(): Gradering {
 
 fun QueryResponse.Data.HentPerson.findKommunenummer(): String {
     return this.bostedsadresse.let { bostedsadresse ->
-        bostedsadresse.first().let {
-            it.vegadresse?.let { vegadresse ->
-                Metrics.vegadresse.inc()
-                vegadresse.kommunenummer
-            } ?: it.matrikkeladresse?.let { matrikkeladresse ->
-                Metrics.matrikkeladresse.inc()
-                matrikkeladresse.kommunenummer
-            } ?: it.ukjentBosted?.let { ukjentBosted ->
-                Metrics.ukjentBosted.inc()
-                ukjentBosted.bostedskommune
-            } ?: "".also {
-                Metrics.ingenAdresse.inc()
+        if (bostedsadresse.isNullOrEmpty()) {
+            Metrics.ingenAdresse.inc()
+            ""
+        } else {
+            bostedsadresse.first().let {
+                it.vegadresse?.let { vegadresse ->
+                    Metrics.vegadresse.inc()
+                    vegadresse.kommunenummer
+                } ?: it.matrikkeladresse?.let { matrikkeladresse ->
+                    Metrics.matrikkeladresse.inc()
+                    matrikkeladresse.kommunenummer
+                } ?: it.ukjentBosted?.let { ukjentBosted ->
+                    Metrics.ukjentBosted.inc()
+                    ukjentBosted.bostedskommune
+                } ?: "".also {
+                    Metrics.ingenAdresse.inc()
+                }
             }
         }
     }
