@@ -247,7 +247,7 @@ enum class Gradering {
     FORTROLIG,
     UGRADERT
 }
-private const val UKJENT_FRA_PDL = "<UKJENT_FRA_PDL>"
+internal const val UKJENT_FRA_PDL = "<UKJENT_FRA_PDL>"
 
 sealed class NavnBase {
     abstract val fornavn: String

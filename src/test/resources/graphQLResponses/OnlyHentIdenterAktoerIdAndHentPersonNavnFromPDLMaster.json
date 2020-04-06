@@ -1,0 +1,28 @@
+{
+  "data": {
+    "hentIdenter": {
+      "identer": [
+        {
+          "ident": "2643116775510",
+          "gruppe": "AKTORID"
+        }
+      ]
+    },
+    "hentPerson": {
+      "doedsfall": [],
+      "adressebeskyttelse": [],
+      "bostedsadresse": [],
+      "sikkerhetstiltak": [],
+      "navn": [
+        {
+          "fornavn": "Gammel",
+          "mellomnavn": null,
+          "etternavn": "Hund",
+          "metadata": {
+            "master": "PDL"
+          }
+        }
+      ]
+    }
+  }
+}

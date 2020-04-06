@@ -1,0 +1,19 @@
+{
+  "data": {
+    "hentIdenter": {
+      "identer": [
+        {
+          "ident": "2044593176091",
+          "gruppe": "AKTORID"
+        }
+      ]
+    },
+    "hentPerson": {
+      "doedsfall": [],
+      "adressebeskyttelse": [],
+      "bostedsadresse": [],
+      "sikkerhetstiltak": [],
+      "navn": []
+    }
+  }
+}
