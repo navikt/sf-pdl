@@ -247,6 +247,52 @@ enum class Gradering {
     FORTROLIG,
     UGRADERT
 }
+private const val UKJENT_FRA_PDL = "<UKJENT_FRA_PDL>"
+
+sealed class NavnBase {
+    abstract val fornavn: String
+    abstract val mellomnavn: String
+    abstract val etternavn: String
+
+    data class Freg(
+        override val fornavn: String,
+        override val mellomnavn: String,
+        override val etternavn: String
+    ) : NavnBase()
+
+    data class Pdl(
+        override val fornavn: String,
+        override val mellomnavn: String,
+        override val etternavn: String
+    ) : NavnBase()
+
+    data class Ukjent(
+        override val fornavn: String = UKJENT_FRA_PDL,
+        override val mellomnavn: String = UKJENT_FRA_PDL,
+        override val etternavn: String = UKJENT_FRA_PDL
+    ) : NavnBase()
+}
+
+private fun QueryResponse.Data.HentPerson.findNavn(): NavnBase {
+    return if (this.navn.isNullOrEmpty()) {
+        NavnBase.Ukjent()
+    } else {
+        this.navn.firstOrNull { it.metadata.master.toUpperCase() == "FREG" }?.let {
+            if (it.etternavn.isBlank() || it.fornavn.isBlank())
+                NavnBase.Freg(
+                        fornavn = it.fornavn,
+                        etternavn = it.etternavn,
+                        mellomnavn = it.mellomnavn.orEmpty()
+                )
+            else
+                NavnBase.Ukjent(
+                        fornavn = it.fornavn,
+                        etternavn = it.etternavn,
+                        mellomnavn = it.mellomnavn.orEmpty()
+                )
+        } ?: NavnBase.Ukjent()
+    }
+}
 
 @UnstableDefault
 @ImplicitReflectionSerializer
@@ -264,13 +310,13 @@ fun QueryResponse.toPerson(): PersonBase {
     return runCatching { Person(
             aktoerId = this.data.hentIdenter.identer.first { it.gruppe == QueryResponse.Data.HentIdenter.Identer.IdentGruppe.AKTORID }.ident,
             identifikasjonsnummer = this.data.hentIdenter.identer.first { it.gruppe == QueryResponse.Data.HentIdenter.Identer.IdentGruppe.FOLKEREGISTERIDENT }.ident,
-            fornavn = this.data.hentPerson.navn.first { it.metadata.master.toUpperCase() == "FREG" }.fornavn,
-            mellomnavn = this.data.hentPerson.navn.first { it.metadata.master.toUpperCase() == "FREG" }.mellomnavn.orEmpty(),
-            etternavn = this.data.hentPerson.navn.first { it.metadata.master.toUpperCase() == "FREG" }.etternavn,
+            fornavn = this.data.hentPerson.findNavn().fornavn,
+            mellomnavn = this.data.hentPerson.findNavn().mellomnavn,
+            etternavn = this.data.hentPerson.findNavn().etternavn,
             adressebeskyttelse = this.data.hentPerson.findAdressebeskyttelse(),
             sikkerhetstiltak = this.data.hentPerson.sikkerhetstiltak.map { it.beskrivelse }.toList(),
             kommunenummer = this.data.hentPerson.findKommunenummer(),
-            region = runCatching { this.data.hentPerson.findKommunenummer().substring(0, 2) }.getOrDefault(""),
+            region = this.data.hentPerson.findRegion(),
             doed = this.data.hentPerson.doedsfall.isNotEmpty()
         )
     }
@@ -292,7 +338,7 @@ fun QueryResponse.Data.HentPerson.findKommunenummer(): String {
     return this.bostedsadresse.let { bostedsadresse ->
         if (bostedsadresse.isNullOrEmpty()) {
             Metrics.ingenAdresse.inc()
-            ""
+            UKJENT_FRA_PDL
         } else {
             bostedsadresse.first().let {
                 it.vegadresse?.let { vegadresse ->
@@ -304,10 +350,15 @@ fun QueryResponse.Data.HentPerson.findKommunenummer(): String {
                 } ?: it.ukjentBosted?.let { ukjentBosted ->
                     Metrics.ukjentBosted.inc()
                     ukjentBosted.bostedskommune
-                } ?: "".also {
+                } ?: UKJENT_FRA_PDL.also {
                     Metrics.ingenAdresse.inc()
                 }
             }
         }
     }
 }
+
+fun QueryResponse.Data.HentPerson.findRegion(): String {
+    return this.findKommunenummer().let { kommunenummer ->
+        if (kommunenummer == UKJENT_FRA_PDL) kommunenummer else kommunenummer.substring(0, 2) }
+    }
