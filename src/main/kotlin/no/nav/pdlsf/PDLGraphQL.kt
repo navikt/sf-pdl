@@ -290,6 +290,19 @@ private fun QueryResponse.Data.HentPerson.findNavn(): NavnBase {
                         etternavn = it.etternavn,
                         mellomnavn = it.mellomnavn.orEmpty()
                 )
+        } ?: this.navn.firstOrNull { it.metadata.master.toUpperCase() == "PDL" }?.let {
+            if (it.etternavn.isBlank() || it.fornavn.isBlank())
+                NavnBase.Pdl(
+                        fornavn = it.fornavn,
+                        etternavn = it.etternavn,
+                        mellomnavn = it.mellomnavn.orEmpty()
+                )
+            else
+                NavnBase.Ukjent(
+                        fornavn = it.fornavn,
+                        etternavn = it.etternavn,
+                        mellomnavn = it.mellomnavn.orEmpty()
+                )
         } ?: NavnBase.Ukjent()
     }
 }
