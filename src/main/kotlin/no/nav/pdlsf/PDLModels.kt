@@ -27,11 +27,10 @@ fun createCache(params: Params): Map<String, Int> {
             },
             listOf(params.kafkaTopicSf), fromBeginning = true
     ) { cRecords ->
-        log.info { "Start building up Cache of existing SF Objects compaction log" }
         if (!cRecords.isEmpty) {
             cRecords.forEach { record ->
-                val aktoerId = PersonKey.parseFrom(record.key()).aktoerId
-                cache[aktoerId] = PersonValue.parseFrom(record.value()).hashCode()
+                val aktoerId = record.key().protobufSafeParseKey().aktoerId
+                cache[aktoerId] = record.value().protobufSafeParseValue().hashCode()
             }
             ConsumerStates.IsOkNoCommit
         } else {
@@ -39,7 +38,6 @@ fun createCache(params: Params): Map<String, Int> {
             ConsumerStates.IsFinished
         }
     }
-
     log.info { "Finished building up Cache of compaction log size person ${cache.size}" }
     return cache
 }

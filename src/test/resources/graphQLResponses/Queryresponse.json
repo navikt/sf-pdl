@@ -1,0 +1,51 @@
+{
+  "data": {
+    "hentIdenter": {
+      "identer": [
+        {
+          "ident": "FOLKEREGISTERIDENT",
+          "gruppe": "FOLKEREGISTERIDENT"
+        },
+        {
+          "ident": "AKTORID",
+          "gruppe": "AKTORID"
+        }
+      ]
+    },
+    "hentPerson": {
+      "doedsfall": [
+
+      ],
+      "adressebeskyttelse": [
+
+      ],
+      "bostedsadresse": [
+        {
+          "vegadresse": null,
+          "matrikkeladresse": {
+            "kommunenummer": "0301"
+          },
+          "ukjentBosted": null
+        }
+      ],
+      "sikkerhetstiltak": [
+        {
+          "beskrivelse": "test"
+        },
+        {
+          "beskrivelse": "test2"
+        }
+      ],
+      "navn": [
+        {
+          "fornavn": "KUNNSKAPSLØS",
+          "mellomnavn": null,
+          "etternavn": "APRILSNARR",
+          "metadata": {
+            "master": "FREG"
+          }
+        }
+      ]
+    }
+  }
+}
