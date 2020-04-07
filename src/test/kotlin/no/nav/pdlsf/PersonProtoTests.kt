@@ -18,7 +18,6 @@ private const val KUN_AKTOERID_UNDER_HENTIDENTER_ALLE_ELEMENTER_UNDER_HENTPERSON
 private const val KUN_AKTOERID_UNDER_HENTIDENTER_KUN_NAVN_MED_PDL_SOM_MASTER_UNDER_HENTPERSON = "/graphQLResponses/OnlyHentIdenterAktoerIdAndHentPersonNavnFromPDLMaster.json"
 private const val KOMPLETT__HENTIDENTER_OG_HENTPERSON = "/graphQLResponses/Queryresponse.json"
 
-
 @OptIn(UnstableDefault::class)
 @ImplicitReflectionSerializer
 class PersonProtoTests : StringSpec() {
