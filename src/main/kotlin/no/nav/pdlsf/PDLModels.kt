@@ -80,6 +80,16 @@ data class Person(
                     .build()
 }
 
+fun PersonBase.toMetricsLable(): String {
+    return when (this) {
+        is PersonUnknown -> "UNKNOWN"
+        is PersonTombestone -> "TOMBESTONE"
+        is PersonInvalid -> "INVALID"
+        is PersonError -> "ERROR"
+        is Person -> "VALID"
+    }
+}
+
 internal fun ByteArray.protobufSafeParseKey(): PersonKey = this.let { ba ->
     try {
         PersonKey.parseFrom(ba)
@@ -96,10 +106,10 @@ internal fun ByteArray.protobufSafeParseValue(): PersonValue = this.let { ba ->
     }
 }
 
-internal sealed class ObjectInCacheStatus() {
-    object New : ObjectInCacheStatus()
-    object Updated : ObjectInCacheStatus()
-    object NoChange : ObjectInCacheStatus()
+internal sealed class ObjectInCacheStatus(val name: String) {
+    object New : ObjectInCacheStatus("NY")
+    object Updated : ObjectInCacheStatus("ENDRET")
+    object NoChange : ObjectInCacheStatus("UENDRET")
 }
 
 internal fun Map<String, Int>.exists(aktoerId: String, newValueHash: Int): ObjectInCacheStatus =

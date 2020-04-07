@@ -77,27 +77,23 @@ internal fun work(params: Params) {
                     when (person) {
                         is PersonUnknown -> {
                             // log.info { "Unknown aktørId - ${cr.key()}" }
-                            // Metrics
+                            Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
                         }
                         is PersonInvalid -> {
                             // log.info { "Error creating person on aktørId - ${cr.key()}" }
-                            // Metrics
+                            Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
                         }
                         is PersonError -> {
                             // log.info { "Technical error when creating person on aktørId - ${cr.key()}" }
-                            // Metrics
+                            Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
                         }
                         is Person -> {
-                            log.debug { "Compare cache to find new and updated persons from pdl aktørId - ${cr.key()}" }
-                            log.debug { "Person from GraphQL $person" }
+                            Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
                             val personProto = person.toPersonProto()
-                            log.debug { "Person proto key ${personProto.first}" }
-                            log.debug { "Person proto value ${personProto.second}" }
-                            // Metrics
-                            if (cache.exists(cr.key(), personProto.second.hashCode()) != ObjectInCacheStatus.NoChange) {
+                            val status = cache.exists(cr.key(), personProto.second.hashCode())
+                            Metrics.publishedPersons.labels(status.name).inc()
+                            if (status in listOf(ObjectInCacheStatus.New, ObjectInCacheStatus.Updated)) {
                                 kafkaMessages[personProto.first.toByteArray()] = personProto.second.toByteArray()
-                                log.debug { "Added to kafkaMessages $person" }
-                                // Metrics
                             }
                         }
                     }

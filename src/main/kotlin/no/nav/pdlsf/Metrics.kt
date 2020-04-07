@@ -36,6 +36,20 @@ object Metrics {
             .help("No of sucessfully converted kafka topic values to query")
             .register()
 
+    val publishedPersons: Gauge = Gauge
+            .build()
+            .name("published_person_gauge")
+            .labelNames("status")
+            .help("No. of persons published to kafka in last work session")
+            .register()
+    // TODO :: Graphana
+    val parsedGrapQLPersons: Gauge = Gauge
+            .build()
+            .name("parsed_person_gauge")
+            .labelNames("type")
+            .help("No. of person types parsed from graphql response in last work session")
+            .register()
+
     val vegadresse: Gauge = Gauge
             .build()
             .name("vegadresse_gauge")
