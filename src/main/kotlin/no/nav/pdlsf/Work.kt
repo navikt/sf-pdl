@@ -40,6 +40,7 @@ internal fun work(params: Params) {
 
         val kafkaMessages: MutableMap<ByteArray, ByteArray> = mutableMapOf()
 
+        log.info { "Start building up map of person from PDL compaction log"}
         getKafkaConsumerByConfig<String, String>(
                 mapOf(
                         ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG to params.kafkaBrokers,
@@ -58,7 +59,7 @@ internal fun work(params: Params) {
                 },
                 listOf(params.kafkaTopicPdl), fromBeginning = true
         ) { cRecords ->
-            log.info { "Start building up map of person from PDL compaction log, size  - ${cRecords.count()}" }
+            log.debug { "Records polled from PDL compaction log - ${cRecords.count()}" }
             if (!cRecords.isEmpty) {
                 cRecords.forEach { cr ->
                     val person: PersonBase = when (val v = cr.value()) {
@@ -87,7 +88,7 @@ internal fun work(params: Params) {
                             // Metrics
                         }
                         is Person -> {
-                            log.info { "Compare cache to find new and updated persons from pdl aktørId - ${cr.key()}" }
+                            log.debug { "Compare cache to find new and updated persons from pdl aktørId - ${cr.key()}" }
                             log.debug { "Person from GraphQL $person" }
                             val personProto = person.toPersonProto()
                             log.debug { "Person proto key ${personProto.first}" }
