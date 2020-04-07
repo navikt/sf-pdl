@@ -40,7 +40,7 @@ internal fun work(params: Params) {
 
         val kafkaMessages: MutableMap<ByteArray, ByteArray> = mutableMapOf()
 
-        log.info { "Start building up map of person from PDL compaction log"}
+        log.info { "Start building up map of person from PDL compaction log" }
         getKafkaConsumerByConfig<String, String>(
                 mapOf(
                         ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG to params.kafkaBrokers,
