@@ -36,6 +36,12 @@ object Metrics {
             .help("No of sucessfully converted kafka topic values to query")
             .register()
 
+    val cachedPersons: Gauge = Gauge
+            .build()
+            .name("cached_persons_event_gauge")
+            .help("No. of cached persons consumed in last work session")
+            .register()
+
     val publishedPersons: Gauge = Gauge
             .build()
             .name("published_person_gauge")
@@ -80,6 +86,7 @@ object Metrics {
     }
 
     fun sessionReset() {
+        cachedPersons.clear()
         invalidQuery.clear()
         sucessfulValueToQuery.clear()
         vegadresse.clear()
@@ -89,6 +96,7 @@ object Metrics {
     }
 
     fun resetAll() {
+        cachedPersons.clear()
         invalidQuery.clear()
         sucessfulValueToQuery.clear()
         invalidQuery.clear()

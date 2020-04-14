@@ -76,22 +76,22 @@ internal fun work(params: Params) {
 
                     when (person) {
                         is PersonUnknown -> {
-                            // log.info { "Unknown aktørId - ${cr.key()}" }
                             Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
                         }
                         is PersonInvalid -> {
-                            // log.info { "Error creating person on aktørId - ${cr.key()}" }
                             Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
                         }
                         is PersonError -> {
-                            // log.info { "Technical error when creating person on aktørId - ${cr.key()}" }
+                            Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
+                        }
+                        is PersonTombestone -> {
                             Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
                         }
                         is Person -> {
                             Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
                             val personProto = person.toPersonProto()
                             val status = cache.exists(cr.key(), personProto.second.hashCode())
-                            Metrics.publishedPersons.labels(person.toMetricsLable(), status.name).inc()
+                            Metrics.publishedPersons.labels(status.name).inc()
                             if (status in listOf(ObjectInCacheStatus.New, ObjectInCacheStatus.Updated)) {
                                 kafkaMessages[personProto.first.toByteArray()] = personProto.second.toByteArray()
                             }

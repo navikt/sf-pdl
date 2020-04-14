@@ -38,7 +38,9 @@ fun createCache(params: Params): Map<String, Int> {
             ConsumerStates.IsFinished
         }
     }
+    Metrics.cachedPersons.inc(cache.size.toDouble())
     log.info { "Finished building up Cache of compaction log size person ${cache.size}" }
+
     return cache
 }
 
