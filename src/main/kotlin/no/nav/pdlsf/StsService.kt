@@ -15,7 +15,7 @@ private val log = KotlinLogging.logger { }
 private var cachedToken: StsAccessToken? = null
 
 @ImplicitReflectionSerializer
-private fun fetchNewToken(): StsAccessTokenBase = Http.client.invoke(
+private fun fetchNewToken(): StsAccessTokenBase = Http.client.invokeWM(
         (Request(Method.GET, ParamsFactory.p.stsUrl)
                 .header("x-nav-apiKey", ParamsFactory.p.stsApiKey)
                 .header("Authorization", "Basic ${ParamsFactory.p.credentials()}")

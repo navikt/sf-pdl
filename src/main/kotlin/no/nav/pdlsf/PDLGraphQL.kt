@@ -26,7 +26,7 @@ private const val GRAPHQL_QUERY = "/graphql/query.graphql"
 private fun executeGraphQlQuery(
     query: String,
     variables: Map<String, String>
-): QueryResponseBase = Http.client.invoke(
+): QueryResponseBase = Http.client.invokeWM(
         org.http4k.core.Request(Method.POST, ParamsFactory.p.pdlGraphQlUrl)
                 .header("x-nav-apiKey", ParamsFactory.p.pdlGraphQlApiKey)
                 .header("Tema", "GEN")
