@@ -91,7 +91,7 @@ internal fun work(params: Params) {
                             Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
                             val personProto = person.toPersonProto()
                             val status = cache.exists(cr.key(), personProto.second.hashCode())
-                            Metrics.publishedPersons.labels(status.name).inc()
+                            Metrics.publishedPersons.labels(person.toMetricsLable(), status.name).inc()
                             if (status in listOf(ObjectInCacheStatus.New, ObjectInCacheStatus.Updated)) {
                                 kafkaMessages[personProto.first.toByteArray()] = personProto.second.toByteArray()
                             }

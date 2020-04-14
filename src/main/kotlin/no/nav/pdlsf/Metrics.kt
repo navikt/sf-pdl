@@ -39,7 +39,7 @@ object Metrics {
     val publishedPersons: Gauge = Gauge
             .build()
             .name("published_person_gauge")
-            .labelNames("status")
+            .labelNames("type", "status")
             .help("No. of persons published to kafka in last work session")
             .register()
     // TODO :: Graphana
@@ -72,24 +72,6 @@ object Metrics {
             .build()
             .name("ingenadresse_gauge")
             .help("Kommunenummer from ingen adresse")
-            .register()
-
-    val filterHit: Gauge = Gauge
-            .build()
-            .name("filter_hit_gauge")
-            .help("Filter hit")
-            .register()
-
-    val filterNoHit: Gauge = Gauge
-            .build()
-            .name("filter_miss_gauge")
-            .help("Filter no hit")
-            .register()
-
-    val filterFaild: Gauge = Gauge
-            .build()
-            .name("filter_faild_gauge")
-            .help("Filter faild, fail createing PersonC or Account message from Query")
             .register()
 
     init {
