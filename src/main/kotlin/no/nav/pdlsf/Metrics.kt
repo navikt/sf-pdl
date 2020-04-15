@@ -45,7 +45,7 @@ object Metrics {
     val publishedPersons: Gauge = Gauge
             .build()
             .name("published_person_gauge")
-            .labelNames("type", "status")
+            .labelNames("status")
             .help("No. of persons published to kafka in last work session")
             .register()
     // TODO :: Graphana
@@ -87,6 +87,9 @@ object Metrics {
 
     fun sessionReset() {
         cachedPersons.clear()
+        publishedPersons.clear()
+        parsedGrapQLPersons.clear()
+
         invalidQuery.clear()
         sucessfulValueToQuery.clear()
         vegadresse.clear()
