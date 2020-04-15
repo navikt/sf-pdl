@@ -57,7 +57,7 @@ internal fun work(params: Params) {
                         cMap.addKafkaSecurity(params.kafkaUser, params.kafkaPassword, params.kafkaSecProt, params.kafkaSaslMec)
                     else cMap
                 },
-                listOf(params.kafkaTopicPdl), fromBeginning = true
+                listOf(params.kafkaTopicPdl), fromBeginning = true // TODO :: false
         ) { cRecords ->
             log.debug { "Records polled from PDL compaction log - ${cRecords.count()}" }
             if (!cRecords.isEmpty) {

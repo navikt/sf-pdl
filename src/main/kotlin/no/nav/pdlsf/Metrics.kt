@@ -6,6 +6,13 @@ import io.prometheus.client.Histogram
 import io.prometheus.client.hotspot.DefaultExports
 import mu.KotlinLogging
 
+enum class AdresseType {
+    INGEN,
+    MATRIKKELADRESSE,
+    VEGADRESSE,
+    UKJENTBOSTED
+}
+
 object Metrics {
 
     private val log = KotlinLogging.logger { }
@@ -16,12 +23,6 @@ object Metrics {
         .build()
         .name("response_latency_seconds_histogram")
         .help("Salesforce post response latency")
-        .register()
-
-    val successfulRequest: Gauge = Gauge
-        .build()
-        .name("successful_request_gauge")
-        .help("No. of successful requests to Salesforce since last restart")
         .register()
 
     val invalidQuery: Gauge = Gauge
@@ -36,6 +37,18 @@ object Metrics {
             .help("No of sucessfully converted kafka topic values to query")
             .register()
 
+    val failedRequestSts: Gauge = Gauge
+            .build()
+            .name("failed_request_sts_gauge")
+            .help("No. of failed requests to Sts since last restart")
+            .register()
+
+    val failedRequestGraphQl: Gauge = Gauge
+            .build()
+            .name("failed_request_graphql_gauge")
+            .help("No. of failed requests to GraphQl since last restart")
+            .register()
+
     val cachedPersons: Gauge = Gauge
             .build()
             .name("cached_persons_event_gauge")
@@ -48,7 +61,7 @@ object Metrics {
             .labelNames("status")
             .help("No. of persons published to kafka in last work session")
             .register()
-    // TODO :: Graphana
+
     val parsedGrapQLPersons: Gauge = Gauge
             .build()
             .name("parsed_person_gauge")
@@ -56,28 +69,11 @@ object Metrics {
             .help("No. of person types parsed from graphql response in last work session")
             .register()
 
-    val vegadresse: Gauge = Gauge
+    val usedAdresseTypes: Gauge = Gauge
             .build()
-            .name("vegadresse_gauge")
-            .help("Kommunenummer from vegadresse")
-            .register()
-
-    val matrikkeladresse: Gauge = Gauge
-            .build()
-            .name("matrikkeladresse_gauge")
-            .help("Kommunenummer from matrikkeladresse")
-            .register()
-
-    val ukjentBosted: Gauge = Gauge
-            .build()
-            .name("ukjentbosted_gauge")
-            .help("Kommunenummer from ukjentbosted")
-            .register()
-
-    val ingenAdresse: Gauge = Gauge
-            .build()
-            .name("ingenadresse_gauge")
-            .help("Kommunenummer from ingen adresse")
+            .name("used_adress_gauge")
+            .labelNames("type")
+            .help("No. of adress types used from graphql response in last work session")
             .register()
 
     init {
@@ -89,13 +85,10 @@ object Metrics {
         cachedPersons.clear()
         publishedPersons.clear()
         parsedGrapQLPersons.clear()
+        usedAdresseTypes.clear()
 
         invalidQuery.clear()
         sucessfulValueToQuery.clear()
-        vegadresse.clear()
-        matrikkeladresse.clear()
-        ukjentBosted.clear()
-        ingenAdresse.clear()
     }
 
     fun resetAll() {
@@ -104,9 +97,5 @@ object Metrics {
         sucessfulValueToQuery.clear()
         invalidQuery.clear()
         sucessfulValueToQuery.clear()
-        vegadresse.clear()
-        matrikkeladresse.clear()
-        ukjentBosted.clear()
-        ingenAdresse.clear()
     }
 }

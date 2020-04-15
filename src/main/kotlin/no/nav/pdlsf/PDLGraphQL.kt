@@ -41,13 +41,12 @@ private fun executeGraphQlQuery(
 ).let { response ->
     when (response.status) {
         Status.OK -> {
-            log.debug { "GraphQL response string ${response.bodyString()}" } // TODO :: REMOVE
             val result = response.bodyString().getQueryResponseFromJsonString()
-            log.debug { "GraphQL result $result" }
             result
         }
         else -> {
             log.error { "PDL GraphQl request failed - ${response.toMessage()}" }
+            Metrics.failedRequestGraphQl.inc()
             InvalidQueryResponse
         }
     }
@@ -367,21 +366,21 @@ private fun QueryResponse.Data.HentPerson.findAdressebeskyttelse(): Gradering {
 fun QueryResponse.Data.HentPerson.findKommunenummer(): String {
     return this.bostedsadresse.let { bostedsadresse ->
         if (bostedsadresse.isNullOrEmpty()) {
-            Metrics.ingenAdresse.inc()
+            Metrics.usedAdresseTypes.labels(AdresseType.INGEN.name).inc()
             UKJENT_FRA_PDL
         } else {
             bostedsadresse.first().let {
                 it.vegadresse?.let { vegadresse ->
-                    Metrics.vegadresse.inc()
+                    Metrics.usedAdresseTypes.labels(AdresseType.VEGADRESSE.name).inc()
                     vegadresse.kommunenummer
                 } ?: it.matrikkeladresse?.let { matrikkeladresse ->
-                    Metrics.matrikkeladresse.inc()
+                    Metrics.usedAdresseTypes.labels(AdresseType.MATRIKKELADRESSE.name).inc()
                     matrikkeladresse.kommunenummer
                 } ?: it.ukjentBosted?.let { ukjentBosted ->
-                    Metrics.ukjentBosted.inc()
+                    Metrics.usedAdresseTypes.labels(AdresseType.UKJENTBOSTED.name).inc()
                     ukjentBosted.bostedskommune
                 } ?: UKJENT_FRA_PDL.also {
-                    Metrics.ingenAdresse.inc()
+                    Metrics.usedAdresseTypes.labels(AdresseType.INGEN.name).inc()
                 }
             }
         }

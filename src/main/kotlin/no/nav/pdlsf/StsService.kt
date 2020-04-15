@@ -27,6 +27,7 @@ private fun fetchNewToken(): StsAccessTokenBase = Http.client.invokeWM(
         Status.OK -> json.parse<StsAccessToken>(response.bodyString())
         else -> {
             log.error { "Authorization request failed - ${response.toMessage()}" }
+            Metrics.failedRequestSts.inc()
             InvalidStsAccessToken
         }
     }
