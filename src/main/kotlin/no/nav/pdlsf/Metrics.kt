@@ -94,12 +94,4 @@ object Metrics {
         invalidQuery.clear()
         sucessfulValueToQuery.clear()
     }
-
-    fun resetAll() {
-        cachedPersons.clear()
-        invalidQuery.clear()
-        sucessfulValueToQuery.clear()
-        invalidQuery.clear()
-        sucessfulValueToQuery.clear()
-    }
 }
