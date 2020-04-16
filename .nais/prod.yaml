@@ -55,10 +55,10 @@ spec:
     - name: KAFKA_TOPIC_PDL
       value: aapen-person-pdl-dokument-v1
     - name: KAFKA_TOPIC_SF
-      value: aapen-sf-objects-v1
-    - name: SF_OAUTHURL
-      value: 'https://login.salesforce.com/services/oauth2/token'
-    - name: SF_RESTENDPOINT
-      value: '/services/data/v47.0/composite/sobjects'
+      value: privat-pdl-sfobjects-v1
+    - name: PDL_GRAPHQL_URL
+      value: 'https://api-gw.oera.no/pdl-api/graphql'
+    - name: STS_REST_URL
+      value: 'https://api-gw.oera.no/security-token-service/rest/v1/sts/token'
     - name: MS_BETWEEN_WORK
       value: '600000'

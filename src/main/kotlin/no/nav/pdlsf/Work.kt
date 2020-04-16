@@ -38,7 +38,7 @@ internal fun work(params: Params) {
             }
     ) {
 
-        val kafkaMessages: MutableMap<ByteArray, ByteArray> = mutableMapOf()
+        val kafkaMessages: MutableMap<ByteArray, ByteArray?> = mutableMapOf()
 
         log.info { "Start building up map of person from PDL compaction log" }
         getKafkaConsumerByConfig<String, String>(
@@ -62,7 +62,7 @@ internal fun work(params: Params) {
             if (!cRecords.isEmpty) {
                 var consumerstate: ConsumerStates = ConsumerStates.HasIssues
                 cRecords.forEach { cr ->
-                    val person: PersonBase = when (val v = cr.value()) {
+                    val person: PersonBase = when (cr.value()) {
                         null -> {
                             log.info { "Tombestone" }
                             PersonTombestone(aktoerId = cr.key())
@@ -80,14 +80,12 @@ internal fun work(params: Params) {
                         }
                         is PersonUnknown -> {
                             Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
-                            // Sier det er Ok, men gjør ingenting da dette ikke vil bli løst preprod med det første og er ett Dolly issue
-                            // Viktig å fortsette å logge og fange opp dette i prod hvis det er noen cornercases i prod som MFN håndterer feil feks rundt split og merge.
-                            ConsumerStates.IsOk
+                            ConsumerStates.HasIssues
                         }
                         is PersonTombestone -> {
                             Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
-                            val personTombstoneProto = person.toPersonTombstoneProto()
-                            kafkaMessages[personTombstoneProto.first.toByteArray()] = personTombstoneProto.second.toByteArray()
+                            val personTombstoneProtoKey = person.toPersonTombstoneProtoKey()
+                            kafkaMessages[personTombstoneProtoKey.toByteArray()] = null
                             ConsumerStates.IsOk
                         }
                         is Person -> {

@@ -84,7 +84,6 @@ object Metrics {
     fun sessionReset() {
         cachedPersons.clear()
         publishedPersons.clear()
-
         parsedGrapQLPersons.clear()
 
         usedAdresseTypes.clear()

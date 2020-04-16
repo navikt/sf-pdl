@@ -54,10 +54,10 @@ data class PersonTombestone(
     val aktoerId: String
 ) : PersonBase() {
 
-    fun toPersonTombstoneProto(): Pair<PersonKey, PersonValue> =
+    fun toPersonTombstoneProtoKey(): PersonKey =
             PersonKey.newBuilder().apply {
                 aktoerId = this@PersonTombestone.aktoerId
-            }.build() to PersonValue.newBuilder().apply {}.build()
+            }.build()
 }
 
 data class Person(
