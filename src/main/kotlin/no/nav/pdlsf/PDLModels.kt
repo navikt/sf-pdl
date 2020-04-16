@@ -45,10 +45,20 @@ fun createCache(params: Params): Map<String, Int> {
 }
 
 sealed class PersonBase
-object PersonTombestone : PersonBase()
-object PersonUnknown : PersonBase()
-object PersonInvalid : PersonBase()
-object PersonError : PersonBase()
+
+object PersonUnknown : PersonBase() // Http 200, men person finnes ikke. Tibakemelding i Errors
+object PersonInvalid : PersonBase() // Konvertering fra response graphQl til Person mislykkes
+object PersonError : PersonBase() // Internal error/network/unauthorized
+
+data class PersonTombestone(
+    val aktoerId: String
+) : PersonBase() {
+
+    fun toPersonTombstoneProto(): Pair<PersonKey, PersonValue> =
+            PersonKey.newBuilder().apply {
+                aktoerId = this@PersonTombestone.aktoerId
+            }.build() to PersonValue.newBuilder().apply {}.build()
+}
 
 data class Person(
     val aktoerId: String = "",
@@ -104,7 +114,7 @@ internal fun ByteArray.protobufSafeParseValue(): PersonValue = this.let { ba ->
     try {
         PersonValue.parseFrom(ba)
     } catch (e: InvalidProtocolBufferException) {
-        PersonValue.getDefaultInstance()
+        PersonValue.getDefaultInstance() // TODO:: Mulig dette trefer tombestone
     }
 }
 

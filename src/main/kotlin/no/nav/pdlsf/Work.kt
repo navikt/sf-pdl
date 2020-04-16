@@ -50,42 +50,45 @@ internal fun work(params: Params) {
                         ConsumerConfig.GROUP_ID_CONFIG to params.kafkaClientID,
                         ConsumerConfig.CLIENT_ID_CONFIG to params.kafkaClientID,
                         ConsumerConfig.AUTO_OFFSET_RESET_CONFIG to "earliest",
-                        ConsumerConfig.MAX_POLL_RECORDS_CONFIG to 200, // 200 is the maximum batch size accepted by salesforce
                         ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG to "false"
                 ).let { cMap ->
                     if (params.kafkaSecurityEnabled())
                         cMap.addKafkaSecurity(params.kafkaUser, params.kafkaPassword, params.kafkaSecProt, params.kafkaSaslMec)
                     else cMap
                 },
-                listOf(params.kafkaTopicPdl), fromBeginning = true // TODO :: false
+                listOf(params.kafkaTopicPdl), fromBeginning = false
         ) { cRecords ->
             log.debug { "Records polled from PDL compaction log - ${cRecords.count()}" }
             if (!cRecords.isEmpty) {
+                var consumerstate: ConsumerStates = ConsumerStates.HasIssues
                 cRecords.forEach { cr ->
                     val person: PersonBase = when (val v = cr.value()) {
                         null -> {
                             log.info { "Tombestone" }
-                            PersonTombestone
+                            PersonTombestone(aktoerId = cr.key())
                         }
-                        else -> if (v.isNotEmpty()) {
-                            getPersonFromGraphQL(cr.key())
-                        } else {
-                            PersonInvalid // TODO :: TOMBSTONE ??
-                        }
+                        else -> getPersonFromGraphQL(cr.key())
                     }
-
-                    when (person) {
-                        is PersonUnknown -> {
-                            Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
-                        }
+                    consumerstate = when (person) {
                         is PersonInvalid -> {
                             Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
+                            ConsumerStates.HasIssues
                         }
                         is PersonError -> {
                             Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
+                            ConsumerStates.HasIssues
+                        }
+                        is PersonUnknown -> {
+                            Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
+                            // Sier det er Ok, men gjør ingenting da dette ikke vil bli løst preprod med det første og er ett Dolly issue
+                            // Viktig å fortsette å logge og fange opp dette i prod hvis det er noen cornercases i prod som MFN håndterer feil feks rundt split og merge.
+                            ConsumerStates.IsOk
                         }
                         is PersonTombestone -> {
                             Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
+                            val personTombstoneProto = person.toPersonTombstoneProto()
+                            kafkaMessages[personTombstoneProto.first.toByteArray()] = personTombstoneProto.second.toByteArray()
+                            ConsumerStates.IsOk
                         }
                         is Person -> {
                             Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
@@ -95,10 +98,12 @@ internal fun work(params: Params) {
                             if (status in listOf(ObjectInCacheStatus.New, ObjectInCacheStatus.Updated)) {
                                 kafkaMessages[personProto.first.toByteArray()] = personProto.second.toByteArray()
                             }
+                            ConsumerStates.IsOk
                         }
                     }
+                    if (consumerstate != ConsumerStates.IsOk) return@forEach
                 }
-                ConsumerStates.IsOkNoCommit
+                consumerstate
             } else {
                 log.info { "Kafka events completed for now - leaving kafka consumer loop" }
                 ConsumerStates.IsFinished

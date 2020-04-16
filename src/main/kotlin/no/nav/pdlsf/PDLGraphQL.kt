@@ -55,10 +55,8 @@ private fun executeGraphQlQuery(
 @ImplicitReflectionSerializer
 fun getPersonFromGraphQL(ident: String): PersonBase {
     val query = getStringFromResource(GRAPHQL_QUERY).trim()
-    val response = executeGraphQlQuery(query, mapOf("ident" to ident))
-    log.debug { "GraphQL response - $response" }
 
-    return when (response) {
+    return when (val response = executeGraphQlQuery(query, mapOf("ident" to ident))) {
         is QueryErrorResponse -> {
             if (response.errors.first().mapToHttpCode().code == 404) {
                 log.warn { "GraphQL aktørId $ident ikke funnet" }
