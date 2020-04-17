@@ -12,8 +12,11 @@ import org.http4k.core.HttpHandler
 import org.http4k.core.Request
 import org.http4k.core.Response
 
-internal val json = Json(JsonConfiguration(
-        ignoreUnknownKeys = true)
+internal val json = Json(
+        JsonConfiguration(
+                ignoreUnknownKeys = true,
+                isLenient = true
+        )
 )
 
 object Http {

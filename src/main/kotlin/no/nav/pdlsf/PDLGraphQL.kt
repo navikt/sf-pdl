@@ -158,7 +158,7 @@ data class QueryResponse(
             @Serializable
             data class Doedsfall(
                 @Serializable(with = IsoLocalDateSerializer::class)
-                val doedsdato: LocalDate
+                val doedsdato: LocalDate? = null
             )
             @Serializable
             data class Navn(
@@ -307,14 +307,16 @@ private fun QueryResponse.Data.HentPerson.findNavn(): NavnBase {
 @UnstableDefault
 @ImplicitReflectionSerializer
 fun String.getQueryResponseFromJsonString(): QueryResponseBase = runCatching {
-    runCatching {
         json.parse(QueryResponse.serializer(), this)
-    }.getOrNull()?.let { it } ?: json.parse(QueryErrorResponse.serializer(), this)
-}
-        .onFailure {
-            log.error { "Failed serialize GraphQL QueryResponse - ${it.localizedMessage}" }
+    }
+        .onFailure { log.error { "Failed serialize GraphQL QueryResponse - ${it.localizedMessage}" } }
+        .getOrElse {
+        runCatching {
+            json.parse(QueryErrorResponse.serializer(), this)
         }
-        .getOrDefault(InvalidQueryResponse)
+                .onFailure { log.error { "Failed serialize GraphQL QueryErrorResponse - ${it.localizedMessage}" } }
+                .getOrDefault(InvalidQueryResponse)
+    }
 
 fun QueryResponse.toPerson(): PersonBase {
     return runCatching { Person(
