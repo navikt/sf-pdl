@@ -25,7 +25,7 @@ data class Params(
 
         // other details
     val httpsProxy: String = System.getenv("HTTPS_PROXY") ?: "",
-    val msBetweenWork: Long = System.getenv("MS_BETWEEN_WORK")?.toLong() ?: 30 * 60 * 1_000 * 15,
+    val msBetweenWork: Long = System.getenv("MS_BETWEEN_WORK")?.toLong() ?: 5 * 60 * 100,
     val pdlGraphQlApiKey: String = ("/var/run/secrets/nais.io/apigw/pdl-api/x-nav-apiKey".readFile() ?: ""),
     val pdlGraphQlUrl: String = System.getenv("PDL_GRAPHQL_URL") ?: "",
     val stsApiKey: String = ("/var/run/secrets/nais.io/apigw/security-token-service-token/x-nav-apiKey".readFile() ?: ""),
