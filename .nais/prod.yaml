@@ -38,7 +38,7 @@ spec:
       - mountPath: /var/run/secrets/nais.io/vault
         kvPath: /kv/prod/sbs/sf-pdl/default
       - mountPath: /var/run/secrets/nais.io/serviceuser
-        kvPath: /serviceuser/data/prod/srvpdlsf
+        kvPath: /serviceuser/data/prod/srvsfpdl
       - mountPath: /var/run/secrets/nais.io/apigw/security-token-service-token
         kvPath: /apikey/apigw/prod/security-token-service-token/sf-pdl
       - mountPath: /var/run/secrets/nais.io/apigw/pdl-api
