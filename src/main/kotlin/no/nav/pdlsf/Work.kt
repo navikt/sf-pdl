@@ -41,7 +41,7 @@ internal fun work(params: Params) {
         val kafkaMessages: MutableMap<ByteArray, ByteArray?> = mutableMapOf()
 
         log.info { "Start building up map of person from PDL compaction log" }
-        getKafkaConsumerByConfig<String, String>(
+        val consumerRecordsProcessedWithNoIssue = getKafkaConsumerByConfig<String, String>(
                 mapOf(
                         ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG to params.kafkaBrokers,
                         "schema.registry.url" to params.kafkaSchemaRegistry,
@@ -58,7 +58,6 @@ internal fun work(params: Params) {
                 },
                 listOf(params.kafkaTopicPdl), fromBeginning = false
         ) { cRecords ->
-            log.debug { "Records polled from PDL compaction log - ${cRecords.count()}" }
             if (!cRecords.isEmpty) {
                 var consumerstate: ConsumerStates = ConsumerStates.HasIssues
                 cRecords.forEach { cr ->
@@ -101,6 +100,7 @@ internal fun work(params: Params) {
                     }
                     if (consumerstate != ConsumerStates.IsOk) return@forEach
                 }
+                log.info { "Consumersta"  }
                 consumerstate
             } else {
                 log.info { "Kafka events completed for now - leaving kafka consumer loop" }
@@ -108,9 +108,14 @@ internal fun work(params: Params) {
             }
         }
 
-        log.info { "Send ${kafkaMessages.size} protobuf Person objects to topic ${params.kafkaTopicSf}" }
-        kafkaMessages.forEach { m ->
-            this.send(ProducerRecord(params.kafkaTopicSf, m.key, m.value))
+        if (consumerRecordsProcessedWithNoIssue) {
+            log.info { "Kafka consumer records processed with no issue, building up kafka messages ready to process to topic" }
+            log.info { "Send ${kafkaMessages.size} protobuf Person objects to topic ${params.kafkaTopicSf}" }
+            kafkaMessages.forEach { m ->
+                this.send(ProducerRecord(params.kafkaTopicSf, m.key, m.value))
+            }
+        } else {
+            log.warn { "Kafka consumer records processed with issue, will not send kafka messages to topic" }
         }
     }
 }

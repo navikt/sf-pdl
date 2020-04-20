@@ -329,7 +329,7 @@ fun QueryResponse.toPerson(): PersonBase {
             sikkerhetstiltak = this.data.hentPerson.sikkerhetstiltak.map { it.beskrivelse }.toList(),
             kommunenummer = this.data.hentPerson.findKommunenummer(),
             region = this.data.hentPerson.findRegion(),
-            doed = this.data.hentPerson.doedsfall.isNotEmpty()
+            doed = this.data.hentPerson.doedsfall.isNotEmpty() // "doedsdato": null  betyr at han faktsik er død, man vet bare ikke når. Listen kan ha to innslagt, kilde FREG og PDL
         )
     }
             .onFailure { log.error { "Error creating Person from a graphQL query response ${it.localizedMessage}" } }
