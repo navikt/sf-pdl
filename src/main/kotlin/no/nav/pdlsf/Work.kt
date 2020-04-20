@@ -100,7 +100,7 @@ internal fun work(params: Params) {
                     }
                     if (consumerstate != ConsumerStates.IsOk) return@forEach
                 }
-                log.info { "Consumersta"  }
+                log.info { "Consumersta" }
                 consumerstate
             } else {
                 log.info { "Kafka events completed for now - leaving kafka consumer loop" }
