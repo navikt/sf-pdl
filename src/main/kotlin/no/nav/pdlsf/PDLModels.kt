@@ -9,8 +9,8 @@ import org.apache.kafka.common.serialization.ByteArrayDeserializer
 
 private val log = KotlinLogging.logger { }
 
-fun createCache(params: Params): Map<String, Int> {
-    val cache: MutableMap<String, Int> = mutableMapOf()
+fun createCache(params: Params): Map<String, Int?> {
+    val cache: MutableMap<String, Int?> = mutableMapOf()
 
     getKafkaConsumerByConfig<ByteArray, ByteArray>(
             mapOf(
@@ -30,7 +30,11 @@ fun createCache(params: Params): Map<String, Int> {
         if (!cRecords.isEmpty) {
             cRecords.forEach { record ->
                 val aktoerId = record.key().protobufSafeParseKey().aktoerId
-                cache[aktoerId] = record.value().protobufSafeParseValue().hashCode()
+                if (record.value() == null) {
+                    cache[aktoerId] = null
+                } else {
+                    cache[aktoerId] = record.value().protobufSafeParseValue().hashCode()
+                }
             }
             ConsumerStates.IsOkNoCommit
         } else {
@@ -123,7 +127,7 @@ internal sealed class ObjectInCacheStatus(val name: String) {
     object NoChange : ObjectInCacheStatus("UENDRET")
 }
 
-internal fun Map<String, Int>.exists(aktoerId: String, newValueHash: Int): ObjectInCacheStatus =
+internal fun Map<String, Int?>.exists(aktoerId: String, newValueHash: Int): ObjectInCacheStatus =
         if (!this.containsKey(aktoerId))
             ObjectInCacheStatus.New
         else if ((this.containsKey(aktoerId) && this[aktoerId] != newValueHash))
