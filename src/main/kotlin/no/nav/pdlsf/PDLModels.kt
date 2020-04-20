@@ -53,7 +53,6 @@ object PersonError : PersonBase() // Internal error/network/unauthorized
 data class PersonTombestone(
     val aktoerId: String
 ) : PersonBase() {
-
     fun toPersonTombstoneProtoKey(): PersonKey =
             PersonKey.newBuilder().apply {
                 aktoerId = this@PersonTombestone.aktoerId

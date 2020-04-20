@@ -58,6 +58,7 @@ internal fun work(params: Params) {
                 },
                 listOf(params.kafkaTopicPdl), fromBeginning = false
         ) { cRecords ->
+            log.info { "Consumer records ready to process - ${cRecords.count()}" }
             if (!cRecords.isEmpty) {
                 var consumerstate: ConsumerStates = ConsumerStates.HasIssues
                 cRecords.forEach { cr ->
