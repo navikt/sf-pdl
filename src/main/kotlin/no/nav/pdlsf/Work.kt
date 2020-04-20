@@ -63,7 +63,6 @@ internal fun work(params: Params) {
                 cRecords.forEach { cr ->
                     val person: PersonBase = when (cr.value()) {
                         null -> {
-                            log.info { "Tombestone" }
                             PersonTombestone(aktoerId = cr.key())
                         }
                         else -> getPersonFromGraphQL(cr.key())
