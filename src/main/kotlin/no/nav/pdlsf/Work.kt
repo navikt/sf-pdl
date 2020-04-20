@@ -98,9 +98,14 @@ internal fun work(params: Params) {
                             ConsumerStates.IsOk
                         }
                     }
-                    if (consumerstate != ConsumerStates.IsOk) return@forEach
+                    if (consumerstate != ConsumerStates.IsOk) {
+                        log.warn { "Consumerstate issues return from foreach  with consumerstate - $consumerstate" }
+                        return@forEach
+                    }
                 }
-                log.info { "Consumersta" }
+                if (consumerstate != ConsumerStates.IsOk) {
+                    log.info { "Consumerstate is should be ok  and not - $consumerstate" }
+                }
                 consumerstate
             } else {
                 log.info { "Kafka events completed for now - leaving kafka consumer loop" }
