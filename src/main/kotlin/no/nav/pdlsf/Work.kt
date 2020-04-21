@@ -38,8 +38,6 @@ internal fun work(params: Params) {
             }
     ) {
 
-        val kafkaMessages: MutableMap<ByteArray, ByteArray?> = mutableMapOf()
-
         log.info { "Start building up map of person from PDL compaction log" }
         getKafkaConsumerByConfig<String, String>(
                 mapOf(
@@ -59,6 +57,7 @@ internal fun work(params: Params) {
                 listOf(params.kafkaTopicPdl), fromBeginning = false
         ) { cRecords ->
             log.info { "Consumer records ready to process - ${cRecords.count()}" }
+            val kafkaMessages: MutableMap<ByteArray, ByteArray?> = mutableMapOf()
             if (!cRecords.isEmpty) {
                 var consumerstate: ConsumerStates = ConsumerStates.HasIssues
                 cRecords.forEach { cr ->
@@ -109,6 +108,8 @@ internal fun work(params: Params) {
                     kafkaMessages.forEach { m ->
                         this.send(ProducerRecord(params.kafkaTopicSf, m.key, m.value))
                     }
+                    kafkaMessages.clear()
+                    log.info { "Reset kafkaMessages, new size  - ${kafkaMessages.size}" }
                 }
                 consumerstate
             } else {
