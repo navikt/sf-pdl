@@ -22,7 +22,8 @@ object Metrics {
     val responseLatency: Histogram = Histogram
         .build()
         .name("response_latency_seconds_histogram")
-        .help("Salesforce post response latency")
+        .labelNames("uri")
+        .help("Http response latency")
         .register()
 
     val invalidQuery: Gauge = Gauge

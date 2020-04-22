@@ -100,7 +100,6 @@ internal fun work(params: Params) {
                     if (consumerstate != ConsumerStates.IsOk) {
                         log.warn { "Consumerstate issues, is not Ok. Return from foreach  with consumerstate" }
                         return@getKafkaConsumerByConfig consumerstate
-                        // return@forEach, det  gjør at den ikke hopper helt ut og kjører videre med sender ikke recordene når de er feil Invalid eller Unknown.. Ikke gunstig, hvertfall ikke for Invalid
                     }
                 }
                 if (consumerstate == ConsumerStates.IsOk) {
