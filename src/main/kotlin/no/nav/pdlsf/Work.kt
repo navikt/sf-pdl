@@ -57,7 +57,7 @@ internal fun work(params: Params) {
                         cMap.addKafkaSecurity(params.kafkaUser, params.kafkaPassword, params.kafkaSecProt, params.kafkaSaslMec)
                     else cMap
                 },
-                listOf(params.kafkaTopicPdl), fromBeginning = true
+                listOf(params.kafkaTopicPdl), fromBeginning = false
         ) { cRecords ->
             log.info { "${cRecords.count()} - consumer records ready to process" }
             val kafkaMessages: MutableMap<ByteArray, ByteArray?> = mutableMapOf()
@@ -107,7 +107,7 @@ internal fun work(params: Params) {
                             }
                             consumerstate
                         }
-                    }.awaitAll()
+                    }.awaitAll().also { log.info { "${cRecords.count()} - Query graphql PDL" } }
                 }
 
                 if (listConsumerStates.all { it != ConsumerStates.IsOk }) {
