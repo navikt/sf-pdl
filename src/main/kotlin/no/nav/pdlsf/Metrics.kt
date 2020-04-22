@@ -94,5 +94,7 @@ object Metrics {
 
         invalidQuery.clear()
         sucessfulValueToQuery.clear()
+
+        responseLatency.clear()
     }
 }

@@ -54,7 +54,7 @@ internal fun work(params: Params) {
                         cMap.addKafkaSecurity(params.kafkaUser, params.kafkaPassword, params.kafkaSecProt, params.kafkaSaslMec)
                     else cMap
                 },
-                listOf(params.kafkaTopicPdl), fromBeginning = true // TODO :: Endre før prod igjen
+                listOf(params.kafkaTopicPdl), fromBeginning = false
         ) { cRecords ->
             log.info { "${cRecords.count()} - consumer records ready to process" }
             val kafkaMessages: MutableMap<ByteArray, ByteArray?> = mutableMapOf()
