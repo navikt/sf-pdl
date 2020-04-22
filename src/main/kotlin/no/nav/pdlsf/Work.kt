@@ -107,8 +107,8 @@ internal fun work(params: Params) {
                             }
                             consumerstate
                         }
-                    }.awaitAll().also { log.info { "${cRecords.count()} - Query graphql PDL" } }
-                }
+                    }.awaitAll()
+                }.also { log.info { "${cRecords.count()} - Records resulted in kafkamessages - ${kafkaMessages.size}" } }
 
                 if (listConsumerStates.all { it != ConsumerStates.IsOk }) {
                     log.warn { "Consumerstate issues, is not Ok. Return from foreach  with consumerstate" }
