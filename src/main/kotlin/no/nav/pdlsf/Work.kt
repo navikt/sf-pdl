@@ -54,9 +54,9 @@ internal fun work(params: Params) {
                         cMap.addKafkaSecurity(params.kafkaUser, params.kafkaPassword, params.kafkaSecProt, params.kafkaSaslMec)
                     else cMap
                 },
-                listOf(params.kafkaTopicPdl), fromBeginning = false
+                listOf(params.kafkaTopicPdl), fromBeginning = true // TODO :: Endre før prod igjen
         ) { cRecords ->
-            log.info { "Consumer records ready to process - ${cRecords.count()}" }
+            log.info { "${cRecords.count()} - consumer records ready to process" }
             val kafkaMessages: MutableMap<ByteArray, ByteArray?> = mutableMapOf()
             if (!cRecords.isEmpty) {
                 var consumerstate: ConsumerStates = ConsumerStates.HasIssues
@@ -98,18 +98,17 @@ internal fun work(params: Params) {
                         }
                     }
                     if (consumerstate != ConsumerStates.IsOk) {
-                        log.warn { "Consumerstate issues return from foreach  with consumerstate - $consumerstate" }
-                        return@forEach
+                        log.warn { "Consumerstate issues, is not Ok. Return from foreach  with consumerstate" }
+                        return@getKafkaConsumerByConfig consumerstate
+                        // return@forEach, det  gjør at den ikke hopper helt ut og kjører videre med sender ikke recordene når de er feil Invalid eller Unknown.. Ikke gunstig, hvertfall ikke for Invalid
                     }
                 }
                 if (consumerstate == ConsumerStates.IsOk) {
-                    log.info { "Consumerstate is ok, send to Kafka topic.  - $consumerstate" }
-                    log.info { "Send ${kafkaMessages.size} protobuf Person objects to topic ${params.kafkaTopicSf}" }
+                    log.info { "${kafkaMessages.size} - protobuf Person objects sent to topic ${params.kafkaTopicSf}" }
                     kafkaMessages.forEach { m ->
                         this.send(ProducerRecord(params.kafkaTopicSf, m.key, m.value))
                     }
                     kafkaMessages.clear()
-                    log.info { "Reset kafkaMessages, new size  - ${kafkaMessages.size}" }
                 }
                 consumerstate
             } else {
