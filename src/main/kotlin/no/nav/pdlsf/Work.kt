@@ -64,10 +64,9 @@ internal fun work(params: Params) {
                 listOf(params.kafkaTopicPdl), fromBeginning = false
         ) { cRecords ->
             log.info { "${cRecords.count()} - consumer records ready to process" }
-            val kafkaMessages: MutableMap<ByteArray, ByteArray?> = mutableMapOf()
             if (!cRecords.isEmpty) {
-            runBlocking {
-
+                val kafkaMessages = runBlocking {
+                    val km: MutableMap<ByteArray, ByteArray?> = mutableMapOf()
                     cRecords.asFlow()
                             .filterNotNull()
                             .map { handleConsumerRecord(it) }
@@ -76,18 +75,19 @@ internal fun work(params: Params) {
                                 when (val person = it.second) {
                                     is PersonTombestone -> {
                                         val personTombstoneProtoKey = person.toPersonTombstoneProtoKey()
-                                        kafkaMessages[personTombstoneProtoKey.toByteArray()] = null
+                                        km[personTombstoneProtoKey.toByteArray()] = null
                                     }
                                     is Person -> {
                                         val personProto = person.toPersonProto()
                                         val status = cache.exists(person.aktoerId, personProto.second.hashCode())
                                         Metrics.publishedPersons.labels(status.name).inc()
                                         if (status in listOf(ObjectInCacheStatus.New, ObjectInCacheStatus.Updated)) {
-                                            kafkaMessages[personProto.first.toByteArray()] = personProto.second.toByteArray()
+                                            km[personProto.first.toByteArray()] = personProto.second.toByteArray()
                                         }
                                     }
                                 }
                             }.collect()
+                    km
                 }
 
                 if (kafkaMessages.size == cRecords.count()) {
