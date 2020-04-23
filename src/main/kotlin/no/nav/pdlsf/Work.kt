@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.ImplicitReflectionSerializer
 import kotlinx.serialization.UnstableDefault
@@ -75,13 +76,15 @@ internal fun work(params: Params) {
                             .filterNotNull()
                             .map { handleConsumerRecord(it) }
                             .filter { it.first == ConsumerStates.IsOk }
-                            .map {
+                            .onEach {
                                 when (val person = it.second) {
                                     is PersonTombestone -> {
+                                        log.warn { "In onEach Tombestone" }
                                         val personTombstoneProtoKey = person.toPersonTombstoneProtoKey()
                                         km[personTombstoneProtoKey.toByteArray()] = null
                                     }
                                     is Person -> {
+                                        log.warn { "In onEach Person" }
                                         val personProto = person.toPersonProto()
                                         val status = cache.exists(person.aktoerId, personProto.second.hashCode())
                                         Metrics.publishedPersons.labels(status.name).inc()
