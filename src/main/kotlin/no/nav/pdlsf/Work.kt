@@ -66,9 +66,8 @@ internal fun work(params: Params) {
             log.info { "${cRecords.count()} - consumer records ready to process" }
             if (!cRecords.isEmpty) {
                 val toList = cRecords.map { handleConsumerRecord(it) }
-                log.info { "Foreach hasIssues - ${toList.filter { it.first == ConsumerStates.HasIssues }}" }
-                log.info { "Foreach isOk - ${toList.filter { it.first == ConsumerStates.IsOk }}" }
-                log.info { "Foreach - " }
+                log.info { "Foreach hasIssues - ${toList.filter { it.first == ConsumerStates.HasIssues }.size}" }
+                log.info { "Foreach isOk - ${toList.filter { it.first == ConsumerStates.IsOk }.size}" }
 
                 val kafkaMessages = runBlocking {
                     val km: MutableMap<ByteArray, ByteArray?> = mutableMapOf()
