@@ -61,7 +61,7 @@ internal fun work(params: Params) {
                         cMap.addKafkaSecurity(params.kafkaUser, params.kafkaPassword, params.kafkaSecProt, params.kafkaSaslMec)
                     else cMap
                 },
-                listOf(params.kafkaTopicPdl), fromBeginning = false
+                listOf(params.kafkaTopicPdl), fromBeginning = true
         ) { cRecords ->
             log.info { "${cRecords.count()} - consumer records ready to process" }
             if (!cRecords.isEmpty) {
@@ -90,15 +90,15 @@ internal fun work(params: Params) {
                     km
                 }
 
-                if (kafkaMessages.size == cRecords.count()) {
+                if (kafkaMessages.toList().size == cRecords.count()) {
                     log.info { "${kafkaMessages.size} - protobuf Person objects sent to topic ${params.kafkaTopicSf}" }
                     kafkaMessages.forEach { m ->
                         this.send(ProducerRecord(params.kafkaTopicSf, m.key, m.value))
                     }
-                    kafkaMessages.clear()
                     ConsumerStates.IsOk
                 } else {
                     log.error { "Consumerstate issues, is not Ok. Difference between number of consumer records and new kafka messages" }
+                    log.info { "Kafkamessges ${kafkaMessages.size} vs Consumer records ${cRecords.count()}" }
                     ConsumerStates.HasIssues
                 }
             } else {
