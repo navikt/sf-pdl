@@ -65,6 +65,11 @@ internal fun work(params: Params) {
         ) { cRecords ->
             log.info { "${cRecords.count()} - consumer records ready to process" }
             if (!cRecords.isEmpty) {
+                val toList = cRecords.map { handleConsumerRecord(it) }
+                log.info { "Foreach hasIssues - ${toList.filter { it.first == ConsumerStates.HasIssues }}" }
+                log.info { "Foreach isOk - ${toList.filter { it.first == ConsumerStates.IsOk }}" }
+                log.info { "Foreach - " }
+
                 val kafkaMessages = runBlocking {
                     val km: MutableMap<ByteArray, ByteArray?> = mutableMapOf()
                     cRecords.asFlow()
@@ -90,7 +95,7 @@ internal fun work(params: Params) {
                     km
                 }
 
-                if (kafkaMessages.toList().size == cRecords.count()) {
+                if (kafkaMessages.size == cRecords.count()) {
                     log.info { "${kafkaMessages.size} - protobuf Person objects sent to topic ${params.kafkaTopicSf}" }
                     kafkaMessages.forEach { m ->
                         this.send(ProducerRecord(params.kafkaTopicSf, m.key, m.value))
