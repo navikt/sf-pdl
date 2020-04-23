@@ -87,13 +87,15 @@ internal fun work(params: Params) {
                                         log.warn { "In onEach Person" }
                                         val personProto = person.toPersonProto()
                                         val status = cache.exists(person.aktoerId, personProto.second.hashCode())
+                                        log.warn { "In onEach Person status - ${status.name}" }
                                         Metrics.publishedPersons.labels(status.name).inc()
                                         if (status in listOf(ObjectInCacheStatus.New, ObjectInCacheStatus.Updated)) {
                                             km[personProto.first.toByteArray()] = personProto.second.toByteArray()
                                         }
                                     }
                                 }
-                            }.collect()
+                            }
+                            .collect()
                     km
                 }
 
