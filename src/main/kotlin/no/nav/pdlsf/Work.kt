@@ -1,12 +1,9 @@
 package no.nav.pdlsf
 
 import io.confluent.kafka.serializers.KafkaAvroDeserializer
-import java.lang.Exception
-import kotlinx.coroutines.flow.asFlow
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
+import kotlin.system.measureTimeMillis
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.ImplicitReflectionSerializer
 import kotlinx.serialization.UnstableDefault
@@ -18,8 +15,6 @@ import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.ByteArraySerializer
 
 private val log = KotlinLogging.logger {}
-
-class HasKafkaIssues(message: String) : Exception(message)
 
 @OptIn(UnstableDefault::class)
 @ImplicitReflectionSerializer
@@ -64,39 +59,49 @@ internal fun work(params: Params) {
                         cMap.addKafkaSecurity(params.kafkaUser, params.kafkaPassword, params.kafkaSecProt, params.kafkaSaslMec)
                     else cMap
                 },
-                listOf(params.kafkaTopicPdl), fromBeginning = false
+                listOf(params.kafkaTopicPdl), fromBeginning = true // TODO:: false in prod
         ) { cRecords ->
             log.info { "${cRecords.count()} - consumer records ready to process" }
             if (!cRecords.isEmpty) {
                 val result = runBlocking {
                     val km: MutableMap<ByteArray, ByteArray?> = mutableMapOf()
-                    var hasIssues: Boolean = false
-                        cRecords.asFlow()
-                                .filterNotNull()
-                                .map {
-                                    val pair = handleConsumerRecord(it)
-                                    if (pair.first != ConsumerStates.IsOk) hasIssues = true
-                                    pair
+                    var hasIssues = false
+
+                    val cTime = measureTimeMillis {
+                        cRecords.map { cr ->
+                            async {
+                                val pair = if (cr.value() == null) {
+                                    val personTombestone = PersonTombestone(aktoerId = cr.key())
+                                    Metrics.parsedGrapQLPersons.labels(personTombestone.toMetricsLable()).inc()
+                                    Pair(ConsumerStates.IsOk, personTombestone)
+                                } else {
+                                    handleConsumerRecord(cr)
                                 }
-                                .onEach {
-                                    when (val person = it.second) {
-                                        is PersonTombestone -> {
-                                            val personTombstoneProtoKey = person.toPersonTombstoneProtoKey()
-                                            km[personTombstoneProtoKey.toByteArray()] = null
+                                if (pair.first != ConsumerStates.IsOk) {
+                                    hasIssues = true
+                                } else {
+                                    val personBase = pair.second
+                                    if (personBase is PersonTombestone) {
+                                        val personTombstoneProtoKey = personBase.toPersonTombstoneProtoKey()
+                                        km[personTombstoneProtoKey.toByteArray()] = null
+                                    } else if (personBase is Person) {
+                                        val personProto = personBase.toPersonProto()
+                                        val status = cache.exists(cr.key(), personProto.second.hashCode())
+                                        Metrics.publishedPersons.labels(status.name).inc()
+                                        if (status in listOf(ObjectInCacheStatus.New, ObjectInCacheStatus.Updated)) {
+                                            km[personProto.first.toByteArray()] = personProto.second.toByteArray()
                                         }
-                                        is Person -> {
-                                            val personProto = person.toPersonProto()
-                                            val status = cache.exists(person.aktoerId, personProto.second.hashCode())
-                                            Metrics.publishedPersons.labels(status.name).inc()
-                                            if (status in listOf(ObjectInCacheStatus.New, ObjectInCacheStatus.Updated)) {
-                                                km[personProto.first.toByteArray()] = personProto.second.toByteArray()
-                                            }
-                                        }
+                                    } else {
+                                        log.error { "Consumerstate should not be valid an result other then Person or PersonTombestone" }
                                     }
                                 }
-                                .collect()
-                    if (hasIssues) return@runBlocking Pair(ConsumerStates.HasIssues, km) else return@runBlocking Pair(ConsumerStates.IsOk, km)
-                }
+                            }
+                        }.awaitAll()
+                    }
+                    log.info { "$cTime - to async invoke ${cRecords.count()}" }
+
+                    if (hasIssues) Pair(ConsumerStates.HasIssues, km) else Pair(ConsumerStates.IsOk, km)
+            }.also { log.info { "${it.second.size} of ${cRecords.count()} resulted in kafkamessages and consumerstate  ${it.first}" } }
 
                 if (result.first == ConsumerStates.IsOk) {
                     log.info { "${result.second.size} - protobuf Person objects sent to topic ${params.kafkaTopicSf}" }
@@ -118,16 +123,7 @@ internal fun work(params: Params) {
 
 @ImplicitReflectionSerializer
 private fun handleConsumerRecord(cr: ConsumerRecord<String, String>): Pair<ConsumerStates, PersonBase> {
-    val person = when (cr.value()) {
-        null -> {
-            PersonTombestone(aktoerId = cr.key())
-        }
-        else -> {
-            val personBase = getPersonFromGraphQL(cr.key())
-            personBase
-        }
-    }
-    return when (person) {
+    return when (val person = getPersonFromGraphQL(cr.key())) {
         is PersonInvalid -> {
             Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
             Pair(ConsumerStates.HasIssues, person)
@@ -138,7 +134,7 @@ private fun handleConsumerRecord(cr: ConsumerRecord<String, String>): Pair<Consu
         }
         is PersonUnknown -> {
             Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
-            Pair(ConsumerStates.HasIssues, person)
+            Pair(ConsumerStates.IsOk, person) // TODO:: HasIssues in prod
         }
         is PersonTombestone -> {
             Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
