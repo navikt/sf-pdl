@@ -59,7 +59,7 @@ internal fun work(params: Params) {
                         cMap.addKafkaSecurity(params.kafkaUser, params.kafkaPassword, params.kafkaSecProt, params.kafkaSaslMec)
                     else cMap
                 },
-                listOf(params.kafkaTopicPdl), fromBeginning = true // TODO:: false in prod
+                listOf(params.kafkaTopicPdl), fromBeginning = false // TODO:: false in prod
         ) { cRecords ->
             log.info { "${cRecords.count()} - consumer records ready to process" }
             if (!cRecords.isEmpty) {
@@ -91,8 +91,8 @@ internal fun work(params: Params) {
                                         if (status in listOf(ObjectInCacheStatus.New, ObjectInCacheStatus.Updated)) {
                                             km[personProto.first.toByteArray()] = personProto.second.toByteArray()
                                         }
-                                    } else if (personBase is PersonUnknown) {
-                                        log.info { "PersonUknown - for preprod only" }
+//                                    } else if (personBase is PersonUnknown) { // TODO :: Not in prod
+//                                        log.info { "PersonUknown - for preprod only" }
                                     } else {
                                         log.error { "Consumerstate should not be valid an result other then Person or PersonTombestone" }
                                     }
@@ -103,7 +103,7 @@ internal fun work(params: Params) {
                     log.info { "$cTime - ms to async invoke ${cRecords.count()} average ${cTime / cRecords.count()} ms" }
 
                     if (hasIssues) Pair(ConsumerStates.HasIssues, km) else Pair(ConsumerStates.IsOk, km)
-            }.also { log.info { "${it.second.size} of ${cRecords.count()} resulted in kafkamessages and consumerstate  ${it.first}" } }
+            }.also { log.info { "${it.second.size} of ${cRecords.count()} resulted in messages going to kafkatopic. Has no kafka issues ${it.first == ConsumerStates.IsOk}" } }
 
                 if (result.first == ConsumerStates.IsOk) {
                     log.info { "${result.second.size} - protobuf Person objects sent to topic ${params.kafkaTopicSf}" }
@@ -136,7 +136,7 @@ private fun handleConsumerRecord(cr: ConsumerRecord<String, String>): Pair<Consu
         }
         is PersonUnknown -> {
             Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
-            Pair(ConsumerStates.IsOk, person) // TODO:: HasIssues in prod
+            Pair(ConsumerStates.HasIssues, person) // TODO:: HasIssues in prod
         }
         is PersonTombestone -> {
             Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
