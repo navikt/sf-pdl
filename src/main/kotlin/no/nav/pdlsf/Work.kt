@@ -1,6 +1,7 @@
 package no.nav.pdlsf
 
 import io.confluent.kafka.serializers.KafkaAvroDeserializer
+import java.lang.Exception
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.filter
@@ -18,6 +19,8 @@ import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.ByteArraySerializer
 
 private val log = KotlinLogging.logger {}
+
+class HasKafkaIssues(message: String) : Exception(message)
 
 @OptIn(UnstableDefault::class)
 @ImplicitReflectionSerializer
@@ -62,7 +65,7 @@ internal fun work(params: Params) {
                         cMap.addKafkaSecurity(params.kafkaUser, params.kafkaPassword, params.kafkaSecProt, params.kafkaSaslMec)
                     else cMap
                 },
-                listOf(params.kafkaTopicPdl), fromBeginning = true
+                listOf(params.kafkaTopicPdl), fromBeginning = false
         ) { cRecords ->
             log.info { "${cRecords.count()} - consumer records ready to process" }
             if (!cRecords.isEmpty) {
@@ -70,44 +73,47 @@ internal fun work(params: Params) {
                 log.info { "Foreach hasIssues - ${toList.filter { it.first == ConsumerStates.HasIssues }.size}" }
                 log.info { "Foreach isOk - ${toList.filter { it.first == ConsumerStates.IsOk }.size}" }
 
-                val kafkaMessages = runBlocking {
+                val result = runBlocking {
                     val km: MutableMap<ByteArray, ByteArray?> = mutableMapOf()
-                    cRecords.asFlow()
-                            .filterNotNull()
-                            .map { handleConsumerRecord(it) }
-                            .filter { it.first == ConsumerStates.IsOk }
-                            .onEach {
-                                when (val person = it.second) {
-                                    is PersonTombestone -> {
-                                        log.warn { "In onEach Tombestone" }
-                                        val personTombstoneProtoKey = person.toPersonTombstoneProtoKey()
-                                        km[personTombstoneProtoKey.toByteArray()] = null
-                                    }
-                                    is Person -> {
-                                        log.warn { "In onEach Person" }
-                                        val personProto = person.toPersonProto()
-                                        val status = cache.exists(person.aktoerId, personProto.second.hashCode())
-                                        log.warn { "In onEach Person status - ${status.name}" }
-                                        Metrics.publishedPersons.labels(status.name).inc()
-                                        if (status in listOf(ObjectInCacheStatus.New, ObjectInCacheStatus.Updated)) {
-                                            km[personProto.first.toByteArray()] = personProto.second.toByteArray()
+                    var hasIssues: Boolean = false
+                        cRecords.asFlow()
+                                .filterNotNull()
+                                .map {
+                                    val pair = handleConsumerRecord(it)
+                                    if (pair.first != ConsumerStates.IsOk) hasIssues = true
+                                    pair
+                                }
+                                .onEach {
+                                    when (val person = it.second) {
+                                        is PersonTombestone -> {
+                                            log.warn { "In onEach Tombestone" }
+                                            val personTombstoneProtoKey = person.toPersonTombstoneProtoKey()
+                                            km[personTombstoneProtoKey.toByteArray()] = null
+                                        }
+                                        is Person -> {
+                                            log.warn { "In onEach Person" }
+                                            val personProto = person.toPersonProto()
+                                            val status = cache.exists(person.aktoerId, personProto.second.hashCode())
+                                            log.warn { "In onEach Person status - ${status.name}" }
+                                            Metrics.publishedPersons.labels(status.name).inc()
+                                            if (status in listOf(ObjectInCacheStatus.New, ObjectInCacheStatus.Updated)) {
+                                                km[personProto.first.toByteArray()] = personProto.second.toByteArray()
+                                            }
                                         }
                                     }
                                 }
-                            }
-                            .collect()
-                    km
+                                .collect()
+                    if (hasIssues) return@runBlocking Pair(ConsumerStates.HasIssues, km) else return@runBlocking Pair(ConsumerStates.IsOk, km)
                 }
 
-                if (kafkaMessages.size == cRecords.count()) {
-                    log.info { "${kafkaMessages.size} - protobuf Person objects sent to topic ${params.kafkaTopicSf}" }
-                    kafkaMessages.forEach { m ->
+                if (result.first == ConsumerStates.IsOk) {
+                    log.info { "${result.second.size} - protobuf Person objects sent to topic ${params.kafkaTopicSf}" }
+                    result.second.forEach { m ->
                         this.send(ProducerRecord(params.kafkaTopicSf, m.key, m.value))
                     }
                     ConsumerStates.IsOk
                 } else {
-                    log.error { "Consumerstate issues, is not Ok. Difference between number of consumer records and new kafka messages" }
-                    log.info { "Kafkamessges ${kafkaMessages.size} vs Consumer records ${cRecords.count()}" }
+                    log.error { "Consumerstate issues, is not Ok." }
                     ConsumerStates.HasIssues
                 }
             } else {
