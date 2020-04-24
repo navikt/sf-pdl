@@ -91,6 +91,8 @@ internal fun work(params: Params) {
                                         if (status in listOf(ObjectInCacheStatus.New, ObjectInCacheStatus.Updated)) {
                                             km[personProto.first.toByteArray()] = personProto.second.toByteArray()
                                         }
+                                    } else if (personBase is PersonUnknown) {
+                                        log.info{"PersonUknown - for preprod only"}
                                     } else {
                                         log.error { "Consumerstate should not be valid an result other then Person or PersonTombestone" }
                                     }
