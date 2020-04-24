@@ -4,7 +4,6 @@ import io.confluent.kafka.serializers.KafkaAvroDeserializer
 import java.lang.Exception
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -69,10 +68,6 @@ internal fun work(params: Params) {
         ) { cRecords ->
             log.info { "${cRecords.count()} - consumer records ready to process" }
             if (!cRecords.isEmpty) {
-                val toList = cRecords.map { handleConsumerRecord(it) }
-                log.info { "Foreach hasIssues - ${toList.filter { it.first == ConsumerStates.HasIssues }.size}" }
-                log.info { "Foreach isOk - ${toList.filter { it.first == ConsumerStates.IsOk }.size}" }
-
                 val result = runBlocking {
                     val km: MutableMap<ByteArray, ByteArray?> = mutableMapOf()
                     var hasIssues: Boolean = false
@@ -86,15 +81,12 @@ internal fun work(params: Params) {
                                 .onEach {
                                     when (val person = it.second) {
                                         is PersonTombestone -> {
-                                            log.warn { "In onEach Tombestone" }
                                             val personTombstoneProtoKey = person.toPersonTombstoneProtoKey()
                                             km[personTombstoneProtoKey.toByteArray()] = null
                                         }
                                         is Person -> {
-                                            log.warn { "In onEach Person" }
                                             val personProto = person.toPersonProto()
                                             val status = cache.exists(person.aktoerId, personProto.second.hashCode())
-                                            log.warn { "In onEach Person status - ${status.name}" }
                                             Metrics.publishedPersons.labels(status.name).inc()
                                             if (status in listOf(ObjectInCacheStatus.New, ObjectInCacheStatus.Updated)) {
                                                 km[personProto.first.toByteArray()] = personProto.second.toByteArray()
