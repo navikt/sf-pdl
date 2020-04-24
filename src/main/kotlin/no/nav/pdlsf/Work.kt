@@ -11,7 +11,6 @@ import mu.KotlinLogging
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.producer.ProducerConfig
-import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.ByteArraySerializer
 
 private val log = KotlinLogging.logger {}
@@ -59,10 +58,33 @@ internal fun work(params: Params) {
                         cMap.addKafkaSecurity(params.kafkaUser, params.kafkaPassword, params.kafkaSecProt, params.kafkaSaslMec)
                     else cMap
                 },
-                listOf(params.kafkaTopicPdl), fromBeginning = false // TODO:: false in prod
+                listOf(params.kafkaTopicPdl), fromBeginning = true // TODO:: false in prod
         ) { cRecords ->
             log.info { "${cRecords.count()} - consumer records ready to process" }
             if (!cRecords.isEmpty) {
+
+                runBlocking {
+                    val sTime = measureTimeMillis {
+                        log.info { "Sequential processing of ${cRecords.count()} requests" }
+                        val results = cRecords.map { handleConsumerRecord(it) }
+                        val areOk = results
+                                .fold(true) { acc, resp -> acc && (resp.first == ConsumerStates.IsOk) }
+                        log.info { "All requests are ok? $areOk" }
+                    }
+                    log.info { "Sequential processing took $sTime ms" }
+
+                    val cTime = measureTimeMillis {
+                        log.info { "Concurrent processing of ${cRecords.count()} requests" }
+                        val results = cRecords.map { async { handleConsumerRecord(it) } }
+                        val areOk = results
+                                .awaitAll()
+                                .fold(true) { acc, resp -> acc && (resp.first == ConsumerStates.IsOk) }
+                        log.info { "All requests are ok? $areOk " }
+                    }
+                    log.info { "Concurrent processing took $cTime ms" }
+                }
+                ConsumerStates.IsOkNoCommit
+/*
                 val result = runBlocking {
                     val km: MutableMap<ByteArray, ByteArray?> = mutableMapOf()
                     var hasIssues = false
@@ -106,15 +128,20 @@ internal fun work(params: Params) {
             }.also { log.info { "${it.second.size} of ${cRecords.count()} resulted in messages going to kafkatopic. Has no kafka issues ${it.first == ConsumerStates.IsOk}" } }
 
                 if (result.first == ConsumerStates.IsOk) {
-                    log.info { "${result.second.size} - protobuf Person objects sent to topic ${params.kafkaTopicSf}" }
-                    result.second.forEach { m ->
-                        this.send(ProducerRecord(params.kafkaTopicSf, m.key, m.value))
+                    val sTime = measureTimeMillis {
+                        log.info { "${result.second.size} - protobuf Person objects sent to topic ${params.kafkaTopicSf}" }
+                        result.second.forEach { m ->
+                            this.send(ProducerRecord(params.kafkaTopicSf, m.key, m.value))
+                        }
                     }
+                    log.info { "$sTime - ms to put all messages ${result.second.count()} on topic, average ${sTime / result.second.count()} ms" }
                     ConsumerStates.IsOk
                 } else {
                     log.error { "Consumerstate issues, is not Ok." }
                     ConsumerStates.HasIssues
                 }
+
+ */
             } else {
                 log.info { "Kafka events completed for now - leaving kafka consumer loop" }
                 ConsumerStates.IsFinished
@@ -136,7 +163,7 @@ private fun handleConsumerRecord(cr: ConsumerRecord<String, String>): Pair<Consu
         }
         is PersonUnknown -> {
             Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
-            Pair(ConsumerStates.HasIssues, person) // TODO:: HasIssues in prod
+            Pair(ConsumerStates.IsOk, person) // TODO:: HasIssues in prod
         }
         is PersonTombestone -> {
             Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
