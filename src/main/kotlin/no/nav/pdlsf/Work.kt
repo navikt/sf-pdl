@@ -92,7 +92,7 @@ internal fun work(params: Params) {
                                             km[personProto.first.toByteArray()] = personProto.second.toByteArray()
                                         }
                                     } else if (personBase is PersonUnknown) {
-                                        log.info{"PersonUknown - for preprod only"}
+                                        log.info { "PersonUknown - for preprod only" }
                                     } else {
                                         log.error { "Consumerstate should not be valid an result other then Person or PersonTombestone" }
                                     }
@@ -100,7 +100,7 @@ internal fun work(params: Params) {
                             }
                         }.awaitAll()
                     }
-                    log.info { "$cTime - to async invoke ${cRecords.count()}" }
+                    log.info { "$cTime - ms to async invoke ${cRecords.count()} average ${cTime / cRecords.count()} ms" }
 
                     if (hasIssues) Pair(ConsumerStates.HasIssues, km) else Pair(ConsumerStates.IsOk, km)
             }.also { log.info { "${it.second.size} of ${cRecords.count()} resulted in kafkamessages and consumerstate  ${it.first}" } }
