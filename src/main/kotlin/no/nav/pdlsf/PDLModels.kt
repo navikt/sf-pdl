@@ -49,14 +49,14 @@ fun createCache(params: Params): Map<String, Int?> {
     return cache
 }
 
-fun JsonElement.isSmiling(): Boolean = runCatching {
+fun JsonElement.isAlive(): Boolean = runCatching {
     jsonObject.content["hentPerson"]?.let { hi ->
         hi.jsonObject.content["doedsfall"]?.let {
             it.jsonArray.isNullOrEmpty()
         } ?: true
     } ?: true
 }
-.onFailure { log.info { "Failure resolving if person smiles - ${it.localizedMessage}" } }
+.onFailure { log.info { "Failure resolving if person is Alive - ${it.localizedMessage}" } }
 .getOrDefault(true)
 
 sealed class PersonBase

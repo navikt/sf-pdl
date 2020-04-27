@@ -58,37 +58,41 @@ internal fun work(params: Params) {
                         cMap.addKafkaSecurity(params.kafkaUser, params.kafkaPassword, params.kafkaSecProt, params.kafkaSaslMec)
                     else cMap
                 },
-                listOf(params.kafkaTopicPdl), fromBeginning = true // TODO:: false in prod
+                listOf(params.kafkaTopicPdl), fromBeginning = false // TODO:: false in prod
         ) { cRecords ->
             log.info { "${cRecords.count()} - consumer records ready to process" }
             if (!cRecords.isEmpty) {
+                val tombestones = cRecords.filter { it.value() == null }
+                val living = cRecords.minus(tombestones).filter { json.parseJson(it.value()).isAlive() }
+                val dead = cRecords.minus(living)
+
+                log.info { "$cRecords - records with living ${living.size}, dead ${dead.size} and ${tombestones.size} tombestone records" }
 
                 val res = runBlocking {
                     val km: MutableMap<ByteArray, ByteArray?> = mutableMapOf()
 
-                    val results = cRecords.map { cr ->
+                    repeat(dead.size) {
+                        Metrics.parsedGrapQLPersons.labels(PersonDead.toMetricsLable()).inc()
+                    }
+
+                    val tombestonePairs = tombestones.map {
+                        val personTombestone = PersonTombestone(aktoerId = it.key())
+                        Metrics.parsedGrapQLPersons.labels(personTombestone.toMetricsLable()).inc()
+                        Pair<ConsumerStates, PersonBase>(ConsumerStates.IsOk, personTombestone)
+                    }
+
+                    val results = living.map { cr ->
                         async {
-                            if (cr.value() == null) {
-                                val personTombestone = PersonTombestone(aktoerId = cr.key())
-                                Metrics.parsedGrapQLPersons.labels(personTombestone.toMetricsLable()).inc()
-                                Pair(ConsumerStates.IsOk, personTombestone)
-                            } else {
-                                if (json.parseJson(cr.value()).isSmiling()) {
                                     Metrics.graphQlLatency.startTimer().let { rt ->
                                         handleConsumerRecord(cr).also { rt.observeDuration() }
                                     }
-                                } else {
-                                    Metrics.parsedGrapQLPersons.labels(PersonDead.toMetricsLable()).inc()
-                                    Pair(ConsumerStates.IsOk, PersonDead)
                                 }
-                            }
-                        }
-                    }.awaitAll()
+                            }.awaitAll().plus(tombestonePairs)
 
                     val areOk = results.fold(true) { acc, resp -> acc && (resp.first == ConsumerStates.IsOk) }
 
                     if (areOk) {
-                        log.info { "${results.size} records resulted in Person ${results.filter { it.second is Person }.count()}, Tombestone ${results.filter { it.second is PersonTombestone }.count()}, Dead Tombestone ${results.filter { it.second is PersonDead }.count()}" }
+                        log.info { "${results.size} records resulted in Person ${results.filter { it.second is Person }.count()}, Tombestone ${results.filter { it.second is PersonTombestone }.count()}, Dead  ${results.filter { it.second is PersonDead }.count()}, Unknown ${results.filter { it.second is PersonUnknown }.count()}" }
                         results.forEach { pair ->
                             val personBase = pair.second
                             if (personBase is PersonTombestone) {
@@ -101,8 +105,6 @@ internal fun work(params: Params) {
                                 if (status in listOf(ObjectInCacheStatus.New, ObjectInCacheStatus.Updated)) {
                                     km[personProto.first.toByteArray()] = personProto.second.toByteArray()
                                 }
-                            } else if (personBase is PersonUnknown) { // TODO :: Not in prod
-                                log.info { "PersonUknown - for preprod only" }
                             } else {
                                 log.error { "Consumerstate should not be valid for an other result then Person or PersonTombestone" }
                             }
@@ -142,19 +144,20 @@ private fun handleConsumerRecord(cr: ConsumerRecord<String, String>): Pair<Consu
             Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
             Pair(ConsumerStates.HasIssues, person)
         }
+        is PersonUnknown -> {
+            Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
+            Pair(ConsumerStates.HasIssues, person) // TODO:: HasIssues in prod
+        }
+        is Person -> {
+            Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
+            Pair(ConsumerStates.IsOk, person)
+        }
+        // Handled outside of handleConsumerRecord
         is PersonDead -> {
             Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
             Pair(ConsumerStates.IsOk, person)
         }
-        is PersonUnknown -> {
-            Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
-            Pair(ConsumerStates.IsOk, person) // TODO:: HasIssues in prod
-        }
         is PersonTombestone -> {
-            Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
-            Pair(ConsumerStates.IsOk, person)
-        }
-        is Person -> {
             Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
             Pair(ConsumerStates.IsOk, person)
         }
