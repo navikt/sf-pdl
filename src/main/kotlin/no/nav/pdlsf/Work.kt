@@ -58,7 +58,7 @@ internal fun work(params: Params) {
                         cMap.addKafkaSecurity(params.kafkaUser, params.kafkaPassword, params.kafkaSecProt, params.kafkaSaslMec)
                     else cMap
                 },
-                listOf(params.kafkaTopicPdl), fromBeginning = false // TODO:: false in prod
+                listOf(params.kafkaTopicPdl), fromBeginning = true // TODO:: false in prod
         ) { cRecords ->
             log.info { "${cRecords.count()} - consumer records ready to process" }
             if (!cRecords.isEmpty) {
@@ -66,7 +66,7 @@ internal fun work(params: Params) {
                 val living = cRecords.minus(tombestones).filter { json.parseJson(it.value()).isAlive() }
                 val dead = cRecords.minus(living)
 
-                log.info { "$cRecords - records with living ${living.size}, dead ${dead.size} and ${tombestones.size} tombestone records" }
+                log.info { "${cRecords.count()} - consumer records contains number of living ${living.size}, dead ${dead.size} and ${tombestones.size} tombestone records" }
 
                 val res = runBlocking {
                     val km: MutableMap<ByteArray, ByteArray?> = mutableMapOf()
@@ -92,7 +92,7 @@ internal fun work(params: Params) {
                     val areOk = results.fold(true) { acc, resp -> acc && (resp.first == ConsumerStates.IsOk) }
 
                     if (areOk) {
-                        log.info { "${results.size} records resulted in Person ${results.filter { it.second is Person }.count()}, Tombestone ${results.filter { it.second is PersonTombestone }.count()}, Dead  ${results.filter { it.second is PersonDead }.count()}, Unknown ${results.filter { it.second is PersonUnknown }.count()}" }
+                        log.info { "${results.size} consumer records resulted in number of Person ${results.filter { it.second is Person }.count()}, Tombestone ${results.filter { it.second is PersonTombestone }.count()}, Dead  ${results.filter { it.second is PersonDead }.count()}, Unknown ${results.filter { it.second is PersonUnknown }.count()}" }
                         results.forEach { pair ->
                             val personBase = pair.second
                             if (personBase is PersonTombestone) {
