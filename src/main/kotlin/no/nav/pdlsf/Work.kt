@@ -74,9 +74,10 @@ internal fun work(params: Params) {
                                 Pair(ConsumerStates.IsOk, personTombestone)
                             } else {
                                 if (json.parseJson(cr.value()).isSmiling()) {
-                                    handleConsumerRecord(cr)
+                                    Metrics.graphQlLatency.startTimer().let { rt ->
+                                        handleConsumerRecord(cr).also { rt.observeDuration() }
+                                    }
                                 } else {
-                                    log.info { "DØDØDØDØDØD" }
                                     Metrics.parsedGrapQLPersons.labels(PersonDead.toMetricsLable()).inc()
                                     Pair(ConsumerStates.IsOk, PersonDead)
                                 }
@@ -87,6 +88,7 @@ internal fun work(params: Params) {
                     val areOk = results.fold(true) { acc, resp -> acc && (resp.first == ConsumerStates.IsOk) }
 
                     if (areOk) {
+                        log.info { "${results.size} records resulted in Person ${results.filter { it.second is Person }.count()}, Tombestone ${results.filter { it.second is PersonTombestone }.count()}, Dead Tombestone ${results.filter { it.second is PersonDead }.count()}" }
                         results.forEach { pair ->
                             val personBase = pair.second
                             if (personBase is PersonTombestone) {

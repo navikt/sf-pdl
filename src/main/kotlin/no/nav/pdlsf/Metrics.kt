@@ -26,6 +26,12 @@ object Metrics {
         .help("Http response latency")
         .register()
 
+    val graphQlLatency: Histogram = Histogram
+            .build()
+            .name("graphQL_response_latency_seconds_histogram")
+            .help("grapQL response latency including deserialization")
+            .register()
+
     val invalidQuery: Gauge = Gauge
             .build()
             .name("invalid_query_gauge")
