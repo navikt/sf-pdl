@@ -74,10 +74,6 @@ fun getPersonFromGraphQL(ident: String): PersonBase {
             val person = response.toPerson()
             if (person is PersonInvalid) {
                 log.error { "Unable to parse person from qraphql response on aktørId - $ident " }
-                // Metrics
-            } else {
-                log.debug { "Person $person" }
-                // Merics
             }
             person
         }

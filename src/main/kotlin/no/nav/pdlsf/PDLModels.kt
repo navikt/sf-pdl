@@ -1,6 +1,7 @@
 package no.nav.pdlsf
 
 import com.google.protobuf.InvalidProtocolBufferException
+import kotlinx.serialization.json.JsonElement
 import mu.KotlinLogging
 import no.nav.pdlsf.proto.PersonProto.PersonKey
 import no.nav.pdlsf.proto.PersonProto.PersonValue
@@ -48,11 +49,22 @@ fun createCache(params: Params): Map<String, Int?> {
     return cache
 }
 
+fun JsonElement.isSmiling(): Boolean = runCatching {
+    jsonObject.content["hentPerson"]?.let { hi ->
+        hi.jsonObject.content["doedsfall"]?.let {
+            it.jsonArray.isNullOrEmpty()
+        } ?: true
+    } ?: true
+}
+.onFailure { log.info { "Failure resolving if person smiles - ${it.localizedMessage}" } }
+.getOrDefault(true)
+
 sealed class PersonBase
 
 object PersonUnknown : PersonBase() // Http 200, men person finnes ikke. Tibakemelding i Errors
 object PersonInvalid : PersonBase() // Konvertering fra response graphQl til Person mislykkes
 object PersonError : PersonBase() // Internal error/network/unauthorized
+object PersonDead : PersonBase() // Dødperson
 
 data class PersonTombestone(
     val aktoerId: String
@@ -97,6 +109,7 @@ data class Person(
 
 fun PersonBase.toMetricsLable(): String {
     return when (this) {
+        is PersonDead -> "DEAD"
         is PersonUnknown -> "UNKNOWN"
         is PersonTombestone -> "TOMBESTONE"
         is PersonInvalid -> "INVALID"
