@@ -102,8 +102,6 @@ internal fun work(params: Params) {
                                 if (status in listOf(ObjectInCacheStatus.New, ObjectInCacheStatus.Updated)) {
                                     km[personProto.first.toByteArray()] = personProto.second.toByteArray()
                                 }
-                            } else {
-                                log.error { "Consumerstate should not be valid for an other result then Person or PersonTombestone" }
                             }
                         }
                         Pair(ConsumerStates.IsOk, km)
