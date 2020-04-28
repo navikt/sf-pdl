@@ -53,29 +53,36 @@ private fun executeGraphQlQuery(
 }
 
 @ImplicitReflectionSerializer
-fun getPersonFromGraphQL(ident: String): PersonBase {
+fun getPersonFromGraphQL(ident: String): Pair<ConsumerStates, PersonBase> {
     val query = getStringFromResource(GRAPHQL_QUERY).trim()
 
     return when (val response = executeGraphQlQuery(query, mapOf("ident" to ident))) {
         is QueryErrorResponse -> {
             if (response.errors.first().mapToHttpCode().code == 404) {
                 log.warn { "GraphQL aktørId $ident ikke funnet" }
-                PersonUnknown
+                Metrics.parsedGrapQLPersons.labels(PersonUnknown.toMetricsLable()).inc()
+                Pair(ConsumerStates.HasIssues, PersonUnknown) // TODO:: HasIssues in prod
             } else {
                 log.error { "GraphQL aktørId $ident  feilet - ${response.errors.first().message}" }
-                PersonError
+                Metrics.parsedGrapQLPersons.labels(PersonError.toMetricsLable()).inc()
+                Pair(ConsumerStates.HasIssues, PersonError)
             }
         }
         is InvalidQueryResponse -> {
             log.error { "Unable to parse graphql query response on aktørId - $ident " }
-            PersonInvalid
+            Metrics.parsedGrapQLPersons.labels(PersonInvalid.toMetricsLable()).inc()
+            Pair(ConsumerStates.HasIssues, PersonInvalid)
         }
         is QueryResponse -> {
             val person = response.toPerson()
             if (person is PersonInvalid) {
                 log.error { "Unable to parse person from qraphql response on aktørId - $ident " }
+                Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
+                Pair(ConsumerStates.HasIssues, person)
+            } else {
+                Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
+                Pair(ConsumerStates.IsOk, person)
             }
-            person
         }
     }
 }

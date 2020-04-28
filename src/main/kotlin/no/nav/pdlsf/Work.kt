@@ -8,7 +8,6 @@ import kotlinx.serialization.ImplicitReflectionSerializer
 import kotlinx.serialization.UnstableDefault
 import mu.KotlinLogging
 import org.apache.kafka.clients.consumer.ConsumerConfig
-import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.ByteArraySerializer
@@ -58,7 +57,7 @@ internal fun work(params: Params) {
                         cMap.addKafkaSecurity(params.kafkaUser, params.kafkaPassword, params.kafkaSecProt, params.kafkaSaslMec)
                     else cMap
                 },
-                listOf(params.kafkaTopicPdl), fromBeginning = true // TODO:: false in prod
+                listOf(params.kafkaTopicPdl), fromBeginning = false // TODO:: false in prod
         ) { cRecords ->
             log.info { "${cRecords.count()} - consumer records ready to process" }
             if (!cRecords.isEmpty) {
@@ -70,24 +69,22 @@ internal fun work(params: Params) {
 
                 val res = runBlocking {
                     val km: MutableMap<ByteArray, ByteArray?> = mutableMapOf()
-
-                    repeat(dead.size) {
-                        Metrics.parsedGrapQLPersons.labels(PersonDead.toMetricsLable()).inc()
-                    }
-
-                    val tombestonePairs = tombestones.map {
-                        val personTombestone = PersonTombestone(aktoerId = it.key())
-                        Metrics.parsedGrapQLPersons.labels(personTombestone.toMetricsLable()).inc()
-                        Pair<ConsumerStates, PersonBase>(ConsumerStates.IsOk, personTombestone)
-                    }
-
-                    val results = living.map { cr ->
+                    val results = Metrics.graphQlLatency.startTimer().let { rt ->
+                    cRecords.map { cr ->
                         async {
-                                    Metrics.graphQlLatency.startTimer().let { rt ->
-                                        handleConsumerRecord(cr).also { rt.observeDuration() }
-                                    }
-                                }
-                            }.awaitAll().plus(tombestonePairs)
+                            if (cr.value() == null) {
+                                val personTombestone = PersonTombestone(aktoerId = cr.key())
+                                Metrics.parsedGrapQLPersons.labels(personTombestone.toMetricsLable()).inc()
+                                Pair<ConsumerStates, PersonBase>(ConsumerStates.IsOk, personTombestone)
+                            } else if (json.parseJson(cr.value()).isAlive()) {
+                                getPersonFromGraphQL(cr.key())
+                            } else {
+                                Metrics.parsedGrapQLPersons.labels(PersonDead.toMetricsLable()).inc()
+                                Pair<ConsumerStates, PersonBase>(ConsumerStates.IsOk, PersonDead)
+                            }
+                        }
+                    }.awaitAll().also { rt.observeDuration() }
+                    }
 
                     val areOk = results.fold(true) { acc, resp -> acc && (resp.first == ConsumerStates.IsOk) }
 
@@ -129,37 +126,6 @@ internal fun work(params: Params) {
                 log.info { "Kafka events completed for now - leaving kafka consumer loop" }
                 ConsumerStates.IsFinished
             }
-        }
-    }
-}
-
-@ImplicitReflectionSerializer
-private fun handleConsumerRecord(cr: ConsumerRecord<String, String>): Pair<ConsumerStates, PersonBase> {
-    return when (val person = getPersonFromGraphQL(cr.key())) {
-        is PersonInvalid -> {
-            Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
-            Pair(ConsumerStates.HasIssues, person)
-        }
-        is PersonError -> {
-            Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
-            Pair(ConsumerStates.HasIssues, person)
-        }
-        is PersonUnknown -> {
-            Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
-            Pair(ConsumerStates.HasIssues, person) // TODO:: HasIssues in prod
-        }
-        is Person -> {
-            Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
-            Pair(ConsumerStates.IsOk, person)
-        }
-        // Handled outside of handleConsumerRecord
-        is PersonDead -> {
-            Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
-            Pair(ConsumerStates.IsOk, person)
-        }
-        is PersonTombestone -> {
-            Metrics.parsedGrapQLPersons.labels(person.toMetricsLable()).inc()
-            Pair(ConsumerStates.IsOk, person)
         }
     }
 }

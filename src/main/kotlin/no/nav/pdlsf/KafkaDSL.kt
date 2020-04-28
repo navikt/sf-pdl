@@ -15,7 +15,7 @@ import org.apache.kafka.common.config.SaslConfigs
 
 private val log = KotlinLogging.logger {}
 
-internal sealed class ConsumerStates {
+sealed class ConsumerStates {
     object IsOk : ConsumerStates()
     object IsOkNoCommit : ConsumerStates()
     object HasIssues : ConsumerStates()

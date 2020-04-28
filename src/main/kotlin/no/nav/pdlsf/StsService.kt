@@ -12,7 +12,7 @@ import org.http4k.core.Request
 import org.http4k.core.Status
 
 private val log = KotlinLogging.logger { }
-private var cachedToken: StsAccessToken? = null
+private var cachedToken: StsAccessToken? = null // TODO :: Sealed class StsTokenEmpty
 
 @ImplicitReflectionSerializer
 private fun fetchNewToken(): StsAccessTokenBase = Http.client.invokeWM(
