@@ -53,7 +53,7 @@ private fun executeGraphQlQuery(
 }
 
 @ImplicitReflectionSerializer
-fun getPersonFromGraphQL(ident: String): Pair<ConsumerStates, PersonBase> {
+fun getPersonFromGraphQL(ident: String, ignorePersonUnkown: Boolean): Pair<ConsumerStates, PersonBase> {
     val query = getStringFromResource(GRAPHQL_QUERY).trim()
 
     return when (val response = executeGraphQlQuery(query, mapOf("ident" to ident))) {
@@ -61,7 +61,7 @@ fun getPersonFromGraphQL(ident: String): Pair<ConsumerStates, PersonBase> {
             if (response.errors.first().mapToHttpCode().code == 404) {
                 log.warn { "GraphQL aktørId $ident ikke funnet" }
                 Metrics.parsedGrapQLPersons.labels(PersonUnknown.toMetricsLable()).inc()
-                Pair(ConsumerStates.HasIssues, PersonUnknown) // TODO:: HasIssues in prod
+                if (ignorePersonUnkown) { Pair(ConsumerStates.IsOk, PersonUnknown) } else { Pair(ConsumerStates.HasIssues, PersonUnknown) }
             } else {
                 log.error { "GraphQL aktørId $ident  feilet - ${response.errors.first().message}" }
                 Metrics.parsedGrapQLPersons.labels(PersonError.toMetricsLable()).inc()

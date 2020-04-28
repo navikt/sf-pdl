@@ -62,29 +62,29 @@ internal fun work(params: Params) {
             log.info { "${cRecords.count()} - consumer records ready to process" }
             if (!cRecords.isEmpty) {
                 val tombestones = cRecords.filter { it.value() == null }
-                val living = cRecords.minus(tombestones).filter { json.parseJson(it.value()).isAlive() }
+                val living = cRecords.filter { json.parseJson(it.value()).isAlive() }
                 val dead = cRecords.minus(living)
 
                 log.info { "${cRecords.count()} - consumer records contains number of living ${living.size}, dead ${dead.size} and ${tombestones.size} tombestone records" }
 
                 val res = runBlocking {
                     val km: MutableMap<ByteArray, ByteArray?> = mutableMapOf()
-                    val results = Metrics.graphQlLatency.startTimer().let { rt ->
-                    cRecords.map { cr ->
+
+                    val results = cRecords.map { cr ->
+                        Metrics.noOfKakfaRecordsPdl.inc()
                         async {
                             if (cr.value() == null) {
                                 val personTombestone = PersonTombestone(aktoerId = cr.key())
                                 Metrics.parsedGrapQLPersons.labels(personTombestone.toMetricsLable()).inc()
                                 Pair<ConsumerStates, PersonBase>(ConsumerStates.IsOk, personTombestone)
                             } else if (json.parseJson(cr.value()).isAlive()) {
-                                getPersonFromGraphQL(cr.key())
+                                getPersonFromGraphQL(cr.key(), params.ignorePersonUnkown)
                             } else {
                                 Metrics.parsedGrapQLPersons.labels(PersonDead.toMetricsLable()).inc()
                                 Pair<ConsumerStates, PersonBase>(ConsumerStates.IsOk, PersonDead)
                             }
                         }
-                    }.awaitAll().also { rt.observeDuration() }
-                    }
+                    }.awaitAll()
 
                     val areOk = results.fold(true) { acc, resp -> acc && (resp.first == ConsumerStates.IsOk) }
 

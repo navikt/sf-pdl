@@ -26,10 +26,10 @@ object Metrics {
         .help("Http response latency")
         .register()
 
-    val graphQlLatency: Histogram = Histogram
+    val noOfKakfaRecordsPdl: Gauge = Gauge
             .build()
-            .name("graphQL_response_latency_seconds_histogram")
-            .help("grapQL response latency including deserialization")
+            .name("no_kafkarecords_pdl_gauge")
+            .help("No. of kafka records pdl")
             .register()
 
     val invalidQuery: Gauge = Gauge
@@ -102,5 +102,6 @@ object Metrics {
         sucessfulValueToQuery.clear()
 
         responseLatency.clear()
+        noOfKakfaRecordsPdl.clear()
     }
 }

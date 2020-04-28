@@ -4,6 +4,9 @@ import java.io.File
 import java.io.FileNotFoundException
 import java.util.Base64
 
+enum class Profile {
+    LOCAL, PREPROD, PRODUCTION
+}
 object ParamsFactory {
     val p: Params by lazy { Params() }
 }
@@ -29,7 +32,9 @@ data class Params(
     val pdlGraphQlApiKey: String = ("/var/run/secrets/nais.io/apigw/pdl-api/x-nav-apiKey".readFile() ?: ""),
     val pdlGraphQlUrl: String = System.getenv("PDL_GRAPHQL_URL") ?: "",
     val stsApiKey: String = ("/var/run/secrets/nais.io/apigw/security-token-service-token/x-nav-apiKey".readFile() ?: ""),
-    val stsUrl: String = System.getenv("STS_REST_URL") ?: ""
+    val stsUrl: String = System.getenv("STS_REST_URL") ?: "",
+
+    val ignorePersonUnkown: Boolean = System.getenv("IGNORE_PERSON_UNKOWN")?.toBoolean() ?: false
 
 )
 

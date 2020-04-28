@@ -49,7 +49,7 @@ spec:
     - name: KAFKA_SCREG
       value: https://kafka-schema-registry.nais.adeo.no
     - name: KAFKA_CLIENTID
-      value: sf-pdl
+      value: sf-pdl-v1
     - name: KAFKA_SECURITY
       value: 'TRUE'
     - name: KAFKA_SECPROT
@@ -59,7 +59,9 @@ spec:
     - name: KAFKA_TOPIC_PDL
       value: aapen-person-pdl-dokument-v1
     - name: KAFKA_TOPIC_SF
-      value: privat-pdl-sfobjects-v1
+      value: privat-sf-person-v1
+    - name: IGNORE_PERSON_UNKOWN
+      value: 'FALSE'
     - name: PDL_GRAPHQL_URL
       value: 'https://api-gw.oera.no/pdl-api/graphql'
     - name: STS_REST_URL
