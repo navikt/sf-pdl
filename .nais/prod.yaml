@@ -61,7 +61,7 @@ spec:
     - name: KAFKA_TOPIC_SF
       value: privat-sf-person-v1
     - name: IGNORE_PERSON_UNKOWN
-      value: 'FALSE'
+      value: 'TRUE'
     - name: PDL_GRAPHQL_URL
       value: 'https://api-gw.oera.no/pdl-api/graphql'
     - name: STS_REST_URL
