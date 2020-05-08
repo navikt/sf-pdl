@@ -6,15 +6,15 @@ class WorkTests : StringSpec() {
 
     init {
         val aktoerIdOne = "a1"
-        val personOne = Person(identifikasjonsnummer = "1")
+        val personOne = PersonSf(identifikasjonsnummer = "1")
         val aktoerIdTwo = "a2"
-        val personTwo = Person(identifikasjonsnummer = "2")
+        val personTwo = PersonSf(identifikasjonsnummer = "2")
         val aktoerIdThree = "a3"
-        val personThree = Person(identifikasjonsnummer = "3")
+        val personThree = PersonSf(identifikasjonsnummer = "3")
 
         val aktoerIdNew = "a4"
-        val personNew = Person(identifikasjonsnummer = "4")
-        val personUpdated = Person(identifikasjonsnummer = "5")
+        val personNew = PersonSf(identifikasjonsnummer = "4")
+        val personUpdated = PersonSf(identifikasjonsnummer = "5")
 
         val personCache = mapOf(
                 aktoerIdOne to personOne.hashCode(),

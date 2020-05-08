@@ -15,18 +15,18 @@ fun createCache(params: Params): Map<String, Int?> {
 
     getKafkaConsumerByConfig<ByteArray, ByteArray>(
             mapOf(
-                    ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG to params.kafkaBrokers,
+                    ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG to params.envVar.kBrokers,
                     ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to ByteArrayDeserializer::class.java,
                     ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to ByteArrayDeserializer::class.java,
-                    ConsumerConfig.GROUP_ID_CONFIG to params.kafkaClientID,
-                    ConsumerConfig.CLIENT_ID_CONFIG to params.kafkaClientID,
+                    ConsumerConfig.GROUP_ID_CONFIG to params.envVar.kClientID,
+                    ConsumerConfig.CLIENT_ID_CONFIG to params.envVar.kClientID,
                     ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG to "false"
             ).let { cMap ->
-                if (params.kafkaSecurityEnabled())
-                    cMap.addKafkaSecurity(params.kafkaUser, params.kafkaPassword, params.kafkaSecProt, params.kafkaSaslMec)
+                if (params.envVar.kSecurityEnabled)
+                    cMap.addKafkaSecurity(params.vault.kafkaUser, params.vault.kafkaPassword, params.envVar.kSecProt, params.envVar.kSaslMec)
                 else cMap
             },
-            listOf(params.kafkaTopicSf), fromBeginning = true
+            listOf(params.envVar.kTopicSf), fromBeginning = true
     ) { cRecords ->
         if (!cRecords.isEmpty) {
             cRecords.forEach { record ->
@@ -61,10 +61,7 @@ fun JsonElement.isAlive(): Boolean = runCatching {
 
 sealed class PersonBase
 
-object PersonUnknown : PersonBase() // Http 200, men person finnes ikke. Tibakemelding i Errors
-object PersonInvalid : PersonBase() // Konvertering fra response graphQl til Person mislykkes
-object PersonError : PersonBase() // Internal error/network/unauthorized
-object PersonDead : PersonBase() // Dødperson
+object PersonInvalid : PersonBase()
 
 data class PersonTombestone(
     val aktoerId: String
@@ -75,13 +72,13 @@ data class PersonTombestone(
             }.build()
 }
 
-data class Person(
+data class PersonSf(
     val aktoerId: String = "",
     val identifikasjonsnummer: String = "",
     val fornavn: String = "",
     val mellomnavn: String = "",
     val etternavn: String = "",
-    val adressebeskyttelse: Gradering = Gradering.UGRADERT,
+    val adressebeskyttelse: AdressebeskyttelseGradering = AdressebeskyttelseGradering.UGRADERT,
     val sikkerhetstiltak: List<String> = emptyList(),
     val kommunenummer: String = "",
     val region: String = "",
@@ -90,31 +87,28 @@ data class Person(
 
     fun toPersonProto(): Pair<PersonKey, PersonValue> =
             PersonKey.newBuilder().apply {
-                aktoerId = this@Person.aktoerId
+                aktoerId = this@PersonSf.aktoerId
             }.build() to PersonValue.newBuilder().apply {
-                identifikasjonsnummer = this@Person.identifikasjonsnummer
-                fornavn = this@Person.fornavn
-                mellomnavn = this@Person.mellomnavn
-                etternavn = this@Person.etternavn
-                adressebeskyttelse = PersonValue.Gradering.valueOf(this@Person.adressebeskyttelse.name)
-                this@Person.sikkerhetstiltak.forEach {
+                identifikasjonsnummer = this@PersonSf.identifikasjonsnummer
+                fornavn = this@PersonSf.fornavn
+                mellomnavn = this@PersonSf.mellomnavn
+                etternavn = this@PersonSf.etternavn
+                adressebeskyttelse = PersonValue.Gradering.valueOf(this@PersonSf.adressebeskyttelse.name)
+                this@PersonSf.sikkerhetstiltak.forEach {
                     addSikkerhetstiltak(it)
                 }
-                kommunenummer = this@Person.kommunenummer
-                region = this@Person.region
-                doed = this@Person.doed
+                kommunenummer = this@PersonSf.kommunenummer
+                region = this@PersonSf.region
+                doed = this@PersonSf.doed
             }
                     .build()
 }
 
 fun PersonBase.toMetricsLable(): String {
     return when (this) {
-        is PersonDead -> "DEAD"
-        is PersonUnknown -> "UNKNOWN"
         is PersonTombestone -> "TOMBESTONE"
         is PersonInvalid -> "INVALID"
-        is PersonError -> "ERROR"
-        is Person -> "VALID"
+        is PersonSf -> "VALID"
     }
 }
 
@@ -130,7 +124,7 @@ internal fun ByteArray.protobufSafeParseValue(): PersonValue = this.let { ba ->
     try {
         PersonValue.parseFrom(ba)
     } catch (e: InvalidProtocolBufferException) {
-        PersonValue.getDefaultInstance() // TODO:: Mulig dette trefer tombestone
+        PersonValue.getDefaultInstance()
     }
 }
 

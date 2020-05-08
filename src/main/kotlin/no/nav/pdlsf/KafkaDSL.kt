@@ -9,13 +9,12 @@ import org.apache.kafka.clients.CommonClientConfigs
 import org.apache.kafka.clients.consumer.ConsumerRecords
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.clients.producer.KafkaProducer
-import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.TopicPartition
 import org.apache.kafka.common.config.SaslConfigs
 
 private val log = KotlinLogging.logger {}
 
-sealed class ConsumerStates {
+internal sealed class ConsumerStates {
     object IsOk : ConsumerStates()
     object IsOkNoCommit : ConsumerStates()
     object HasIssues : ConsumerStates()
@@ -32,7 +31,7 @@ internal fun <K, V> getKafkaProducerByConfig(config: Map<String, Any>, doProduce
             }
             true
         } catch (e: Exception) {
-            ServerState.state = ServerStates.KafkaIssues
+            ServerState.flag(ServerStates.KafkaIssues)
             log.error { "KafkaProducer failure during construction - ${e.message}" }
             false
         }
@@ -43,75 +42,84 @@ internal fun <K, V> getKafkaConsumerByConfig(
     fromBeginning: Boolean = false,
     doConsume: (ConsumerRecords<K, V>) -> ConsumerStates
 ): Boolean =
-    try {
-        KafkaConsumer<K, V>(Properties().apply { config.forEach { set(it.key, it.value) } })
-            .apply {
-                if (fromBeginning)
-                    this.runCatching {
-                        assign(
-                            topics.flatMap { topic ->
-                                partitionsFor(topic).map { TopicPartition(it.topic(), it.partition()) }
+        try {
+            KafkaConsumer<K, V>(Properties().apply { config.forEach { set(it.key, it.value) } })
+                    .apply {
+                        if (fromBeginning)
+                            this.runCatching {
+                                assign(
+                                        topics.flatMap { topic ->
+                                            partitionsFor(topic).map { TopicPartition(it.topic(), it.partition()) }
+                                        }
+                                )
+                            }.onFailure {
+                                ServerState.flag(ServerStates.KafkaIssues)
+                                log.error { "Failure for topic partition(s) assignment for $topics - ${it.message}" }
                             }
-                        )
-                    }.onFailure {
-                        ServerState.state = ServerStates.KafkaIssues
-                        log.error { "Failure for topic partition(s) assignment for $topics - ${it.message}" }
+                        else
+                            this.runCatching {
+                                subscribe(topics)
+                            }.onFailure {
+                                ServerState.flag(ServerStates.KafkaIssues)
+                                log.error { "Failure during subscription for $topics -  ${it.message}" }
+                            }
                     }
-                else
-                    this.runCatching {
-                        subscribe(topics)
-                    }.onFailure {
-                        ServerState.state = ServerStates.KafkaIssues
-                        log.error { "Failure during subscription for $topics -  ${it.message}" }
+                    .use { c ->
+
+                        if (fromBeginning) c.runCatching {
+                            c.seekToBeginning(emptyList())
+                        }.onFailure {
+                            ServerState.flag(ServerStates.KafkaIssues)
+                            log.error { "Failure for SeekToBeginning - ${it.message}" }
+                        }
+
+                        tailrec fun loop(keepGoing: Boolean): Unit = when {
+                            ShutdownHook.isActive() || !ServerState.isOk() || !keepGoing -> Unit
+                            else -> loop(c.pollAndConsumptionIsOk(doConsume))
+                        }
+
+                        loop(true)
+
+                        log.info { "Closing KafkaConsumer" }
                     }
-            }
-            .use { c ->
-
-                if (fromBeginning) c.runCatching {
-                    c.seekToBeginning(emptyList())
-                }.onFailure {
-                    ServerState.state = ServerStates.KafkaIssues
-                    log.error { "Failure for SeekToBeginning - ${it.message}" }
-                }
-
-                var keepGoing = true
-                while (!ShutdownHook.isActive() && ServerState.isOk() && keepGoing) {
-                    keepGoing = c.pollAndConsumptionIsOk(doConsume)
-                }
-                log.info { "Closing KafkaConsumer" }
-            }
-        true
-    } catch (e: Exception) {
-        ServerState.state = ServerStates.KafkaIssues
-        log.error { "Failure during kafka consumer construction - ${e.message}" }
-        false
-    }
-
-private fun <K, V> KafkaConsumer<K, V>.pollAndConsumptionIsOk(doConsume: (ConsumerRecords<K, V>) -> ConsumerStates): Boolean = this.let { c ->
-    try {
-        c.poll(Duration.ofMillis(5_000)).let { cRecords ->
-            when (doConsume(cRecords)) {
-                ConsumerStates.IsOk -> {
-                    c.commitSync()
-                    true
-                }
-                ConsumerStates.IsOkNoCommit -> true
-                ConsumerStates.HasIssues -> {
-                    ServerState.state = ServerStates.KafkaConsumerIssues
-                    false
-                }
-                ConsumerStates.IsFinished -> {
-                    log.info { "Consumer logic requests stop of consumption" }
-                    false
-                }
-            }
+            true
+        } catch (e: Exception) {
+            ServerState.flag(ServerStates.KafkaIssues)
+            log.error { "Failure during kafka consumer construction - ${e.message}" }
+            false
         }
-    } catch (e: Exception) {
-        ServerState.state = ServerStates.KafkaIssues
-        log.error { "Failure during poll or commit, leaving - ${e.message}" }
-        false
-    }
-}
+
+private fun <K, V> KafkaConsumer<K, V>.pollAndConsumptionIsOk(doConsume: (ConsumerRecords<K, V>) -> ConsumerStates): Boolean =
+        runCatching { poll(Duration.ofMillis(5_000)) as ConsumerRecords<K, V> }
+                .onFailure { log.error { "Failure during poll - ${it.localizedMessage}" } }
+                .getOrDefault(ConsumerRecords<K, V>(emptyMap()))
+                .let { cRecords ->
+                    runCatching { doConsume(cRecords) }
+                            .onFailure { log.error { "Failure during doConsume - ${it.localizedMessage}" } }
+                            .getOrDefault(ConsumerStates.HasIssues)
+                            .let { consumerState ->
+                                when (consumerState) {
+                                    ConsumerStates.IsOk -> {
+                                        try {
+                                            commitSync()
+                                            true
+                                        } catch (e: Exception) {
+                                            log.error { "Failure during commit, leaving - ${e.message}" }
+                                            false
+                                        }
+                                    }
+                                    ConsumerStates.IsOkNoCommit -> true
+                                    ConsumerStates.HasIssues -> {
+                                        ServerState.flag(ServerStates.KafkaConsumerIssues)
+                                        false
+                                    }
+                                    ConsumerStates.IsFinished -> {
+                                        log.info { "Consumer logic requests stop of consumption" }
+                                        false
+                                    }
+                                }
+                            }
+                }
 
 internal fun Map<String, Serializable>.addKafkaSecurity(
     username: String,
@@ -133,12 +141,3 @@ internal fun Map<String, Serializable>.addKafkaSecurity(
 
     mMap.toMap()
 }
-
-internal fun <K, V> KafkaProducer<K, V>.send(topic: String, key: K, value: V): Boolean = this.runCatching {
-    send(ProducerRecord(topic, key, value)).get().hasOffset()
-}
-        .onFailure {
-            ServerState.state = ServerStates.KafkaIssues
-            log.error { "KafkaProducer failure when sending data to kafka - ${it.message}" }
-        }
-        .getOrDefault(false)

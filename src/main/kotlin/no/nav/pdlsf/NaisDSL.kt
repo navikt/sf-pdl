@@ -13,18 +13,20 @@ import org.http4k.routing.routes
 import org.http4k.server.Netty
 import org.http4k.server.asServer
 
-object NaisDSL {
+private val log = KotlinLogging.logger { }
 
-    private val log = KotlinLogging.logger { }
+const val NAIS_URL = "http://localhost:8080"
 
-    const val ISALIVE = "/isAlive"
-    const val ISREADY = "/isReady"
-    const val METRICS = "/metrics"
+const val NAIS_ISALIVE = "/isAlive"
+const val NAIS_ISREADY = "/isReady"
+const val NAIS_METRICS = "/metrics"
+const val NAIS_PRESTOP = "/stop"
 
-    private val api = routes(
-        ISALIVE bind Method.GET to { Response(Status.OK).body("is alive") },
-        ISREADY bind Method.GET to { Response(Status.OK).body("is ready") },
-        METRICS bind Method.GET to {
+private val api = routes(
+
+        NAIS_ISALIVE bind Method.GET to { Response(Status.OK).body("is alive") },
+        NAIS_ISREADY bind Method.GET to { Response(Status.OK).body("is ready") },
+        NAIS_METRICS bind Method.GET to {
             val content = try {
                 StringWriter().let { str ->
                     TextFormat.write004(str, cRegistry.metricFamilySamples())
@@ -36,19 +38,27 @@ object NaisDSL {
             }
             if (content.isNotEmpty()) Response(Status.OK).body(content)
             else Response(Status.NO_CONTENT).body(content)
+        },
+        NAIS_PRESTOP bind Method.GET to {
+            Metrics.preStopHook.inc()
+            ServerState.flag(ServerStates.PreStopHookActive)
+            log.info { "Received PreStopHook from NAIS" }
+            Response(Status.OK).body("")
         }
-    ).asServer(Netty(8080))
+)
 
-    fun enabled(doSomething: () -> Unit) = api.use {
-        try {
-            it.start()
-            log.info { "NAIS DSL is up and running" }
-            doSomething()
-            log.info { "NAIS DSL is stopped" }
-        } catch (e: Exception) {
-            log.error { "Could not enable NAIS api for port 8080" }
-        } finally {
-            it.stop()
-        }
+fun enableNAISAPI(doSomething: () -> Unit) {
+    val srv = api.asServer(Netty(8080))
+
+    try {
+        srv.start()
+        log.info { "NAIS DSL is up and running" }
+        doSomething()
+        srv.stop()
+    } catch (e: Exception) {
+        log.error { "Could not enable/disable NAIS api for port 8080" }
+    } finally {
+        srv.close()
+        log.info { "NAIS DSL is stopped" }
     }
 }

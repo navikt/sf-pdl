@@ -23,20 +23,23 @@ object Http {
     val client: HttpHandler by lazy { ApacheClient.proxy() }
 }
 
-fun ApacheClient.proxy(): HttpHandler = when {
-    ParamsFactory.p.httpsProxy.isEmpty() -> this()
-    else -> {
-        val up = URI(ParamsFactory.p.httpsProxy)
-        this(client =
-        HttpClients.custom()
-                .setDefaultRequestConfig(
-                        RequestConfig.custom()
-                                .setProxy(HttpHost(up.host, up.port, up.scheme))
-                                .setRedirectsEnabled(false)
-                                .setCookieSpec(CookieSpecs.IGNORE_COOKIES)
-                                .build())
-                .build()
-        )
+fun ApacheClient.proxy(): HttpHandler = EnvVar().httpsProxy.let { p ->
+
+    when {
+        p.isEmpty() -> this()
+        else -> {
+            val up = URI(p)
+            this(client =
+            HttpClients.custom()
+                    .setDefaultRequestConfig(
+                            RequestConfig.custom()
+                                    .setProxy(HttpHost(up.host, up.port, up.scheme))
+                                    .setRedirectsEnabled(false)
+                                    .setCookieSpec(CookieSpecs.IGNORE_COOKIES)
+                                    .build())
+                    .build()
+            )
+        }
     }
 }
 

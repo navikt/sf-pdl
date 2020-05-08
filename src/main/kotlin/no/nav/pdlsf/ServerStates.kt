@@ -1,16 +1,23 @@
 package no.nav.pdlsf
 
 sealed class ServerStates {
-    object IsOk : ServerStates()
     object KafkaIssues : ServerStates()
     object KafkaConsumerIssues : ServerStates()
-    object ProtobufIssues : ServerStates()
+    object IntegrityIssues : ServerStates()
+    object PreStopHookActive : ServerStates()
 }
 
 object ServerState {
-    var state: ServerStates = ServerStates.IsOk
+    private var states: MutableSet<ServerStates> = mutableSetOf()
 
-    fun isOk(): Boolean = state == ServerStates.IsOk
-    fun reset() { state = ServerStates.IsOk
-    }
+    fun flag(s: ServerStates) { states.add(s) }
+
+    fun isOk(): Boolean = states
+            .minus(ServerStates.KafkaIssues)
+            .minus(ServerStates.KafkaConsumerIssues)
+            .isEmpty()
+
+    fun preStopIsActive(): Boolean = states.contains(ServerStates.PreStopHookActive)
+
+    fun reset() { states = mutableSetOf() }
 }

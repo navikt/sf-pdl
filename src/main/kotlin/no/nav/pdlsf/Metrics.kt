@@ -19,6 +19,18 @@ object Metrics {
 
     val cRegistry: CollectorRegistry = CollectorRegistry.defaultRegistry
 
+    val preStopHook: Gauge = Gauge
+            .build()
+            .name("pre_stop__hook_gauge")
+            .help("No. of preStopHook activation since ever")
+            .register()
+
+    val failedRequest: Gauge = Gauge
+            .build()
+            .name("failed_request_gauge")
+            .help("No. of failed requests to Salesforce since last restart")
+            .register()
+
     val responseLatency: Histogram = Histogram
         .build()
         .name("response_latency_seconds_histogram")
@@ -42,18 +54,6 @@ object Metrics {
             .build()
             .name("sucessfully_value_to_query_gauge")
             .help("No of sucessfully converted kafka topic values to query")
-            .register()
-
-    val failedRequestSts: Gauge = Gauge
-            .build()
-            .name("failed_request_sts_gauge")
-            .help("No. of failed requests to Sts since last restart")
-            .register()
-
-    val failedRequestGraphQl: Gauge = Gauge
-            .build()
-            .name("failed_request_graphql_gauge")
-            .help("No. of failed requests to GraphQl since last restart")
             .register()
 
     val cachedPersons: Gauge = Gauge
@@ -94,9 +94,6 @@ object Metrics {
         parsedGrapQLPersons.clear()
 
         usedAdresseTypes.clear()
-
-        failedRequestGraphQl.clear()
-        failedRequestSts.clear()
 
         invalidQuery.clear()
         sucessfulValueToQuery.clear()

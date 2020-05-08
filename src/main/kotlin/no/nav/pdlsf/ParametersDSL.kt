@@ -1,56 +1,90 @@
 package no.nav.pdlsf
 
 import java.io.File
-import java.io.FileNotFoundException
-import java.util.Base64
+import mu.KotlinLogging
 
-enum class Profile {
-    LOCAL, PREPROD, PRODUCTION
-}
-object ParamsFactory {
-    val p: Params by lazy { Params() }
-}
+private val log = KotlinLogging.logger { }
 
-// TODO:: Read parameters from vault
+/**
+ * data class Vault contains expected vault configuration
+ * data class EnvVar contains expected environment variables
+ *
+ * data class Params contains the previous ones and a set of extension function
+ */
+
+const val PROGNAME = "sf-pdl"
+
+sealed class IntegrityBase
+data class IntegrityIssue(val cause: String) : IntegrityBase()
+object IntegrityOk : IntegrityBase()
+
 data class Params(
+    val vault: Vault = Vault(),
+    val envVar: EnvVar = EnvVar()
+) {
+    private fun kafkaSecurityConfigOk(): Boolean =
+            envVar.kSecProt.isNotEmpty() && envVar.kSaslMec.isNotEmpty() &&
+                    vault.kafkaUser.isNotEmpty() && vault.kafkaPassword.isNotEmpty()
+
+    private fun kafkaBaseConfigOk(): Boolean =
+            envVar.kBrokers.isNotEmpty() && envVar.kClientID.isNotEmpty() && envVar.kTopicPdl.isNotEmpty() && envVar.kTopicSf.isNotEmpty()
+
+    fun integrityCheck(): IntegrityBase =
+            when {
+                !kafkaBaseConfigOk() -> IntegrityIssue("Kafka base config is incomplete")
+                envVar.kSecurityEnabled && !kafkaSecurityConfigOk() ->
+                    IntegrityIssue("Kafka security enabled, but incomplete kafka security properties")
+                else -> IntegrityOk
+            }
+}
+
+// according to dev and prod.yaml
+const val pathSecrets = "/var/run/secrets/nais.io/vault/"
+const val pathServiceUser = "/var/run/secrets/nais.io/serviceuser/"
+
+data class Vault(
         // kafka details
-    val kafkaBrokers: String = System.getenv("KAFKA_BROKERS")?.toString() ?: "localhost:9092",
-    val kafkaSchemaRegistry: String = System.getenv("KAFKA_SCREG")?.toString() ?: "",
-    val kafkaClientID: String = System.getenv("KAFKA_CLIENTID")?.toString() ?: "sf-pdl-v1",
-    val kafkaProducerTimeout: Int = System.getenv("KAFKA_PRODUCERTIMEOUT")?.toInt() ?: 31_000,
-    val kafkaSecurity: String = System.getenv("KAFKA_SECURITY")?.toString()?.toUpperCase() ?: "FALSE",
-    val kafkaSecProt: String = System.getenv("KAFKA_SECPROT")?.toString() ?: "",
-    val kafkaSaslMec: String = System.getenv("KAFKA_SASLMEC")?.toString() ?: "",
-    val kafkaUser: String = ("/var/run/secrets/nais.io/serviceuser/username".readFile() ?: "username"),
-    val kafkaPassword: String = ("/var/run/secrets/nais.io/serviceuser/password".readFile() ?: "password"),
-    val kafkaTopicPdl: String = System.getenv("KAFKA_TOPIC_PDL")?.toString() ?: "",
-    val kafkaTopicSf: String = System.getenv("KAFKA_TOPIC_SF")?.toString() ?: "",
+    val kafkaUser: String = getServiceUserOrDefault("username", "kafkauser"),
+    val kafkaPassword: String = getServiceUserOrDefault("password", "kafkapassword")
+) {
+    companion object {
+        private fun getOrDefault(file: File, d: String): String = runCatching { file.readText(Charsets.UTF_8) }
+                .onFailure { log.error { "Couldn't read ${file.absolutePath}" } }
+                .getOrDefault(d)
 
-        // other details
-    val httpsProxy: String = System.getenv("HTTPS_PROXY") ?: "",
-    val msBetweenWork: Long = System.getenv("MS_BETWEEN_WORK")?.toLong() ?: 5 * 60 * 100,
-    val pdlGraphQlApiKey: String = ("/var/run/secrets/nais.io/apigw/pdl-api/x-nav-apiKey".readFile() ?: ""),
-    val pdlGraphQlUrl: String = System.getenv("PDL_GRAPHQL_URL") ?: "",
-    val stsApiKey: String = ("/var/run/secrets/nais.io/apigw/security-token-service-token/x-nav-apiKey".readFile() ?: ""),
-    val stsUrl: String = System.getenv("STS_REST_URL") ?: "",
+        fun getSecretOrDefault(k: String, d: String = "", p: String = pathSecrets): String =
+                getOrDefault(File("$p$k"), d)
 
-    val ignorePersonUnkown: Boolean = System.getenv("IGNORE_PERSON_UNKOWN")?.toBoolean() ?: false
+        fun getServiceUserOrDefault(k: String, d: String = "", p: String = pathServiceUser): String =
+                getOrDefault(File("$p$k"), d)
+    }
+}
 
-)
+data class EnvVar(
 
-fun Params.credentials(): String = Base64.getEncoder().encodeToString("$kafkaUser:$kafkaPassword".toByteArray(Charsets.UTF_8))
+        // kafka details
+    val kBrokers: String = getEnvOrDefault("KAFKA_BROKERS", "localhost:9092"),
+    val kSchemaRegistry: String = getEnvOrDefault("KAFKA_SCREG"),
+    val kClientID: String = getEnvOrDefault("KAFKA_CLIENTID", PROGNAME),
+    val kSecurityEnabled: Boolean = getEnvOrDefault("KAFKA_SECURITY", "false").toBoolean(),
+    val kSecProt: String = getEnvOrDefault("KAFKA_SECPROT"),
+    val kSaslMec: String = getEnvOrDefault("KAFKA_SASLMEC"),
+    val kTopicPdl: String = getEnvOrDefault("KAFKA_TOPIC_PDL", "default-topic-pdl"),
+    val kTopicSf: String = getEnvOrDefault("KAFKA_TOPIC_SF", "default-topic-sf"),
+    val kProducerTimeout: Int = System.getenv("KAFKA_PRODUCERTIMEOUT")?.toInt() ?: 31_000,
 
-fun Params.kafkaSecurityEnabled(): Boolean = kafkaSecurity == "TRUE"
+        // other
+    val httpsProxy: String = getEnvOrDefault("HTTPS_PROXY"),
+    val msBetweenWork: Long = getEnvOrDefault("MS_BETWEEN_WORK", "60000").toLong()
+) {
+    companion object {
+        fun getEnvOrDefault(k: String, d: String = ""): String = runCatching { System.getenv(k) ?: d }.getOrDefault(d)
+    }
+}
 
-fun Params.kafkaSecurityComplete(): Boolean =
-        kafkaSecProt.isNotEmpty() && kafkaSaslMec.isNotEmpty() && kafkaUser.isNotEmpty() && kafkaPassword.isNotEmpty()
-
-internal fun String.readFile(): String? =
-        try {
-            File(this).readText(Charsets.UTF_8)
-        } catch (err: FileNotFoundException) {
-            null
-        }
+internal fun String.getResourceOrDefault(d: String = ""): String =
+        runCatching { Params::class.java.getResourceAsStream("/$this").bufferedReader().use { it.readText() } }
+                .getOrDefault(d)
 
 internal fun getStringFromResource(path: String) =
-        ParamsFactory::class.java.getResourceAsStream(path).bufferedReader().use { it.readText() }
+        Params::class.java.getResourceAsStream(path).bufferedReader().use { it.readText() }
