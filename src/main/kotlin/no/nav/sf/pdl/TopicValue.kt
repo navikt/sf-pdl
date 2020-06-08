@@ -1,21 +1,22 @@
-package no.nav.pdlsf
+package no.nav.sf.pdl
 
 import kotlinx.serialization.ImplicitReflectionSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UnstableDefault
 import kotlinx.serialization.parse
 import mu.KotlinLogging
+import no.nav.sf.library.json
 
 private val log = KotlinLogging.logger { }
 
 @UnstableDefault
 @ImplicitReflectionSerializer
 fun String.getQueryFromJson(): QueryBase = runCatching {
-    Metrics.sucessfulValueToQuery.inc()
+    // Metrics.sucessfulValueToQuery.inc() //TODO :: Metrics
     json.parse<Query>(this)
 }
         .onFailure {
-            Metrics.invalidQuery.inc()
+            // Metrics.invalidQuery.inc()
             log.error { "Cannot convert kafka value to query - ${it.localizedMessage}" }
         }
         .getOrDefault(InvalidQuery)
@@ -143,7 +144,8 @@ private fun Query.findAktoerId(): String {
         if (it.isEmpty()) {
             UKJENT_FRA_PDL
         } else {
-            hentIdenter.identer.firstOrNull { it.gruppe == IdentGruppe.AKTORID }?.ident ?: UKJENT_FRA_PDL }
+            hentIdenter.identer.firstOrNull { it.gruppe == IdentGruppe.AKTORID }?.ident ?: UKJENT_FRA_PDL
+        }
     }
 }
 
@@ -152,7 +154,8 @@ private fun Query.findFolkeregisterIdent(): String {
         if (it.isEmpty()) {
             UKJENT_FRA_PDL
         } else {
-            hentIdenter.identer.firstOrNull { it.gruppe == IdentGruppe.FOLKEREGISTERIDENT }?.ident ?: UKJENT_FRA_PDL }
+            hentIdenter.identer.firstOrNull { it.gruppe == IdentGruppe.FOLKEREGISTERIDENT }?.ident ?: UKJENT_FRA_PDL
+        }
     }
 }
 private fun Query.findAdressebeskyttelse(): AdressebeskyttelseGradering {
@@ -168,21 +171,21 @@ private fun Query.findAdressebeskyttelse(): AdressebeskyttelseGradering {
 fun Query.findKommunenummer(): String {
     return this.hentPerson.bostedsadresse.let { bostedsadresse ->
         if (bostedsadresse.isNullOrEmpty()) {
-            Metrics.usedAdresseTypes.labels(AdresseType.INGEN.name).inc()
+            // Metrics.usedAdresseTypes.labels(AdresseType.INGEN.name).inc()
             UKJENT_FRA_PDL
         } else {
             bostedsadresse.first { !it.metadata.historisk }.let {
                 it.vegadresse?.let { vegadresse ->
-                    Metrics.usedAdresseTypes.labels(AdresseType.VEGADRESSE.name).inc()
+                    // Metrics.usedAdresseTypes.labels(AdresseType.VEGADRESSE.name).inc()
                     vegadresse.kommunenummer
                 } ?: it.matrikkeladresse?.let { matrikkeladresse ->
-                    Metrics.usedAdresseTypes.labels(AdresseType.MATRIKKELADRESSE.name).inc()
+                    // Metrics.usedAdresseTypes.labels(AdresseType.MATRIKKELADRESSE.name).inc()
                     matrikkeladresse.kommunenummer
                 } ?: it.ukjentBosted?.let { ukjentBosted ->
-                    Metrics.usedAdresseTypes.labels(AdresseType.UKJENTBOSTED.name).inc()
+                    // Metrics.usedAdresseTypes.labels(AdresseType.UKJENTBOSTED.name).inc()
                     ukjentBosted.bostedskommune
                 } ?: UKJENT_FRA_PDL.also {
-                    Metrics.usedAdresseTypes.labels(AdresseType.INGEN.name).inc()
+                    // Metrics.usedAdresseTypes.labels(AdresseType.INGEN.name).inc()
                 }
             }
         }

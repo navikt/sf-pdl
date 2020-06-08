@@ -1,6 +1,9 @@
-package no.nav.pdlsf
+package no.nav.sf
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.StringSpec
+import no.nav.sf.pdl.ObjectInCacheStatus
+import no.nav.sf.pdl.PersonSf
+import no.nav.sf.pdl.exists
 
 class WorkTests : StringSpec() {
 

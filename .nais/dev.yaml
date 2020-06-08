@@ -39,10 +39,6 @@ spec:
         kvPath: /kv/preprod/sbs/sf-pdl/default
       - mountPath: /var/run/secrets/nais.io/serviceuser
         kvPath: /serviceuser/data/dev/srvsfpdl
-      - mountPath: /var/run/secrets/nais.io/apigw/security-token-service-token
-        kvPath: /apikey/apigw/dev/security-token-service-token/sf-pdl_q1
-      - mountPath: /var/run/secrets/nais.io/apigw/pdl-api
-        kvPath: /apikey/apigw/dev/pdl-api/sf-pdl_q2
   env:
     - name: KAFKA_BROKERS
       value: SASL_SSL://b27apvl00045.preprod.local:8443,SASL_SSL://b27apvl00046.preprod.local:8443,SASL_SSL://b27apvl00047.preprod.local:8443
@@ -56,9 +52,9 @@ spec:
       value: SASL_SSL
     - name: KAFKA_SASLMEC
       value: PLAIN
-    - name: KAFKA_TOPIC_PDL
+    - name: KAFKA_TOPIC
       value: aapen-person-pdl-dokument-v1
-    - name: KAFKA_TOPIC_SF
+    - name: KAFKA_PRODUCER_TOPIC
       value: privat-sf-person-v1
     - name: IGNORE_PERSON_UNKOWN
       value: 'TRUE'

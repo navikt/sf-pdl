@@ -1,4 +1,4 @@
-package no.nav.pdlsf
+package no.nav.sf
 /*
 
 import io.kotlintest.matchers.asClue
