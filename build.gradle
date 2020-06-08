@@ -70,11 +70,10 @@ repositories {
         url "http://packages.confluent.io/maven"
     }
     maven {
-        setUrl("https://maven.pkg.github.com/navikt/crm-utilities")
+        url "https://maven.pkg.github.com/navikt/crm-utilities"
         credentials {
             username = project.ext.githubUser
             password = project.ext.githubPassword
-
         }
     }
 }
