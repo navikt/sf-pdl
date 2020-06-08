@@ -36,7 +36,7 @@ enum class AdressebeskyttelseGradering {
 }
 @Serializable
 data class Metadata(
-    val historisk: Boolean = true, // TODO:: prøver å defaulte til true mens vi venter
+    val historisk: Boolean,
     val master: String
 )
 
