@@ -16,7 +16,7 @@ buildscript {
     ext.kotest_version = '4.0.3'
     ext.caffeine_version = '2.8.2'
 
-    ext.crm_utilities_version = '0.59'
+    ext.crm_utilities_version = '0.61'
 }
 
 plugins {
@@ -44,7 +44,7 @@ shadowJar {
     archiveClassifier = ''
 
     dependencies {
-        include(dependency('no.nav.sf.library:crm-utilities:0.59'))
+        include(dependency('no.nav.sf.library:crm-utilities:0.61'))
     }
 }
 
@@ -76,8 +76,8 @@ repositories {
     maven {
         url "https://maven.pkg.github.com/navikt/crm-utilities"
         credentials {
-            username = project.ext.githubUser
-            password = project.ext.githubPassword
+            username = "x-access-token"
+            password = System.getenv("GITHUB_TOKEN")
         }
     }
 }
@@ -88,6 +88,7 @@ configurations {
 
 
 dependencies {
+    compile fileTree(dir: 'libs', include: ['*.jar'])
     implementation "no.nav.sf.library:crm-utilities:$crm_utilities_version"
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
