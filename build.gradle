@@ -16,7 +16,9 @@ buildscript {
     ext.kotest_version = '4.0.3'
     ext.caffeine_version = '2.8.2'
 
-    ext.crm_utilities_version = '0.64'
+    ext.crm_utilities_version = '0.65'
+    ext.smCommonVersion = "1.bba46d9"
+
 }
 
 plugins {
@@ -44,7 +46,8 @@ shadowJar {
     archiveClassifier = ''
 
     dependencies {
-        include(dependency('no.nav.sf.library:crm-utilities:0.64'))
+        include(dependency('no.nav.helse:syfosm-common-models:1.bba46d9'))
+        include(dependency('no.nav.sf.library:crm-utilities:0.65'))
     }
 }
 
@@ -76,8 +79,15 @@ repositories {
     maven {
         url "https://maven.pkg.github.com/navikt/crm-utilities"
         credentials {
-            username = "x-access-token"
-            password = System.getenv("GITHUB_TOKEN")
+            username = project.ext.githubUser
+            password = project.ext.githubPassword
+        }
+    }
+    maven {
+        url "https://maven.pkg.github.com/navikt/syfosm-common"
+        credentials {
+            username = project.ext.githubUser
+            password = project.ext.githubPassword
         }
     }
 }
@@ -89,6 +99,7 @@ configurations {
 
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
+    implementation "no.nav.helse:syfosm-common-models:$smCommonVersion"
     implementation "no.nav.sf.library:crm-utilities:$crm_utilities_version"
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
