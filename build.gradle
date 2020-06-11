@@ -46,8 +46,8 @@ shadowJar {
     archiveClassifier = ''
 
     dependencies {
-        include(dependency('no.nav.helse:syfosm-common-models:1.bba46d9'))
-        include(dependency('no.nav.sf.library:crm-utilities:0.69'))
+        // include(dependency('no.nav.helse:syfosm-common-models:1.bba46d9'))
+        // include(dependency('no.nav.sf.library:crm-utilities:0.69'))
     }
 }
 
@@ -80,15 +80,15 @@ repositories {
     maven {
         url = uri("https://maven.pkg.github.com/navikt/syfosm-common")
         credentials {
-            username = project.ext.githubUser
-            password = project.ext.githubPassword
+            username = "x-access-token"
+            password = "$System.env.GITHUB_TOKEN"
         }
     }
     maven {
         url = uri("https://maven.pkg.github.com/navikt/crm-utilities")
         credentials {
-            username = project.ext.githubUser
-            password = project.ext.githubPassword
+            username = "x-access-token"
+            password = "$System.env.GITHUB_TOKEN"
         }
     }
 }
