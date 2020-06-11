@@ -45,9 +45,9 @@ shadowJar {
     archiveBaseName = 'app'
     archiveClassifier = ''
 
-//    dependencies {
-//        include(dependency('no.nav.sf.library:crm-utilities:0.69'))
-//    }
+    dependencies {
+        include(dependency('no.nav.sf.library:crm-utilities:0.69'))
+    }
 }
 
 application {
