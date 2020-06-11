@@ -166,7 +166,6 @@ internal fun work(ws: WorkSettings): Pair<WorkSettings, ExitReason> {
         } // Consumer pdl topic
     } // Producer person topic
 
-
     log.info { "bootstrap work session finished" }
     return Pair(ws, exitReason)
 }
