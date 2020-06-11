@@ -45,10 +45,9 @@ shadowJar {
     archiveBaseName = 'app'
     archiveClassifier = ''
 
-    dependencies {
-        // include(dependency('no.nav.helse:syfosm-common-models:1.bba46d9'))
-        include(dependency('no.nav.sf.library:crm-utilities:0.69'))
-    }
+//    dependencies {
+//        include(dependency('no.nav.sf.library:crm-utilities:0.69'))
+//    }
 }
 
 application {
@@ -63,11 +62,12 @@ run {
     environment "KAFKA_BROKERS", "localhost:9092"
     environment "KAFKA_CLIENTID", "pdl-sf"
     environment "KAFKA_SECURITY", "FALSE"
-    environment "KAFKA_TOPIC", "public-ereg-cache-org-json"
+    environment "KAFKA_TOPIC", "default_topic"
+    environment "KAFKA_PRODUCER_TOPIC", "default_producer_topic"
     environment "SF_OAUTHURL", "tbd"
     environment "SF_TOKEN", "tbd"
     environment "SF_RESTENDPOINT", "tbd"
-    environment "MS_BETWEEN_WORK", "40000"
+    environment "MS_BETWEEN_WORK", "20000"
 }
 
 repositories {
