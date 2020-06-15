@@ -16,8 +16,7 @@ buildscript {
     ext.kotest_version = '4.0.3'
     ext.caffeine_version = '2.8.2'
 
-    ext.crm_utilities_version = '0.69'
-    ext.smCommonVersion = '1.bba46d9'
+    ext.crm_utilities_version = '0.72'
 
 }
 
@@ -44,11 +43,6 @@ jar {
 shadowJar {
     archiveBaseName = 'app'
     archiveClassifier = ''
-
-    dependencies {
-        // include(dependency('no.nav.helse:syfosm-common-models:1.bba46d9'))
-        // include(dependency('no.nav.sf.library:crm-utilities:0.69'))
-    }
 }
 
 application {
@@ -78,17 +72,10 @@ repositories {
         url "http://packages.confluent.io/maven"
     }
     maven {
-        url = uri("https://maven.pkg.github.com/navikt/syfosm-common")
-        credentials {
-            username = "x-access-token"
-            password = "$System.env.GITHUB_TOKEN"
-        }
-    }
-    maven {
         url = uri("https://maven.pkg.github.com/navikt/crm-utilities")
         credentials {
-            username = "x-access-token"
-            password = "$System.env.GITHUB_TOKEN"
+            username = 'x-access-token'
+            password = 'da014711c0d5cf98c3f992a9fedce4410d350ee4'
         }
     }
 }
@@ -99,7 +86,6 @@ configurations {
 
 
 dependencies {
-    implementation "no.nav.helse:syfosm-common-models:$smCommonVersion"
     implementation "no.nav.sf.library:crm-utilities:$crm_utilities_version"
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
