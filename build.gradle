@@ -17,21 +17,6 @@ buildscript {
     ext.caffeine_version = '2.8.2'
 
     ext.crm_utilities_version = '0.72'
-
-    repositories {
-        mavenCentral()
-        jcenter()
-        maven {
-            url = uri("https://maven.pkg.github.com/navikt/crm-utilities")
-            credentials {
-                username = "token"
-                password = System.getenv("GITHUB_TOKEN")
-            }
-        }
-        maven {
-            url "http://packages.confluent.io/maven"
-        }
-    }
 }
 
 plugins {
@@ -79,15 +64,27 @@ run {
 repositories {
     mavenCentral()
     jcenter()
-    maven {
-        url = uri("https://maven.pkg.github.com/navikt/crm-utilities")
-        credentials {
-            username = "token"
-            password = System.getenv("GITHUB_TOKEN")
-        }
-    }
+//    maven {
+//        url = uri("https://maven.pkg.github.com/navikt/crm-utilities")
+//        credentials {
+//            username = "token"
+//            password = System.getenv("GITHUB_TOKEN")
+//        }
+//    }
     maven {
         url "http://packages.confluent.io/maven"
+    }
+
+    ["maven-release", "crm-utilities"].each { repo ->
+        String token = System.getenv("GITHUB_TOKEN") ?: project.findProperty("githubPassword")
+        if (!token) throw new NullPointerException("Missing token, you have to set GITHUB_TOKEN or gpr.key, see README")
+        maven {
+            url = uri("https://maven.pkg.github.com/navikt/$repo")
+            credentials {
+                username = "token"
+                password = token
+            }
+        }
     }
 }
 
