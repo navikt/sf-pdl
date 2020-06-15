@@ -68,7 +68,7 @@ repositories {
         url = uri("https://maven.pkg.github.com/navikt/crm-utilities")
         credentials {
             username = 'x-access-token'
-            password = '6d419bbf4e91298a7995e7f13e8efa14f14e6c12'
+            password = '4b95038351459f06473fd9debf12e3aafe999598'
         }
     }
     maven {
