@@ -4,8 +4,8 @@ on: [push, pull_request]
 
 env:
   IMAGE: docker.pkg.github.com/${{ github.repository }}/sf-pdl:${{ github.sha }}
-  ORG_GRADLE_PROJECT_githubUser: x-access-token
   ORG_GRADLE_PROJECT_githubPassword: ${{ secrets.GITHUB_TOKEN }}
+
 jobs:
   test:
     name: Run tests
@@ -28,10 +28,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-wrapper-
       - name: Build and run tests
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew clean build
-
+        run: ./gradlew clean build --info
   build:
     name: Build and push Docker container
     needs: test
@@ -55,8 +52,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-wrapper-
       - name: Build JAR
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./gradlew clean build shadowJar -x test
       - name: Build and publish Docker image
         env:
