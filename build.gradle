@@ -17,7 +17,6 @@ buildscript {
     ext.caffeine_version = '2.8.2'
 
     ext.crm_utilities_version = '0.72'
-
 }
 
 plugins {
@@ -41,8 +40,8 @@ jar {
 }
 
 shadowJar {
-    archiveBaseName = 'app'
-    archiveClassifier = ''
+    archiveBaseName.set('app')
+    archiveClassifier.set('')
 }
 
 application {
@@ -50,7 +49,7 @@ application {
 }
 
 tasks.withType(JavaExec) {
-    jvmArgs = ['-Xms4096m', '-Xmx8192m']
+    jvmArgs = ['-Xms1024m', '-Xmx2048m']
 }
 
 run {
@@ -59,9 +58,6 @@ run {
     environment "KAFKA_SECURITY", "FALSE"
     environment "KAFKA_TOPIC", "default_topic"
     environment "KAFKA_PRODUCER_TOPIC", "default_producer_topic"
-    environment "SF_OAUTHURL", "tbd"
-    environment "SF_TOKEN", "tbd"
-    environment "SF_RESTENDPOINT", "tbd"
     environment "MS_BETWEEN_WORK", "20000"
 }
 
@@ -100,8 +96,8 @@ dependencies {
     implementation "org.apache.kafka:kafka-clients:$kafka_version"
     implementation "io.confluent:kafka-avro-serializer:$confluent_version"
 
-    implementation "io.grpc:grpc-protobuf:${grpc_version}"
-    implementation "io.grpc:grpc-stub:${grpc_version}"
+    implementation "io.grpc:grpc-protobuf:$grpc_version"
+    implementation "io.grpc:grpc-stub:$grpc_version"
 
     implementation "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
 
