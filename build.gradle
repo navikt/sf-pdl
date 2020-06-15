@@ -68,7 +68,7 @@ repositories {
         url = uri("https://maven.pkg.github.com/navikt/crm-utilities")
         credentials {
             username = 'x-access-token'
-            password = '4b95038351459f06473fd9debf12e3aafe999598'
+            password = System.getenv("GITHUB_TOKEN")
         }
     }
     maven {
@@ -82,6 +82,8 @@ configurations {
 
 
 dependencies {
+    implementation platform('org.jetbrains.kotlin:kotlin-bom')
+
     implementation "no.nav.sf.library:crm-utilities:$crm_utilities_version"
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
