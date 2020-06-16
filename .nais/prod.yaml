@@ -64,3 +64,5 @@ spec:
       value: 'https://api-gw.oera.no/security-token-service/rest/v1/sts/token'
     - name: MS_BETWEEN_WORK
       value: '600000'
+    - name: VAULT_INSTANCE
+      value: PROD
