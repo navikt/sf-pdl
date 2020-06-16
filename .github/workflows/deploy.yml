@@ -6,7 +6,6 @@ env:
   IMAGE: docker.pkg.github.com/${{ github.repository }}/sf-pdl:${{ github.sha }}
   ORG_GRADLE_PROJECT_githubPassword: ${{ secrets.GITHUB_TOKEN }}
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
 jobs:
   test:
     name: Run tests
@@ -31,7 +30,11 @@ jobs:
       - name: Build and run tests
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew clean build --info
+        run:
+        echo "GITHUB_TOKEN - $GITHUB_TOKEN"
+        echo "secrets.GITHUB_TOKEN - ${{ secrets.GITHUB_TOKEN }}"
+        echo "ORG_GRADLE_PROJECT_githubPassword - $ORG_GRADLE_PROJECT_githubPassword"
+        ./gradlew clean build --info
   build:
     name: Build and push Docker container
     needs: test
