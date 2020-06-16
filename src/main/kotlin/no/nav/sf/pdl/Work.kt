@@ -17,7 +17,6 @@ import no.nav.sf.library.getAllRecords
 import no.nav.sf.library.json
 import no.nav.sf.library.send
 import no.nav.sf.library.sendNullValue
-import no.nav.sf.pdl.FilterBase.Companion.fromJson
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
@@ -48,7 +47,7 @@ data class WorkSettings(
     ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to KafkaAvroDeserializer::class.java,
     "schema.registry.url" to kafkaSchemaReg
 ),
-    val filter: FilterBase = fromJson(AVault.getSecretOrDefault(VAULT_workFilter)),
+    val filter: FilterBase = FilterBase.fromJson(AVault.getSecretOrDefault(VAULT_workFilter)),
     val prevFilter: FilterBase = FilterBase.Missing
 )
 
@@ -141,7 +140,7 @@ internal fun work(ws: WorkSettings): Pair<WorkSettings, ExitReason> {
         return Pair(ws, ExitReason.NoFilter)
     }
     val personFilter = ws.filter as FilterBase.Exists
-
+    log.info { "Continue work with filter" }
     /**
      * Check - no cache means no answer for a new event;
      * - is a new activity id
@@ -155,6 +154,7 @@ internal fun work(ws: WorkSettings): Pair<WorkSettings, ExitReason> {
     }
 
     val cache = tmp as Cache.Exist
+    log.info { "Continue work with Cache" }
 
     var exitReason: ExitReason = ExitReason.NoKafkaProducer
     AKafkaProducer<ByteArray, ByteArray>(
