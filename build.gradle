@@ -42,6 +42,10 @@ jar {
 shadowJar {
     archiveBaseName.set('app')
     archiveClassifier.set('')
+
+    dependencies {
+        include(dependency("no.nav.sf.library:crm-utilities:$crm_utilities_version"))
+    }
 }
 
 application {
