@@ -77,7 +77,7 @@ jobs:
           CLUSTER: dev-sbs
           RESOURCE: .nais/dev.yaml
 
-#  deploy-prod:
+#   deploy-prod:
 #    name: Deploy to NAIS prod
 #    needs: deploy-dev
 #    if: github.ref == 'refs/heads/master'
