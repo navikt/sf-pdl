@@ -4,8 +4,8 @@ on: [push, pull_request]
 
 env:
   IMAGE: docker.pkg.github.com/${{ github.repository }}/sf-pdl:${{ github.sha }}
-  ORG_GRADLE_PROJECT_githubPassword: ${{ secrets.GPR_READ }}
-  GITHUB_TOKEN: ${{ secrets.GPR_READ }}
+  ##ORG_GRADLE_PROJECT_githubPassword: ${{ secrets.GPR_READ }}
+  ##GITHUB_TOKEN: ${{ secrets.GPR_READ }}
 jobs:
   test:
     name: Run tests
@@ -27,7 +27,7 @@ jobs:
           key: ${{ runner.os }}-gradle-wrapper-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-wrapper-
-      - name: Build and run tests with token ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and run tests
         env:
           GITHUB_TOKEN: ${{ secrets.GPR_READ }}
         run: ./gradlew clean build --info

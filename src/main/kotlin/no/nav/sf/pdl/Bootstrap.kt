@@ -25,7 +25,6 @@ private val log = KotlinLogging.logger { }
 @ExperimentalStdlibApi
 object Bootstrap {
 
-
     fun start(ws: WorkSettings = WorkSettings()) {
         log.info { "Starting" }
         enableNAISAPI { loop(ws) }
