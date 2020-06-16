@@ -32,7 +32,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run:
         echo "GITHUB_TOKEN - $GITHUB_TOKEN"
-        echo "secrets.GITHUB_TOKEN - ${{ secrets.GITHUB_TOKEN }}"
         echo "ORG_GRADLE_PROJECT_githubPassword - $ORG_GRADLE_PROJECT_githubPassword"
         ./gradlew clean build --info
   build:
