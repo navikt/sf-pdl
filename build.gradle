@@ -66,14 +66,6 @@ repositories {
     jcenter()
 
     maven {
-        url = uri("https://maven.pkg.github.com/navikt/crm-utilities")
-        credentials {
-            username = 'x-access-token'
-            password = 'abee7f7073014bb60c2445453199298b49fcf730'
-        }
-    }
-
-    maven {
         url "http://packages.confluent.io/maven"
     }
 
