@@ -27,10 +27,11 @@ private val log = KotlinLogging.logger {}
 
 // Work environment dependencies
 const val EV_kafkaProducerTopic = "KAFKA_PRODUCER_TOPIC"
+const val EV_kafkaSchemaReg = "KAFKA_SCREG"
 
 // Work vault dependencies
 const val VAULT_workFilter = "WorkFilter"
-
+val kafkaSchemaReg = AnEnvironment.getEnvOrDefault(EV_kafkaSchemaReg, "http://localhost:8081")
 val kafkaPersonTopic = AnEnvironment.getEnvOrDefault(EV_kafkaProducerTopic, "$PROGNAME-producer")
 
 data class WorkSettings(
@@ -44,7 +45,8 @@ data class WorkSettings(
 ),
     val kafkaConsumerPdl: Map<String, Any> = AKafkaConsumer.configBase + mapOf<String, Any>(
     ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to KafkaAvroDeserializer::class.java,
-    ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to KafkaAvroDeserializer::class.java
+    ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to KafkaAvroDeserializer::class.java,
+    "schema.registry.url" to kafkaSchemaReg
 ),
     val filter: FilterBase = fromJson(AVault.getSecretOrDefault(VAULT_workFilter)),
     val prevFilter: FilterBase = FilterBase.Missing

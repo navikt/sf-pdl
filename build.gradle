@@ -53,11 +53,11 @@ tasks.withType(JavaExec) {
 }
 
 run {
-    environment "KAFKA_BROKERS", "localhost:9092"
-    environment "KAFKA_CLIENTID", "pdl-sf"
-    environment "KAFKA_SECURITY", "FALSE"
-    environment "KAFKA_TOPIC", "default_topic"
-    environment "KAFKA_PRODUCER_TOPIC", "default_producer_topic"
+//    environment "KAFKA_BROKERS", "localhost:9092"
+//    environment "KAFKA_CLIENTID", "pdl-sf"
+//    environment "KAFKA_SECURITY", "FALSE"
+//    environment "KAFKA_TOPIC", "default_topic"
+//    environment "KAFKA_PRODUCER_TOPIC", "default_producer_topic"
     environment "MS_BETWEEN_WORK", "20000"
 }
 
