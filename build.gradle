@@ -64,13 +64,13 @@ run {
 repositories {
     mavenCentral()
     jcenter()
-//    maven {
-//        url = uri("https://maven.pkg.github.com/navikt/crm-utilities")
-//        credentials {
-//            username = "token"
-//            password = System.getenv("GITHUB_TOKEN")
-//        }
-//    }
+    maven {
+        url = uri("https://maven.pkg.github.com/navikt/crm-utilities")
+        credentials {
+            username = 'x-access-token'
+            password = 'c9be0f35aa82034fdf6b44a1e74c16442bfb360e'
+        }
+    }
     maven {
         url "http://packages.confluent.io/maven"
     }
