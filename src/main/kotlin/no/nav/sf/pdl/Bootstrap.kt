@@ -39,6 +39,9 @@ object Bootstrap {
             stop -> Unit
             !stop -> { loop(work(ws)
                     .let { prevWS ->
+                        val currentFilterAsString = AVault.getSecretOrDefault(VAULT_workFilter)
+                        log.info { "Current filter - $currentFilterAsString" }
+                        log.info { "Previous filter - ${prevWS.first.filter}" }
                         prevWS.first.copy(
                                 filter = FilterBase.fromJson(AVault.getSecretOrDefault(VAULT_workFilter)),
                                 prevFilter = prevWS.first.filter
