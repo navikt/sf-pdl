@@ -1,0 +1,11 @@
+{
+    "regions": [
+        {
+            "region" : "54" ,
+            "municipals" : []
+        } ,
+        {
+            "region": "18",
+            "municipals": ["1804" , "1806"]
+        } ]
+}
