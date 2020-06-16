@@ -34,14 +34,14 @@ object Bootstrap {
     }
 
     private tailrec fun loop(ws: WorkSettings) {
+        log.info { "Ready to loop" }
         val stop = ShutdownHook.isActive() || PrestopHook.isActive()
         when {
             stop -> Unit
-            !stop -> { loop(work(ws)
+            !stop -> {
+                log.info { "Continue to loop" }
+                loop(work(ws)
                     .let { prevWS ->
-                        val currentFilterAsString = AVault.getSecretOrDefault(VAULT_workFilter)
-                        log.info { "Current filter - $currentFilterAsString" }
-                        log.info { "Previous filter - ${prevWS.first.filter}" }
                         prevWS.first.copy(
                                 filter = FilterBase.fromJson(AVault.getSecretOrDefault(VAULT_workFilter)),
                                 prevFilter = prevWS.first.filter
@@ -54,7 +54,6 @@ object Bootstrap {
 
     private fun conditionalWait(ms: Long = bootstrapWaitTime) =
             runBlocking {
-
                 log.info { "Will wait $ms ms before starting all over" }
 
                 val cr = launch {
