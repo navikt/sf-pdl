@@ -64,18 +64,19 @@ run {
 repositories {
     mavenCentral()
     jcenter()
-/*    maven {
+    maven {
         url = uri("https://maven.pkg.github.com/navikt/crm-utilities")
         credentials {
             username = 'x-access-token'
-            password = 'c9be0f35aa82034fdf6b44a1e74c16442bfb360e'
+            password = 'abee7f7073014bb60c2445453199298b49fcf730'
         }
     }
-*/
+
     maven {
         url "http://packages.confluent.io/maven"
     }
 
+/*
     ["maven-release", "crm-utilities"].each { repo ->
         String token = System.getenv("GITHUB_TOKEN") ?: project.findProperty("githubPassword")
         if (!token) throw new NullPointerException("Missing token, you have to set GITHUB_TOKEN or githubPassword")
@@ -87,6 +88,8 @@ repositories {
             }
         }
     }
+
+ */
 }
 
 configurations {
