@@ -118,7 +118,12 @@ sealed class Cache {
         fun load(kafkaConsumerConfig: Map<String, Any>, topic: String): Cache =
                 when (val result = getAllRecords<String, String>(kafkaConsumerConfig, listOf(topic))) {
                     is AllRecords.Exist -> {
-                        Exist(result.getKeysValues().map { it.k to it.v.hashCode() }.toMap())
+                        if (result.hasMissingKey())
+                            Missing
+                                    .also { log.error { "Cache has null in key" } } // Allow null vaule because of Tombestone
+                        else {
+                            Exist(result.getKeysValues().map { it.k to it.v.hashCode() }.toMap()).also { log.info { "Cache size is ${it.map.size}" } }
+                        }
                     }
                     else -> Missing
                 }
