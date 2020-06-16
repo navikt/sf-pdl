@@ -27,13 +27,10 @@ jobs:
           key: ${{ runner.os }}-gradle-wrapper-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-wrapper-
-      - name: Build and run tests
+      - name: Build and run tests with token ${{ secrets.GITHUB_TOKEN }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run:
-        echo "GITHUB_TOKEN - $GITHUB_TOKEN"
-        echo "ORG_GRADLE_PROJECT_githubPassword - $ORG_GRADLE_PROJECT_githubPassword"
-        ./gradlew clean build --info
+        run: ./gradlew clean build --info
   build:
     name: Build and push Docker container
     needs: test
