@@ -12,6 +12,7 @@ import no.nav.sf.library.enableNAISAPI
 
 private const val EV_bootstrapWaitTime = "MS_BETWEEN_WORK" // default to 10 minutes
 private val bootstrapWaitTime = AnEnvironment.getEnvOrDefault(EV_bootstrapWaitTime, "60000").toLong()
+private val log = KotlinLogging.logger { }
 
 /**
  * Bootstrap is a very simple µService manager
@@ -24,7 +25,6 @@ private val bootstrapWaitTime = AnEnvironment.getEnvOrDefault(EV_bootstrapWaitTi
 @ExperimentalStdlibApi
 object Bootstrap {
 
-    private val log = KotlinLogging.logger { }
 
     fun start(ws: WorkSettings = WorkSettings()) {
         log.info { "Starting" }
