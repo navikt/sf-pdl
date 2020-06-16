@@ -82,10 +82,11 @@ sealed class FilterBase {
     }
 
     companion object {
-        fun fromJson(data: String): FilterBase = runCatching { json.parse(Exists.serializer(), data) }
-                .onFailure {
-                    log.error { "Parsing of person filter in vault failed - ${it.localizedMessage}" }
-                }
+        fun fromJson(data: String): FilterBase = runCatching {
+            log.info { "Ready to parse filter as json - $data" }
+            json.parse(Exists.serializer(), data)
+        }
+                .onFailure { log.error { "Parsing of person filter in vault failed - ${it.localizedMessage}" } }
                 .getOrDefault(Missing)
     }
 }
