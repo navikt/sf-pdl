@@ -4,8 +4,6 @@ import io.confluent.kafka.serializers.KafkaAvroDeserializer
 import kotlinx.serialization.ImplicitReflectionSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UnstableDefault
-import kotlinx.serialization.parse
-import kotlinx.serialization.serializer
 import mu.KotlinLogging
 import no.nav.pdlsf.proto.PersonProto
 import no.nav.sf.library.AKafkaConsumer
