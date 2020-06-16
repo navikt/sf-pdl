@@ -5,6 +5,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.ImplicitReflectionSerializer
 import mu.KotlinLogging
+import no.nav.sf.library.AVault
 import no.nav.sf.library.AnEnvironment
 import no.nav.sf.library.PrestopHook
 import no.nav.sf.library.ShutdownHook
@@ -12,7 +13,6 @@ import no.nav.sf.library.enableNAISAPI
 
 private const val EV_bootstrapWaitTime = "MS_BETWEEN_WORK" // default to 10 minutes
 private val bootstrapWaitTime = AnEnvironment.getEnvOrDefault(EV_bootstrapWaitTime, "60000").toLong()
-private val log = KotlinLogging.logger { }
 
 /**
  * Bootstrap is a very simple µService manager
@@ -25,6 +25,8 @@ private val log = KotlinLogging.logger { }
 @ExperimentalStdlibApi
 object Bootstrap {
 
+    private val log = KotlinLogging.logger { }
+
     fun start(ws: WorkSettings = WorkSettings()) {
         log.info { "Starting" }
         enableNAISAPI { loop(ws) }
@@ -35,8 +37,14 @@ object Bootstrap {
         val stop = ShutdownHook.isActive() || PrestopHook.isActive()
         when {
             stop -> Unit
-            !stop -> {
-                loop(work(ws).first.also { conditionalWait() })
+            !stop -> { loop(work(ws)
+                    .let {prevWS ->
+                        prevWS.first.copy(
+                                filter = FilterBase.fromJson(AVault.getSecretOrDefault(VAULT_workFilter)),
+                                prevFilter = prevWS.first.filter
+                        )
+                    }
+                    .also { conditionalWait() })
             }
         }
     }
