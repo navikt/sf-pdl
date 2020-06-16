@@ -72,7 +72,7 @@ sealed class FilterBase {
 
     @Serializable
     data class Exists(
-        val regions: List<RegionBase.Exists>
+        val regions: List<Region>
     ) : FilterBase() {
 
         fun approved(p: PersonSf): Boolean {
@@ -80,6 +80,11 @@ sealed class FilterBase {
                     it.region == p.region && (it.municipals.isEmpty() || it.municipals.contains(p.kommunenummer)) }
         }
     }
+    @Serializable
+    data class Region(
+        val region: String,
+        val municipals: List<String> = emptyList()
+    )
 
     companion object {
         fun fromJson(data: String): FilterBase = runCatching {
@@ -89,17 +94,6 @@ sealed class FilterBase {
                 .onFailure { log.error { "Parsing of person filter in vault failed - ${it.localizedMessage}" } }
                 .getOrDefault(Missing)
     }
-}
-
-sealed class RegionBase {
-
-    object Missing : RegionBase()
-
-    @Serializable
-    data class Exists(
-        val region: String,
-        val municipals: List<String> = emptyList()
-    ) : RegionBase()
 }
 
 /**
