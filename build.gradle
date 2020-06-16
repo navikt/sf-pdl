@@ -16,9 +16,7 @@ buildscript {
     ext.kotest_version = '4.0.3'
     ext.caffeine_version = '2.8.2'
 
-    ext.crm_utilities_version = '0.69'
-    ext.smCommonVersion = '1.bba46d9'
-
+    ext.crm_utilities_version = '0.72'
 }
 
 plugins {
@@ -42,13 +40,8 @@ jar {
 }
 
 shadowJar {
-    archiveBaseName = 'app'
-    archiveClassifier = ''
-
-    dependencies {
-        // include(dependency('no.nav.helse:syfosm-common-models:1.bba46d9'))
-        // include(dependency('no.nav.sf.library:crm-utilities:0.69'))
-    }
+    archiveBaseName.set('app')
+    archiveClassifier.set('')
 }
 
 application {
@@ -56,7 +49,7 @@ application {
 }
 
 tasks.withType(JavaExec) {
-    jvmArgs = ['-Xms4096m', '-Xmx8192m']
+    jvmArgs = ['-Xms1024m', '-Xmx2048m']
 }
 
 run {
@@ -65,30 +58,33 @@ run {
     environment "KAFKA_SECURITY", "FALSE"
     environment "KAFKA_TOPIC", "default_topic"
     environment "KAFKA_PRODUCER_TOPIC", "default_producer_topic"
-    environment "SF_OAUTHURL", "tbd"
-    environment "SF_TOKEN", "tbd"
-    environment "SF_RESTENDPOINT", "tbd"
     environment "MS_BETWEEN_WORK", "20000"
 }
 
 repositories {
     mavenCentral()
     jcenter()
+/*    maven {
+        url = uri("https://maven.pkg.github.com/navikt/crm-utilities")
+        credentials {
+            username = 'x-access-token'
+            password = 'c9be0f35aa82034fdf6b44a1e74c16442bfb360e'
+        }
+    }
+*/
     maven {
         url "http://packages.confluent.io/maven"
     }
-    maven {
-        url = uri("https://maven.pkg.github.com/navikt/syfosm-common")
-        credentials {
-            username = "x-access-token"
-            password = "$System.env.GITHUB_TOKEN"
-        }
-    }
-    maven {
-        url = uri("https://maven.pkg.github.com/navikt/crm-utilities")
-        credentials {
-            username = "x-access-token"
-            password = "$System.env.GITHUB_TOKEN"
+
+    ["maven-release", "crm-utilities"].each { repo ->
+        String token = System.getenv("GITHUB_TOKEN") ?: project.findProperty("githubPassword")
+        if (!token) throw new NullPointerException("Missing token, you have to set GITHUB_TOKEN or githubPassword")
+        maven {
+            url = uri("https://maven.pkg.github.com/navikt/$repo")
+            credentials {
+                username = 'x-access-token'
+                password = token
+            }
         }
     }
 }
@@ -99,7 +95,8 @@ configurations {
 
 
 dependencies {
-    implementation "no.nav.helse:syfosm-common-models:$smCommonVersion"
+    implementation platform('org.jetbrains.kotlin:kotlin-bom')
+
     implementation "no.nav.sf.library:crm-utilities:$crm_utilities_version"
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
@@ -114,8 +111,8 @@ dependencies {
     implementation "org.apache.kafka:kafka-clients:$kafka_version"
     implementation "io.confluent:kafka-avro-serializer:$confluent_version"
 
-    implementation "io.grpc:grpc-protobuf:${grpc_version}"
-    implementation "io.grpc:grpc-stub:${grpc_version}"
+    implementation "io.grpc:grpc-protobuf:$grpc_version"
+    implementation "io.grpc:grpc-stub:$grpc_version"
 
     implementation "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
 
