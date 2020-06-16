@@ -38,7 +38,7 @@ object Bootstrap {
         when {
             stop -> Unit
             !stop -> { loop(work(ws)
-                    .let {prevWS ->
+                    .let { prevWS ->
                         prevWS.first.copy(
                                 filter = FilterBase.fromJson(AVault.getSecretOrDefault(VAULT_workFilter)),
                                 prevFilter = prevWS.first.filter
