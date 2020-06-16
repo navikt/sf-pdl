@@ -30,12 +30,12 @@ plugins {
     id 'com.google.protobuf' version '0.8.12'
 }
 
-group 'no.nav.pdlsf'
+group 'no.nav.sf.pdl'
 version '0.2'
 
 jar {
     manifest {
-        attributes 'Main-Class': 'no.nav.pdlsf.MainKt'
+        attributes 'Main-Class': 'no.nav.sf.pdl.MainKt'
     }
 }
 
@@ -49,7 +49,7 @@ shadowJar {
 }
 
 application {
-    mainClassName = 'no.nav.pdlsf.MainKt'
+    mainClassName = 'no.nav.sf.pdl.MainKt'
 }
 
 tasks.withType(JavaExec) {
