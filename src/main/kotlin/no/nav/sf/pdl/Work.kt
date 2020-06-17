@@ -1,6 +1,7 @@
 package no.nav.sf.pdl
 
 import io.confluent.kafka.serializers.KafkaAvroDeserializer
+import io.prometheus.client.Gauge
 import kotlinx.serialization.ImplicitReflectionSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UnstableDefault
@@ -34,22 +35,82 @@ val kafkaSchemaReg = AnEnvironment.getEnvOrDefault(EV_kafkaSchemaReg, "http://lo
 val kafkaPersonTopic = AnEnvironment.getEnvOrDefault(EV_kafkaProducerTopic, "$PROGNAME-producer")
 
 data class WorkSettings(
-    val kafkaConsumerPerson: Map<String, Any> = AKafkaConsumer.configBase + mapOf<String, Any>(
-    ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to ByteArrayDeserializer::class.java,
-    ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to ByteArrayDeserializer::class.java
-),
-    val kafkaProducerPerson: Map<String, Any> = AKafkaConsumer.configBase + mapOf<String, Any>(
-    ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG to ByteArraySerializer::class.java,
-    ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG to ByteArraySerializer::class.java
-),
-    val kafkaConsumerPdl: Map<String, Any> = AKafkaConsumer.configBase + mapOf<String, Any>(
-    ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to KafkaAvroDeserializer::class.java,
-    ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to KafkaAvroDeserializer::class.java,
-    "schema.registry.url" to kafkaSchemaReg
-),
-    val filter: FilterBase = FilterBase.fromJson(AVault.getSecretOrDefault(VAULT_workFilter)),
-    val prevFilter: FilterBase = FilterBase.Missing
+        val kafkaConsumerPerson: Map<String, Any> = AKafkaConsumer.configBase + mapOf<String, Any>(
+                ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to ByteArrayDeserializer::class.java,
+                ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to ByteArrayDeserializer::class.java
+        ),
+        val kafkaProducerPerson: Map<String, Any> = AKafkaConsumer.configBase + mapOf<String, Any>(
+                ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG to ByteArraySerializer::class.java,
+                ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG to ByteArraySerializer::class.java
+        ),
+        val kafkaConsumerPdl: Map<String, Any> = AKafkaConsumer.configBase + mapOf<String, Any>(
+                ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to KafkaAvroDeserializer::class.java,
+                ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to KafkaAvroDeserializer::class.java,
+                "schema.registry.url" to kafkaSchemaReg
+        ),
+        val filter: FilterBase = FilterBase.fromJson(AVault.getSecretOrDefault(VAULT_workFilter)),
+        val prevFilter: FilterBase = FilterBase.Missing
 )
+
+data class WMetrics(
+        val noOfKakfaRecordsPdl: Gauge = Gauge
+                .build()
+                .name("no_kafkarecords_pdl_gauge")
+                .help("No. of kafka records pdl")
+                .register(),
+
+        val noOfTombestone: Gauge = Gauge
+                .build()
+                .name("no_tombestones")
+                .help("No. of kafka records pdl")
+                .register(),
+
+        val noOfPersonSf: Gauge = Gauge
+                .build()
+                .name("no_parsed_persons")
+                .help("No. of parsed person sf")
+                .register(),
+
+        val sizeOfCache: Gauge = Gauge
+                .build()
+                .name("size_of_cache")
+                .help("Size of person cache")
+                .register(),
+
+        val usedAddressTypes: Gauge = Gauge
+                .build()
+                .name("used_address_gauge")
+                .labelNames("type")
+                .help("No. of address types used in last work session")
+                .register(),
+        val publishedPersons: Gauge = Gauge
+                .build()
+                .name("published_person_gauge")
+                .labelNames("status")
+                .help("No. of persons published to kafka in last work session")
+                .register(),
+        val publishedTombestones: Gauge = Gauge
+                .build()
+                .name("published_tombestone_gauge")
+                .labelNames("status")
+                .help("No. of tombestones published to kafka in last work session")
+                .register()
+) {
+    enum class AddressType {
+        VEGAADRESSE, MATRIKKELADRESSE, UKJENTBOSTED, INGEN
+    }
+
+    fun clearAll() {
+        this.noOfPersonSf.clear()
+        this.noOfTombestone.clear()
+        this.noOfKakfaRecordsPdl.clear()
+        this.sizeOfCache.clear()
+        this.usedAddressTypes.clear()
+        this.publishedPersons.clear()
+    }
+}
+
+val workMetrics = WMetrics()
 
 sealed class ExitReason {
     object NoFilter : ExitReason()
@@ -65,24 +126,27 @@ sealed class ExitReason {
  * Only LIVING persons in listed regions and related municipals will be transferred to Salesforce
  * iff empty list of municipal  - all living persons in that region
  * iff non-empty municipals - only living person in given region AND municipals will be transferred
-*/
+ */
 sealed class FilterBase {
     object Missing : FilterBase()
 
     @Serializable
     data class Exists(
-        val regions: List<Region>
+            val regions: List<Region>
     ) : FilterBase() {
 
         fun approved(p: PersonSf): Boolean {
-            return regions.any { !p.doed &&
-                    it.region == p.region && (it.municipals.isEmpty() || it.municipals.contains(p.kommunenummer)) }
+            return regions.any {
+                !p.doed &&
+                        it.region == p.region && (it.municipals.isEmpty() || it.municipals.contains(p.kommunenummer))
+            }
         }
     }
+
     @Serializable
     data class Region(
-        val region: String,
-        val municipals: List<String> = emptyList()
+            val region: String,
+            val municipals: List<String> = emptyList()
     )
 
     companion object {
@@ -96,7 +160,7 @@ sealed class FilterBase {
 }
 
 /**
- * A minimum cache PersonCache as a map of persons aktørId and hash code of person details
+ * A minimum cache as a map of persons aktørId and hash code of person details
  */
 sealed class Cache {
     object Missing : Cache()
@@ -141,6 +205,8 @@ internal fun work(ws: WorkSettings): Pair<WorkSettings, ExitReason> {
 
     log.info { "bootstrap work session starting" }
 
+    workMetrics.clearAll()
+
     /**
      * Check - no filter means nothing to transfer, leaving
      */
@@ -163,6 +229,8 @@ internal fun work(ws: WorkSettings): Pair<WorkSettings, ExitReason> {
     }
 
     val cache = tmp as Cache.Exist
+    workMetrics.sizeOfCache.set(cache.map.size.toDouble())
+
     log.info { "Continue work with Cache" }
 
     var exitReason: ExitReason = ExitReason.NoKafkaProducer
@@ -179,61 +247,63 @@ internal fun work(ws: WorkSettings): Pair<WorkSettings, ExitReason> {
 
         kafkaConsumerPdl.consume { cRecords ->
             log.info { "${cRecords.count()} - consumer records ready to process" }
+            workMetrics.noOfKakfaRecordsPdl.inc(cRecords.count().toDouble())
             // leaving if nothing to do
             exitReason = ExitReason.NoEvents
             if (cRecords.isEmpty) return@consume KafkaConsumerStates.IsFinished
 
             exitReason = ExitReason.Work
-                val results = cRecords.map { cr ->
-                    // log.info { "Topic value - ${cr.value()}" }
-                    if (cr.value() == null) {
-                        // log.info { "debug Consumer record value lacking (tombestone)" }
-                        val personTombestone = PersonTombestone(aktoerId = cr.key())
-                        Pair(KafkaConsumerStates.IsOk, personTombestone)
-                    } else {
-                        // log.info { "debug Consumer record value consumed: ${cr.value()} " }
-                        when (val query = cr.value().getQueryFromJson()) {
-                            InvalidQuery -> {
-
-                                log.error { "Unable to parse topic value PDL" }
-                                Pair(KafkaConsumerStates.HasIssues, PersonInvalid) // TODO:: HasIssues, ignore when test
-                            }
-                            is Query -> {
-                                when (val personSf = query.toPersonSf()) {
-                                    is PersonSf -> {
-                                        Pair(KafkaConsumerStates.IsOk, personSf)
-                                    }
-                                    is PersonInvalid -> {
-                                        Pair(KafkaConsumerStates.HasIssues, PersonInvalid) // TODO:: HasIssues, ignore when test
-                                    }
-                                    else -> {
-                                        log.error { "Returned unhandled PersonBase from Query.toPersonSf" }
-                                        Pair(KafkaConsumerStates.HasIssues, PersonInvalid)
-                                    }
+            val results = cRecords.map { cr ->
+                // log.info { "Topic value - ${cr.value()}" }
+                if (cr.value() == null) {
+                    // log.info { "debug Consumer record value lacking (tombestone)" }
+                    val personTombestone = PersonTombestone(aktoerId = cr.key())
+                    workMetrics.noOfTombestone.inc()
+                    Pair(KafkaConsumerStates.IsOk, personTombestone)
+                } else {
+                    // log.info { "debug Consumer record value consumed: ${cr.value()} " }
+                    when (val query = cr.value().getQueryFromJson()) {
+                        InvalidQuery -> {
+                            log.error { "Unable to parse topic value PDL" }
+                            Pair(KafkaConsumerStates.HasIssues, PersonInvalid)
+                        }
+                        is Query -> {
+                            when (val personSf = query.toPersonSf()) {
+                                is PersonSf -> {
+                                    workMetrics.noOfPersonSf.inc()
+                                    Pair(KafkaConsumerStates.IsOk, personSf)
+                                }
+                                is PersonInvalid -> {
+                                    Pair(KafkaConsumerStates.HasIssues, PersonInvalid)
+                                }
+                                else -> {
+                                    log.error { "Returned unhandled PersonBase from Query.toPersonSf" }
+                                    Pair(KafkaConsumerStates.HasIssues, PersonInvalid)
                                 }
                             }
                         }
                     }
                 }
-                val areOk = results.fold(true) { acc, resp -> acc && (resp.first == KafkaConsumerStates.IsOk) }
+            }
+            val areOk = results.fold(true) { acc, resp -> acc && (resp.first == KafkaConsumerStates.IsOk) }
 
-                if (areOk) {
-                    log.info { "${results.size} consumer records resulted in number of Person ${results.filter { it.second is PersonSf }.count()}, Tombestone ${results.filter { it.second is PersonTombestone }.count()}, Invalid  ${results.filter { it.second is PersonInvalid }.count()}" }
-                    results.filter { it.second is PersonTombestone || (it.second is PersonSf && personFilter.approved(it.second as PersonSf)) }.map {
-                        when (val personBase = it.second) {
-                            is PersonTombestone -> {
-                                Pair<PersonProto.PersonKey, PersonProto.PersonValue?>(personBase.toPersonTombstoneProtoKey(), null)
-                            }
-                            is PersonSf -> {
-                                personBase.toPersonProto()
-                            }
-                            else -> return@consume KafkaConsumerStates.HasIssues
+            if (areOk) {
+                log.info { "${results.size} consumer records resulted in number of Person ${results.filter { it.second is PersonSf }.count()}, Tombestone ${results.filter { it.second is PersonTombestone }.count()}, Invalid  ${results.filter { it.second is PersonInvalid }.count()}" }
+                results.filter { it.second is PersonTombestone || (it.second is PersonSf && personFilter.approved(it.second as PersonSf)) }.map {
+                    when (val personBase = it.second) {
+                        is PersonTombestone -> {
+                            Pair<PersonProto.PersonKey, PersonProto.PersonValue?>(personBase.toPersonTombstoneProtoKey(), null)
                         }
-                    }.filter { cache.isNewOrUpdated(it) }.fold(true) { acc, pair -> acc && pair.second?.let { send(kafkaPersonTopic, pair.first.toByteArray(), it.toByteArray()) } ?: sendNullValue(kafkaPersonTopic, pair.first.toByteArray()) }
-                    KafkaConsumerStates.IsOk
-                } else {
-                    KafkaConsumerStates.HasIssues
-                }
+                        is PersonSf -> {
+                            personBase.toPersonProto()
+                        }
+                        else -> return@consume KafkaConsumerStates.HasIssues
+                    }
+                }.filter { cache.isNewOrUpdated(it) }.fold(true) { acc, pair -> acc && pair.second?.let { send(kafkaPersonTopic, pair.first.toByteArray(), it.toByteArray()).also { workMetrics.publishedPersons.inc() } } ?: sendNullValue(kafkaPersonTopic, pair.first.toByteArray()).also { workMetrics.publishedTombestones.inc() } }
+                KafkaConsumerStates.IsOk
+            } else {
+                KafkaConsumerStates.HasIssues
+            }
         } // Consumer pdl topic
     } // Producer person topic
 

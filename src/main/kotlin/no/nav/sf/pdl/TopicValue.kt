@@ -15,11 +15,9 @@ private val jsonNonStrict = Json(JsonConfiguration.Stable.copy(ignoreUnknownKeys
 @UnstableDefault
 @ImplicitReflectionSerializer
 fun String.getQueryFromJson(): QueryBase = runCatching {
-    // Metrics.sucessfulValueToQuery.inc() //TODO :: Metrics
     jsonNonStrict.parse<Query>(this)
 }
         .onFailure {
-            // Metrics.invalidQuery.inc()
             log.error { "Cannot convert kafka value to query - ${it.localizedMessage}" }
         }
         .getOrDefault(InvalidQuery)
@@ -174,21 +172,21 @@ private fun Query.findAdressebeskyttelse(): AdressebeskyttelseGradering {
 fun Query.findKommunenummer(): String {
     return this.hentPerson.bostedsadresse.let { bostedsadresse ->
         if (bostedsadresse.isNullOrEmpty()) {
-            // Metrics.usedAdresseTypes.labels(AdresseType.INGEN.name).inc()
+            workMetrics.usedAddressTypes.labels(WMetrics.AddressType.INGEN.name).inc()
             UKJENT_FRA_PDL
         } else {
             bostedsadresse.firstOrNull { !it.metadata.historisk }?.let {
                 it.vegadresse?.let { vegadresse ->
-                    // Metrics.usedAdresseTypes.labels(AdresseType.VEGADRESSE.name).inc()
+                    workMetrics.usedAddressTypes.labels(WMetrics.AddressType.VEGAADRESSE.name).inc()
                     vegadresse.kommunenummer
                 } ?: it.matrikkeladresse?.let { matrikkeladresse ->
-                    // Metrics.usedAdresseTypes.labels(AdresseType.MATRIKKELADRESSE.name).inc()
+                    workMetrics.usedAddressTypes.labels(WMetrics.AddressType.MATRIKKELADRESSE.name).inc()
                     matrikkeladresse.kommunenummer
                 } ?: it.ukjentBosted?.let { ukjentBosted ->
-                    // Metrics.usedAdresseTypes.labels(AdresseType.UKJENTBOSTED.name).inc()
+                    workMetrics.usedAddressTypes.labels(WMetrics.AddressType.UKJENTBOSTED.name).inc()
                     ukjentBosted.bostedskommune
                 }
-            } ?: UKJENT_FRA_PDL // Metrics.usedAdresseTypes.labels(AdresseType.INGEN.name).inc()
+            } ?: workMetrics.usedAddressTypes.labels(WMetrics.AddressType.INGEN.name).inc(); UKJENT_FRA_PDL
         }
     }
 }
