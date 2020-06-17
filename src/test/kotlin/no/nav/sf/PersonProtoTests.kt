@@ -9,6 +9,7 @@ import kotlinx.serialization.ImplicitReflectionSerializer
 import kotlinx.serialization.UnstableDefault
 import no.nav.pdlsf.proto.PersonProto
 import no.nav.sf.pdl.AdressebeskyttelseGradering
+import no.nav.sf.pdl.Cache
 import no.nav.sf.pdl.PersonSf
 import no.nav.sf.pdl.Query
 import no.nav.sf.pdl.UKJENT_FRA_PDL
@@ -58,6 +59,27 @@ class PersonProtoTests : StringSpec() {
             val personSf = queryBase.toPersonSf() as PersonSf
             val proto = personSf.toPersonProto()
 
+            proto.first.aktoerId shouldBe AKTORID
+
+            proto.second.identifikasjonsnummer shouldBe FOLKEREGISTERIDENT
+            proto.second.fornavn shouldBe UKJENT_FRA_PDL
+            proto.second.mellomnavn shouldBe UKJENT_FRA_PDL
+            proto.second.etternavn shouldBe UKJENT_FRA_PDL
+            proto.second.adressebeskyttelse shouldBe PersonProto.PersonValue.Gradering.UGRADERT
+            proto.second.sikkerhetstiltakList shouldBe emptyList<String>()
+            proto.second.kommunenummer shouldBe UKJENT_FRA_PDL
+            proto.second.region shouldBe UKJENT_FRA_PDL
+            proto.second.doed shouldBe false
+        }
+    }
+
+    init {
+        "Cache load" {
+            val queryBase = getStringFromResource(PDL_TOPIC_VALUE_OK_WITHOUT_HISTORIKK).getQueryFromJson() as Query
+            val personSf = queryBase.toPersonSf() as PersonSf
+            val proto = personSf.toPersonProto()
+
+            Cache.load()
             proto.first.aktoerId shouldBe AKTORID
 
             proto.second.identifikasjonsnummer shouldBe FOLKEREGISTERIDENT

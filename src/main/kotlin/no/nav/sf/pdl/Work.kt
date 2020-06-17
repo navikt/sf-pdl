@@ -117,13 +117,13 @@ sealed class Cache {
 
     companion object {
         fun load(kafkaConsumerConfig: Map<String, Any>, topic: String): Cache = kotlin.runCatching {
-            when (val result = getAllRecords<String, String>(kafkaConsumerConfig, listOf(topic))) {
+            when (val result = getAllRecords<ByteArray, ByteArray>(kafkaConsumerConfig, listOf(topic))) {
                 is AllRecords.Exist -> {
                     if (result.hasMissingKey())
                         Missing
                                 .also { log.error { "Cache has null in key" } } // Allow null vaule because of Tombestone
                     else {
-                        Exist(result.getKeysValues().map { it.k to it.v.hashCode() }.toMap()).also { log.info { "Cache size is ${it.map.size}" } }
+                        Exist(result.getKeysValues().map { it.k.protobufSafeParseKey().aktoerId to it.v.protobufSafeParseValue().hashCode() }.toMap()).also { log.info { "Cache size is ${it.map.size}" } }
                     }
                 }
                 else -> Missing
