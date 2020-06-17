@@ -185,7 +185,7 @@ internal fun work(ws: WorkSettings): Pair<WorkSettings, ExitReason> {
 
             exitReason = ExitReason.Work
                 val results = cRecords.map { cr ->
-                    log.info { "Topic value - ${cr.value()}" }
+                    // log.info { "Topic value - ${cr.value()}" }
                     if (cr.value() == null) {
                         // log.info { "debug Consumer record value lacking (tombestone)" }
                         val personTombestone = PersonTombestone(aktoerId = cr.key())
