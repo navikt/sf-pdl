@@ -100,6 +100,7 @@ sealed class FilterBase {
  */
 sealed class Cache {
     object Missing : Cache()
+    object Invalid : Cache()
 
     data class Exist(val map: Map<String, Int>) : Cache() {
 
@@ -115,18 +116,21 @@ sealed class Cache {
     }
 
     companion object {
-        fun load(kafkaConsumerConfig: Map<String, Any>, topic: String): Cache =
-                when (val result = getAllRecords<String, String>(kafkaConsumerConfig, listOf(topic))) {
-                    is AllRecords.Exist -> {
-                        if (result.hasMissingKey())
-                            Missing
-                                    .also { log.error { "Cache has null in key" } } // Allow null vaule because of Tombestone
-                        else {
-                            Exist(result.getKeysValues().map { it.k to it.v.hashCode() }.toMap()).also { log.info { "Cache size is ${it.map.size}" } }
-                        }
+        fun load(kafkaConsumerConfig: Map<String, Any>, topic: String): Cache = kotlin.runCatching {
+            when (val result = getAllRecords<String, String>(kafkaConsumerConfig, listOf(topic))) {
+                is AllRecords.Exist -> {
+                    if (result.hasMissingKey())
+                        Missing
+                                .also { log.error { "Cache has null in key" } } // Allow null vaule because of Tombestone
+                    else {
+                        Exist(result.getKeysValues().map { it.k to it.v.hashCode() }.toMap()).also { log.info { "Cache size is ${it.map.size}" } }
                     }
-                    else -> Missing
                 }
+                else -> Missing
+            }
+        }
+                .onFailure { log.error { "Error building Cache - ${it.message}" } }
+                .getOrDefault(Invalid)
     }
 }
 
