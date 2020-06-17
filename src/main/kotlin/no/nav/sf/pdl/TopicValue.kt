@@ -166,7 +166,7 @@ private fun Query.findAdressebeskyttelse(): AdressebeskyttelseGradering {
         if (list.isEmpty()) {
             AdressebeskyttelseGradering.UGRADERT
         } else {
-            AdressebeskyttelseGradering.valueOf(list.first { !it.metadata.historisk }.gradering.name)
+            list.firstOrNull { !it.metadata.historisk }?.let { AdressebeskyttelseGradering.valueOf(it.gradering.name) } ?: AdressebeskyttelseGradering.UGRADERT
         }
     }
 }
@@ -187,10 +187,8 @@ fun Query.findKommunenummer(): String {
                 } ?: it.ukjentBosted?.let { ukjentBosted ->
                     // Metrics.usedAdresseTypes.labels(AdresseType.UKJENTBOSTED.name).inc()
                     ukjentBosted.bostedskommune
-                } ?: UKJENT_FRA_PDL.also {
-                    // Metrics.usedAdresseTypes.labels(AdresseType.INGEN.name).inc()
                 }
-            }
+            } ?: UKJENT_FRA_PDL // Metrics.usedAdresseTypes.labels(AdresseType.INGEN.name).inc()
         }
     }
 }
