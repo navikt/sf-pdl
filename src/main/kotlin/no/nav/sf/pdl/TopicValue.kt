@@ -36,7 +36,7 @@ enum class AdressebeskyttelseGradering {
 }
 @Serializable
 data class Metadata(
-    val historisk: Boolean,
+    val historisk: Boolean = true,
     val master: String
 )
 
@@ -202,7 +202,7 @@ fun Query.findNavn(): NavnBase {
         NavnBase.Ukjent()
     } else {
         this.hentPerson.navn.firstOrNull { it.metadata.master.toUpperCase() == "FREG" && !it.metadata.historisk }?.let {
-            if (it.etternavn.isBlank() || it.fornavn.isBlank())
+            if (it.etternavn.isNotBlank() && it.fornavn.isNotBlank())
                 NavnBase.Freg(
                         fornavn = it.fornavn,
                         etternavn = it.etternavn,
@@ -215,7 +215,7 @@ fun Query.findNavn(): NavnBase {
                         mellomnavn = it.mellomnavn.orEmpty()
                 )
         } ?: this.hentPerson.navn.firstOrNull { it.metadata.master.toUpperCase() == "PDL" && !it.metadata.historisk }?.let {
-            if (it.etternavn.isBlank() || it.fornavn.isBlank())
+            if (it.etternavn.isNotBlank() && it.fornavn.isNotBlank())
                 NavnBase.Pdl(
                         fornavn = it.fornavn,
                         etternavn = it.etternavn,
