@@ -3,17 +3,20 @@ package no.nav.sf.pdl
 import kotlinx.serialization.ImplicitReflectionSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UnstableDefault
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonConfiguration
 import kotlinx.serialization.parse
 import mu.KotlinLogging
-import no.nav.sf.library.json
 
 private val log = KotlinLogging.logger { }
+
+private val jsonNonStrict = Json(JsonConfiguration.Stable.copy(ignoreUnknownKeys = true, isLenient = true))
 
 @UnstableDefault
 @ImplicitReflectionSerializer
 fun String.getQueryFromJson(): QueryBase = runCatching {
     // Metrics.sucessfulValueToQuery.inc() //TODO :: Metrics
-    json.parse<Query>(this)
+    jsonNonStrict.parse<Query>(this)
 }
         .onFailure {
             // Metrics.invalidQuery.inc()
