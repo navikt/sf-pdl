@@ -177,7 +177,7 @@ fun Query.findKommunenummer(): String {
             // Metrics.usedAdresseTypes.labels(AdresseType.INGEN.name).inc()
             UKJENT_FRA_PDL
         } else {
-            bostedsadresse.first { !it.metadata.historisk }.let {
+            bostedsadresse.firstOrNull { !it.metadata.historisk }?.let {
                 it.vegadresse?.let { vegadresse ->
                     // Metrics.usedAdresseTypes.labels(AdresseType.VEGADRESSE.name).inc()
                     vegadresse.kommunenummer
