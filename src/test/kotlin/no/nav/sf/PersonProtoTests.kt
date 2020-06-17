@@ -9,7 +9,6 @@ import kotlinx.serialization.ImplicitReflectionSerializer
 import kotlinx.serialization.UnstableDefault
 import no.nav.pdlsf.proto.PersonProto
 import no.nav.sf.pdl.AdressebeskyttelseGradering
-import no.nav.sf.pdl.Cache
 import no.nav.sf.pdl.PersonSf
 import no.nav.sf.pdl.Query
 import no.nav.sf.pdl.UKJENT_FRA_PDL
