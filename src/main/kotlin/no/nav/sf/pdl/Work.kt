@@ -187,11 +187,11 @@ internal fun work(ws: WorkSettings): Pair<WorkSettings, ExitReason> {
                 val results = cRecords.map { cr ->
                     log.info { "Topic value - ${cr.value()}" }
                     if (cr.value() == null) {
-                        log.info { "debug Consumer record value lacking (tombestone)" }
+                        // log.info { "debug Consumer record value lacking (tombestone)" }
                         val personTombestone = PersonTombestone(aktoerId = cr.key())
                         Pair(KafkaConsumerStates.IsOk, personTombestone)
                     } else {
-                        log.info { "debug Consumer record value consumed: ${cr.value()} " }
+                        // log.info { "debug Consumer record value consumed: ${cr.value()} " }
                         when (val query = cr.value().getQueryFromJson()) {
                             InvalidQuery -> {
 
