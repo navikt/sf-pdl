@@ -164,15 +164,15 @@ sealed class Cache {
     object Missing : Cache()
     object Invalid : Cache()
 
-    data class Exist(val map: Map<String, Int>) : Cache() {
+    data class Exist(val map: Map<String, Int?>) : Cache() {
 
         val isEmpty: Boolean
             get() = map.isEmpty()
 
         internal fun isNewOrUpdated(item: Pair<PersonProto.PersonKey, PersonProto.PersonValue?>): Boolean = when {
-            !map.containsKey(item.first.aktoerId) -> true
-            map.containsKey(item.first.aktoerId) && map[item.first.aktoerId] != item.second.hashCode() -> true
-            map.containsKey(item.first.aktoerId) && map[item.first.aktoerId] != null && item.second == null -> true // Tombestone
+            !map.containsKey(item.first.aktoerId) -> true // NY
+            item.second != null && map[item.first.aktoerId] != item.second.hashCode() -> true // Updated
+            item.second == null && map[item.first.aktoerId] != null -> true // Tombestone
             else -> false
         }
     }
