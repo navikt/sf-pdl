@@ -123,6 +123,7 @@ data class Person(
 internal const val UKJENT_FRA_PDL = "<UKJENT_FRA_PDL>"
 fun Query.toPersonSf(): PersonBase {
     return runCatching {
+        val kommunenummer = this.findKommunenummer()
         PersonSf(
                 aktoerId = this.findAktoerId(),
                 identifikasjonsnummer = this.findFolkeregisterIdent(),
@@ -131,8 +132,8 @@ fun Query.toPersonSf(): PersonBase {
                 etternavn = this.findNavn().etternavn,
                 adressebeskyttelse = this.findAdressebeskyttelse(),
                 sikkerhetstiltak = this.hentPerson.sikkerhetstiltak.map { it.beskrivelse }.toList(),
-                kommunenummer = this.findKommunenummer(),
-                region = this.findRegion(),
+                kommunenummer = kommunenummer,
+                region = kommunenummer.regionOfKommuneNummer(),
                 doed = this.hentPerson.doedsfall.isNotEmpty() // "doedsdato": null  betyr at han faktsik er død, man vet bare ikke når. Listen kan ha to innslagt, kilde FREG og PDL
         )
     }
@@ -191,9 +192,8 @@ fun Query.findKommunenummer(): String {
     }
 }
 
-fun Query.findRegion(): String {
-    return this.findKommunenummer().let { kommunenummer ->
-        if (kommunenummer == UKJENT_FRA_PDL) kommunenummer else kommunenummer.substring(0, 2) }
+fun String.regionOfKommuneNummer(): String {
+    return if (this == UKJENT_FRA_PDL) this else this.substring(0, 2)
 }
 
 fun Query.findNavn(): NavnBase {
