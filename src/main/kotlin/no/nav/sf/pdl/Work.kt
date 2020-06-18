@@ -300,7 +300,7 @@ internal fun work(ws: WorkSettings): Pair<WorkSettings, ExitReason> {
                     }
                 }.filter { cache.isNewOrUpdated(it) }.fold(true) { acc, pair -> acc && pair.second?.let {
                     log.info { it.toString() }
-                    send(kafkaPersonTopic, pair.first.toByteArray(), it.toByteArray()) .also { workMetrics.publishedPersons.inc() }
+                    send(kafkaPersonTopic, pair.first.toByteArray(), it.toByteArray()).also { workMetrics.publishedPersons.inc() }
                 } ?: sendNullValue(kafkaPersonTopic, pair.first.toByteArray()).also { workMetrics.publishedTombestones.inc() } }
                 KafkaConsumerStates.IsOk
             } else {
