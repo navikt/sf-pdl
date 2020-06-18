@@ -39,7 +39,7 @@ data class WorkSettings(
             ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to ByteArrayDeserializer::class.java,
             ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to ByteArrayDeserializer::class.java
     ),
-    val kafkaProducerPerson: Map<String, Any> = AKafkaConsumer.configBase + mapOf<String, Any>(
+    val kafkaProducerPerson: Map<String, Any> = AKafkaProducer.configBase + mapOf<String, Any>(
             ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG to ByteArraySerializer::class.java,
             ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG to ByteArraySerializer::class.java
     ),
@@ -299,8 +299,9 @@ internal fun work(ws: WorkSettings): Pair<WorkSettings, ExitReason> {
                         else -> return@consume KafkaConsumerStates.HasIssues
                     }
                 }.filter { cache.isNewOrUpdated(it) }.fold(true) { acc, pair -> acc && pair.second?.let {
-                    send(kafkaPersonTopic, pair.first.toByteArray(), it.toByteArray()).also { workMetrics.publishedPersons.inc() } }
-                        ?: sendNullValue(kafkaPersonTopic, pair.first.toByteArray()).also { workMetrics.publishedTombestones.inc() } }
+                    log.info { it.toString() }
+                    send(kafkaPersonTopic, pair.first.toByteArray(), it.toByteArray()) .also { workMetrics.publishedPersons.inc() }
+                } ?: sendNullValue(kafkaPersonTopic, pair.first.toByteArray()).also { workMetrics.publishedTombestones.inc() } }
                 KafkaConsumerStates.IsOk
             } else {
                 KafkaConsumerStates.HasIssues
