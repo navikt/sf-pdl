@@ -35,66 +35,66 @@ val kafkaSchemaReg = AnEnvironment.getEnvOrDefault(EV_kafkaSchemaReg, "http://lo
 val kafkaPersonTopic = AnEnvironment.getEnvOrDefault(EV_kafkaProducerTopic, "$PROGNAME-producer")
 
 data class WorkSettings(
-        val kafkaConsumerPerson: Map<String, Any> = AKafkaConsumer.configBase + mapOf<String, Any>(
-                ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to ByteArrayDeserializer::class.java,
-                ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to ByteArrayDeserializer::class.java
-        ),
-        val kafkaProducerPerson: Map<String, Any> = AKafkaConsumer.configBase + mapOf<String, Any>(
-                ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG to ByteArraySerializer::class.java,
-                ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG to ByteArraySerializer::class.java
-        ),
-        val kafkaConsumerPdl: Map<String, Any> = AKafkaConsumer.configBase + mapOf<String, Any>(
-                ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to KafkaAvroDeserializer::class.java,
-                ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to KafkaAvroDeserializer::class.java,
-                "schema.registry.url" to kafkaSchemaReg
-        ),
-        val filter: FilterBase = FilterBase.fromJson(AVault.getSecretOrDefault(VAULT_workFilter)),
-        val prevFilter: FilterBase = FilterBase.Missing
+    val kafkaConsumerPerson: Map<String, Any> = AKafkaConsumer.configBase + mapOf<String, Any>(
+            ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to ByteArrayDeserializer::class.java,
+            ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to ByteArrayDeserializer::class.java
+    ),
+    val kafkaProducerPerson: Map<String, Any> = AKafkaConsumer.configBase + mapOf<String, Any>(
+            ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG to ByteArraySerializer::class.java,
+            ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG to ByteArraySerializer::class.java
+    ),
+    val kafkaConsumerPdl: Map<String, Any> = AKafkaConsumer.configBase + mapOf<String, Any>(
+            ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to KafkaAvroDeserializer::class.java,
+            ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to KafkaAvroDeserializer::class.java,
+            "schema.registry.url" to kafkaSchemaReg
+    ),
+    val filter: FilterBase = FilterBase.fromJson(AVault.getSecretOrDefault(VAULT_workFilter)),
+    val prevFilter: FilterBase = FilterBase.Missing
 )
 
 data class WMetrics(
-        val noOfKakfaRecordsPdl: Gauge = Gauge
-                .build()
-                .name("no_kafkarecords_pdl_gauge")
-                .help("No. of kafka records pdl")
-                .register(),
+    val noOfKakfaRecordsPdl: Gauge = Gauge
+            .build()
+            .name("no_kafkarecords_pdl_gauge")
+            .help("No. of kafka records pdl")
+            .register(),
 
-        val noOfTombestone: Gauge = Gauge
-                .build()
-                .name("no_tombestones")
-                .help("No. of kafka records pdl")
-                .register(),
+    val noOfTombestone: Gauge = Gauge
+            .build()
+            .name("no_tombestones")
+            .help("No. of kafka records pdl")
+            .register(),
 
-        val noOfPersonSf: Gauge = Gauge
-                .build()
-                .name("no_parsed_persons")
-                .help("No. of parsed person sf")
-                .register(),
+    val noOfPersonSf: Gauge = Gauge
+            .build()
+            .name("no_parsed_persons")
+            .help("No. of parsed person sf")
+            .register(),
 
-        val sizeOfCache: Gauge = Gauge
-                .build()
-                .name("size_of_cache")
-                .help("Size of person cache")
-                .register(),
+    val sizeOfCache: Gauge = Gauge
+            .build()
+            .name("size_of_cache")
+            .help("Size of person cache")
+            .register(),
 
-        val usedAddressTypes: Gauge = Gauge
-                .build()
-                .name("used_address_gauge")
-                .labelNames("type")
-                .help("No. of address types used in last work session")
-                .register(),
-        val publishedPersons: Gauge = Gauge
-                .build()
-                .name("published_person_gauge")
-                .labelNames("status")
-                .help("No. of persons published to kafka in last work session")
-                .register(),
-        val publishedTombestones: Gauge = Gauge
-                .build()
-                .name("published_tombestone_gauge")
-                .labelNames("status")
-                .help("No. of tombestones published to kafka in last work session")
-                .register()
+    val usedAddressTypes: Gauge = Gauge
+            .build()
+            .name("used_address_gauge")
+            .labelNames("type")
+            .help("No. of address types used in last work session")
+            .register(),
+    val publishedPersons: Gauge = Gauge
+            .build()
+            .name("published_person_gauge")
+            .labelNames("status")
+            .help("No. of persons published to kafka in last work session")
+            .register(),
+    val publishedTombestones: Gauge = Gauge
+            .build()
+            .name("published_tombestone_gauge")
+            .labelNames("status")
+            .help("No. of tombestones published to kafka in last work session")
+            .register()
 ) {
     enum class AddressType {
         VEGAADRESSE, MATRIKKELADRESSE, UKJENTBOSTED, INGEN
@@ -132,7 +132,7 @@ sealed class FilterBase {
 
     @Serializable
     data class Exists(
-            val regions: List<Region>
+        val regions: List<Region>
     ) : FilterBase() {
 
         fun approved(p: PersonSf): Boolean {
@@ -145,8 +145,8 @@ sealed class FilterBase {
 
     @Serializable
     data class Region(
-            val region: String,
-            val municipals: List<String> = emptyList()
+        val region: String,
+        val municipals: List<String> = emptyList()
     )
 
     companion object {
