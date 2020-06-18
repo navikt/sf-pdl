@@ -86,13 +86,11 @@ data class WMetrics(
     val publishedPersons: Gauge = Gauge
             .build()
             .name("published_person_gauge")
-            .labelNames("status")
             .help("No. of persons published to kafka in last work session")
             .register(),
     val publishedTombestones: Gauge = Gauge
             .build()
             .name("published_tombestone_gauge")
-            .labelNames("status")
             .help("No. of tombestones published to kafka in last work session")
             .register()
 ) {
@@ -299,7 +297,9 @@ internal fun work(ws: WorkSettings): Pair<WorkSettings, ExitReason> {
                         }
                         else -> return@consume KafkaConsumerStates.HasIssues
                     }
-                }.filter { cache.isNewOrUpdated(it) }.fold(true) { acc, pair -> acc && pair.second?.let { send(kafkaPersonTopic, pair.first.toByteArray(), it.toByteArray()).also { workMetrics.publishedPersons.inc() } } ?: sendNullValue(kafkaPersonTopic, pair.first.toByteArray()).also { workMetrics.publishedTombestones.inc() } }
+                }.filter { cache.isNewOrUpdated(it) }.fold(true) { acc, pair -> acc && pair.second?.let {
+                    send(kafkaPersonTopic, pair.first.toByteArray(), it.toByteArray()).also { workMetrics.publishedPersons.inc() } }
+                        ?: sendNullValue(kafkaPersonTopic, pair.first.toByteArray()).also { workMetrics.publishedTombestones.inc() } }
                 KafkaConsumerStates.IsOk
             } else {
                 KafkaConsumerStates.HasIssues
