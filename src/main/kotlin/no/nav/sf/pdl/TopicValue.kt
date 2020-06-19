@@ -187,7 +187,7 @@ fun Query.findKommunenummer(): String {
                     workMetrics.usedAddressTypes.labels(WMetrics.AddressType.UKJENTBOSTED.name).inc()
                     ukjentBosted.bostedskommune
                 }
-            } ?: workMetrics.usedAddressTypes.labels(WMetrics.AddressType.INGEN.name).inc(); UKJENT_FRA_PDL
+            } ?: UKJENT_FRA_PDL.also { workMetrics.usedAddressTypes.labels(WMetrics.AddressType.INGEN.name).inc() }
         }
     }
 }

@@ -92,6 +92,26 @@ data class WMetrics(
             .build()
             .name("published_tombestone_gauge")
             .help("No. of tombestones published to kafka in last work session")
+            .register(),
+    val cacheIsNewOrUpdated_noKey: Gauge = Gauge
+            .build()
+            .name("cache_no_key")
+            .help("cache_no_key")
+            .register(),
+    val cacheIsNewOrUpdated_differentHash: Gauge = Gauge
+            .build()
+            .name("cache_different_hash")
+            .help("cache_different_hash")
+            .register(),
+    val cacheIsNewOrUpdated_existing_to_tombestone: Gauge = Gauge
+            .build()
+            .name("cache_existing_to")
+            .help("cache_existing_to")
+            .register(),
+    val cacheIsNewOrUpdated_no_blocked: Gauge = Gauge
+            .build()
+            .name("cache_no_blocked")
+            .help("cache_no_blocked")
             .register()
 ) {
     enum class AddressType {
@@ -105,6 +125,10 @@ data class WMetrics(
         this.sizeOfCache.clear()
         this.usedAddressTypes.clear()
         this.publishedPersons.clear()
+        this.cacheIsNewOrUpdated_differentHash.clear()
+        this.cacheIsNewOrUpdated_existing_to_tombestone.clear()
+        this.cacheIsNewOrUpdated_noKey.clear()
+        this.cacheIsNewOrUpdated_no_blocked.clear()
     }
 }
 
@@ -170,10 +194,10 @@ sealed class Cache {
             get() = map.isEmpty()
 
         internal fun isNewOrUpdated(item: Pair<PersonProto.PersonKey, PersonProto.PersonValue?>): Boolean = when {
-            !map.containsKey(item.first.aktoerId) -> true // NY
-            item.second != null && map[item.first.aktoerId] != item.second.hashCode() -> true // Updated
-            item.second == null && map[item.first.aktoerId] != null -> true // Tombestone
-            else -> false
+            !map.containsKey(item.first.aktoerId) -> true.also { workMetrics.cacheIsNewOrUpdated_noKey.inc() } // NY
+            item.second != null && map[item.first.aktoerId] != item.second.hashCode() -> true.also { workMetrics.cacheIsNewOrUpdated_differentHash.inc() } // Updated
+            item.second == null && map[item.first.aktoerId] != null -> true.also { workMetrics.cacheIsNewOrUpdated_existing_to_tombestone.inc() } // Tombestone
+            else -> false.also { workMetrics.cacheIsNewOrUpdated_no_blocked.inc() }
         }
     }
 
@@ -299,7 +323,7 @@ internal fun work(ws: WorkSettings): Pair<WorkSettings, ExitReason> {
                         else -> return@consume KafkaConsumerStates.HasIssues
                     }
                 }.filter { cache.isNewOrUpdated(it) }.fold(true) { acc, pair -> acc && pair.second?.let {
-                    log.info { it.toString() }
+                    log.info { "Should attempt send to producer on item: $it" }
                     send(kafkaPersonTopic, pair.first.toByteArray(), it.toByteArray()).also { workMetrics.publishedPersons.inc() }
                 } ?: sendNullValue(kafkaPersonTopic, pair.first.toByteArray()).also { workMetrics.publishedTombestones.inc() } }
                 KafkaConsumerStates.IsOk
