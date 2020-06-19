@@ -96,22 +96,22 @@ data class WMetrics(
     val cacheIsNewOrUpdated_noKey: Gauge = Gauge
             .build()
             .name("cache_no_key")
-            .help("cache_no_key")
+            .help("cache no key")
             .register(),
     val cacheIsNewOrUpdated_differentHash: Gauge = Gauge
             .build()
             .name("cache_different_hash")
-            .help("cache_different_hash")
+            .help("cache different hash")
             .register(),
     val cacheIsNewOrUpdated_existing_to_tombestone: Gauge = Gauge
             .build()
             .name("cache_existing_to")
-            .help("cache_existing_to")
+            .help("cache existing to")
             .register(),
     val cacheIsNewOrUpdated_no_blocked: Gauge = Gauge
             .build()
             .name("cache_no_blocked")
-            .help("cache_no_blocked")
+            .help("cache no blocked")
             .register()
 ) {
     enum class AddressType {
@@ -194,10 +194,10 @@ sealed class Cache {
             get() = map.isEmpty()
 
         internal fun isNewOrUpdated(item: Pair<PersonProto.PersonKey, PersonProto.PersonValue?>): Boolean = when {
-            !map.containsKey(item.first.aktoerId) -> true.also { workMetrics.cacheIsNewOrUpdated_noKey.inc() } // NY
-            item.second != null && map[item.first.aktoerId] != item.second.hashCode() -> true.also { workMetrics.cacheIsNewOrUpdated_differentHash.inc() } // Updated
-            item.second == null && map[item.first.aktoerId] != null -> true.also { workMetrics.cacheIsNewOrUpdated_existing_to_tombestone.inc() } // Tombestone
-            else -> false.also { workMetrics.cacheIsNewOrUpdated_no_blocked.inc() }
+            !map.containsKey(item.first.aktoerId) -> true.also { log.info("debug cache new inc") ; workMetrics.cacheIsNewOrUpdated_noKey.inc() } // NY
+            item.second != null && map[item.first.aktoerId] != item.second.hashCode() -> true.also { log.info("debug cache update person inc") ;  workMetrics.cacheIsNewOrUpdated_differentHash.inc() } // Updated
+            item.second == null && map[item.first.aktoerId] != null -> true.also { log.info("debug cache update tombestone inc") ;  workMetrics.cacheIsNewOrUpdated_existing_to_tombestone.inc() } // Tombestone
+            else -> false.also { log.info("debug cache blocked (present in cache)") ;  workMetrics.cacheIsNewOrUpdated_no_blocked.inc() }
         }
     }
 
