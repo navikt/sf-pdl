@@ -3,21 +3,41 @@ import io.kotest.assertions.asClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import kotlinx.serialization.ImplicitReflectionSerializer
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonConfiguration
 import no.nav.sf.pdl.Cache
 import no.nav.sf.pdl.ExitReason
 import no.nav.sf.pdl.FilterBase
+import no.nav.sf.pdl.PersonInvalid
 import no.nav.sf.pdl.PersonSf
 import no.nav.sf.pdl.PersonTombestone
+import no.nav.sf.pdl.Query
 import no.nav.sf.pdl.WorkSettings
+import no.nav.sf.pdl.toPersonSf
 import no.nav.sf.pdl.work
+
+private const val QUERY_JSON1 = "/queryJson/query1.json"
+private const val QUERY_JSON2 = "/queryJson/query2.json"
+private const val QUERY_JSON3 = "/queryJson/query3.json"
+
+private val jsonNonStrict = Json(JsonConfiguration.Stable.copy(ignoreUnknownKeys = true, isLenient = true))
 
 @ExperimentalStdlibApi
 @ImplicitReflectionSerializer
 class WorkTests : StringSpec() {
 
     init {
+        "Verify parsing of query" {
+            val query1 = jsonNonStrict.parse<Query>(Query.serializer(), getStringFromResource(QUERY_JSON1))
+            val query2 = jsonNonStrict.parse<Query>(Query.serializer(), getStringFromResource(QUERY_JSON2))
+            val query3 = jsonNonStrict.parse<Query>(Query.serializer(), getStringFromResource(QUERY_JSON3))
+
+            query1.toPersonSf() shouldNotBe PersonInvalid
+        }
+
         "Verify exists check on cache" {
 
             val aktoerIdOne = "a1"
@@ -99,4 +119,8 @@ class WorkTests : StringSpec() {
             work(WorkSettings(filter = FilterBase.Missing)).second.shouldBeInstanceOf<ExitReason.NoFilter>()
         }
     }
+
+    @ImplicitReflectionSerializer
+    internal fun getStringFromResource(path: String) =
+            WorkTests::class.java.getResourceAsStream(path).bufferedReader().use { it.readText() }
 }

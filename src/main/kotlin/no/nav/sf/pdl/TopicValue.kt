@@ -171,6 +171,43 @@ private fun Query.findAdressebeskyttelse(): AdressebeskyttelseGradering {
     }
 }
 
+sealed class Kommunenummer {
+    object Missing : Kommunenummer()
+    object Invalid : Kommunenummer()
+
+    data class Exist(val knummer: String) : Kommunenummer()
+}
+
+fun Person.Bostedsadresse.Vegadresse.findKommuneNummer(): Kommunenummer {
+    if (this.kommunenummer.isNullOrEmpty()) {
+        return Kommunenummer.Missing
+    } else if ((this.kommunenummer.length == 4) || this.kommunenummer.all { c -> c.isDigit() }) {
+        return Kommunenummer.Exist(this.kommunenummer)
+    } else {
+        return Kommunenummer.Invalid
+    }
+}
+
+fun Person.Bostedsadresse.Matrikkeladresse.findKommuneNummer(): Kommunenummer {
+    if (this.kommunenummer.isNullOrEmpty()) {
+        return Kommunenummer.Missing
+    } else if ((this.kommunenummer.length == 4) || this.kommunenummer.all { c -> c.isDigit() }) {
+        return Kommunenummer.Exist(this.kommunenummer)
+    } else {
+        return Kommunenummer.Invalid
+    }
+}
+
+fun Person.Bostedsadresse.UkjentBosted.findKommuneNummer(): Kommunenummer {
+    if (this.bostedskommune.isNullOrEmpty()) {
+        return Kommunenummer.Missing
+    } else if ((this.bostedskommune.length == 4) || this.bostedskommune.all { c -> c.isDigit() }) {
+        return Kommunenummer.Exist(this.bostedskommune)
+    } else {
+        return Kommunenummer.Invalid
+    }
+}
+
 fun Query.findKommunenummer(): String {
     return this.hentPerson.bostedsadresse.let { bostedsadresse ->
         if (bostedsadresse.isNullOrEmpty()) {
@@ -179,14 +216,20 @@ fun Query.findKommunenummer(): String {
         } else {
             bostedsadresse.firstOrNull { !it.metadata.historisk }?.let {
                 it.vegadresse?.let { vegadresse ->
-                    workMetrics.usedAddressTypes.labels(WMetrics.AddressType.VEGAADRESSE.name).inc()
-                    vegadresse.kommunenummer
+                    if (vegadresse.findKommuneNummer() is Kommunenummer.Exist) {
+                        workMetrics.usedAddressTypes.labels(WMetrics.AddressType.VEGAADRESSE.name).inc()
+                        vegadresse.kommunenummer
+                    } else null
                 } ?: it.matrikkeladresse?.let { matrikkeladresse ->
-                    workMetrics.usedAddressTypes.labels(WMetrics.AddressType.MATRIKKELADRESSE.name).inc()
-                    matrikkeladresse.kommunenummer
+                    if (matrikkeladresse.findKommuneNummer() is Kommunenummer.Exist) {
+                        workMetrics.usedAddressTypes.labels(WMetrics.AddressType.MATRIKKELADRESSE.name).inc()
+                        matrikkeladresse.kommunenummer
+                    } else null
                 } ?: it.ukjentBosted?.let { ukjentBosted ->
-                    workMetrics.usedAddressTypes.labels(WMetrics.AddressType.UKJENTBOSTED.name).inc()
-                    ukjentBosted.bostedskommune
+                    if (ukjentBosted.findKommuneNummer() is Kommunenummer.Exist) {
+                        workMetrics.usedAddressTypes.labels(WMetrics.AddressType.UKJENTBOSTED.name).inc()
+                        ukjentBosted.bostedskommune
+                    } else null
                 }
             } ?: UKJENT_FRA_PDL.also { workMetrics.usedAddressTypes.labels(WMetrics.AddressType.INGEN.name).inc() }
         }
