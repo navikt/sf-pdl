@@ -195,9 +195,9 @@ sealed class Cache {
 
         internal fun isNewOrUpdated(item: Pair<PersonProto.PersonKey, PersonProto.PersonValue?>): Boolean = when {
             !map.containsKey(item.first.aktoerId) -> true.also { log.info("debug cache new inc") ; workMetrics.cacheIsNewOrUpdated_noKey.inc() } // NY
-            item.second != null && map[item.first.aktoerId] != item.second.hashCode() -> true.also { log.info("debug cache update person inc") ;  workMetrics.cacheIsNewOrUpdated_differentHash.inc() } // Updated
-            item.second == null && map[item.first.aktoerId] != null -> true.also { log.info("debug cache update tombestone inc") ;  workMetrics.cacheIsNewOrUpdated_existing_to_tombestone.inc() } // Tombestone
-            else -> false.also { log.info("debug cache blocked (present in cache)") ;  workMetrics.cacheIsNewOrUpdated_no_blocked.inc() }
+            item.second != null && map[item.first.aktoerId] != item.second.hashCode() -> true.also { log.info("debug cache update person inc") ; workMetrics.cacheIsNewOrUpdated_differentHash.inc() } // Updated
+            item.second == null && map[item.first.aktoerId] != null -> true.also { log.info("debug cache update tombestone inc") ; workMetrics.cacheIsNewOrUpdated_existing_to_tombestone.inc() } // Tombestone
+            else -> false.also { log.info("debug cache blocked (present in cache)") ; workMetrics.cacheIsNewOrUpdated_no_blocked.inc() }
         }
     }
 
