@@ -325,13 +325,12 @@ internal fun work(ws: WorkSettings): Pair<WorkSettings, ExitReason> {
                 }.filter { cache.isNewOrUpdated(it) }
                         .fold(true) { acc, pair ->
                             acc && pair.second?.let {
-                                log.info { "Should attempt send to producer on item: $it" }
                                 send(kafkaPersonTopic, pair.first.toByteArray(), it.toByteArray()).also { workMetrics.publishedPersons.inc() }
                             } ?: sendNullValue(kafkaPersonTopic, pair.first.toByteArray()).also { workMetrics.publishedTombestones.inc() }
                         }.let { sent ->
                             when (sent) {
-                                true -> KafkaConsumerStates.IsOk.also { log.info { "Producer has sent to topic" } }
-                                false -> KafkaConsumerStates.HasIssues.also { log.info { "Producer has issues sending to topic" } }
+                                true -> KafkaConsumerStates.IsOk
+                                false -> KafkaConsumerStates.HasIssues.also { log.error { "Producer has issues sending to topic" } }
                             }
                         }
             } else {
