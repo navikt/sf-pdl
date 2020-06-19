@@ -112,7 +112,18 @@ data class WMetrics(
             .build()
             .name("cache_no_blocked")
             .help("cache no blocked")
+            .register(),
+    val filterApproved: Gauge = Gauge
+            .build()
+            .name("filter_approved")
+            .help("filter approved")
+            .register(),
+    val filterDisproved: Gauge = Gauge
+            .build()
+            .name("filter_disproved")
+            .help("filter disproved")
             .register()
+
 ) {
     enum class AddressType {
         VEGAADRESSE, MATRIKKELADRESSE, UKJENTBOSTED, INGEN
@@ -129,6 +140,8 @@ data class WMetrics(
         this.cacheIsNewOrUpdated_existing_to_tombestone.clear()
         this.cacheIsNewOrUpdated_noKey.clear()
         this.cacheIsNewOrUpdated_no_blocked.clear()
+        this.filterApproved.clear()
+        this.filterDisproved.clear()
     }
 }
 
@@ -158,10 +171,12 @@ sealed class FilterBase {
     ) : FilterBase() {
 
         fun approved(p: PersonSf): Boolean {
-            return regions.any {
+            val approved = regions.any {
                 !p.doed &&
                         it.region == p.region && (it.municipals.isEmpty() || it.municipals.contains(p.kommunenummer))
             }
+            if (approved) workMetrics.filterApproved.inc() else workMetrics.filterDisproved.inc()
+            return approved
         }
     }
 

@@ -30,12 +30,14 @@ private val jsonNonStrict = Json(JsonConfiguration.Stable.copy(ignoreUnknownKeys
 class WorkTests : StringSpec() {
 
     init {
-        "Verify parsing of query" {
+        "Verify mapping of query to PersonSf" {
             val query1 = jsonNonStrict.parse<Query>(Query.serializer(), getStringFromResource(QUERY_JSON1))
             val query2 = jsonNonStrict.parse<Query>(Query.serializer(), getStringFromResource(QUERY_JSON2))
             val query3 = jsonNonStrict.parse<Query>(Query.serializer(), getStringFromResource(QUERY_JSON3))
 
             query1.toPersonSf() shouldNotBe PersonInvalid
+            query2.toPersonSf() shouldNotBe PersonInvalid
+            query3.toPersonSf() shouldNotBe PersonInvalid
         }
 
         "Verify exists check on cache" {
