@@ -59,4 +59,4 @@ spec:
     - name: MS_BETWEEN_WORK
       value: '600000'
     - name: VAULT_INSTANCE
-      value: PROD
+      value: PRODUCTION

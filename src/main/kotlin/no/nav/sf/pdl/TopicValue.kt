@@ -138,7 +138,7 @@ fun Query.toPersonSf(): PersonBase {
                 doed = this.hentPerson.doedsfall.isNotEmpty() // "doedsdato": null  betyr at han faktsik er død, man vet bare ikke når. Listen kan ha to innslagt, kilde FREG og PDL
         )
     }
-            .onFailure { log.error { "Error creating PersonSf from Query ${it.localizedMessage}. Query json: ${jsonNonStrict.toJson(this)}" } }
+            .onFailure { log.error { "Error creating PersonSf from Query ${it.localizedMessage}" } }
             .getOrDefault(PersonInvalid)
 }
 
