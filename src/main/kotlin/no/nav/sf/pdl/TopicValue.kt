@@ -121,6 +121,7 @@ data class Person(
 }
 
 internal const val UKJENT_FRA_PDL = "<UKJENT_FRA_PDL>"
+@ImplicitReflectionSerializer
 fun Query.toPersonSf(): PersonBase {
     return runCatching {
         val kommunenummer = this.findKommunenummer()
@@ -137,7 +138,7 @@ fun Query.toPersonSf(): PersonBase {
                 doed = this.hentPerson.doedsfall.isNotEmpty() // "doedsdato": null  betyr at han faktsik er død, man vet bare ikke når. Listen kan ha to innslagt, kilde FREG og PDL
         )
     }
-            .onFailure { log.error { "Error creating PersonSf from Query ${it.localizedMessage}" } }
+            .onFailure { log.error { "Error creating PersonSf from Query ${it.localizedMessage}. Query json: ${jsonNonStrict.toJson(this)}" } }
             .getOrDefault(PersonInvalid)
 }
 
