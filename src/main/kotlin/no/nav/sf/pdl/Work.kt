@@ -136,6 +136,7 @@ data class WMetrics(
         this.sizeOfCache.clear()
         this.usedAddressTypes.clear()
         this.publishedPersons.clear()
+        this.publishedTombestones.clear()
         this.cacheIsNewOrUpdated_differentHash.clear()
         this.cacheIsNewOrUpdated_existing_to_tombestone.clear()
         this.cacheIsNewOrUpdated_noKey.clear()
