@@ -1,4 +1,5 @@
 package no.nav.sf
+import io.findify.s3mock.S3Mock
 import io.kotest.assertions.asClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
@@ -30,6 +31,9 @@ private val jsonNonStrict = Json(JsonConfiguration.Stable.copy(ignoreUnknownKeys
 class WorkTests : StringSpec() {
 
     init {
+        val api = S3Mock.Builder().withPort(8001).withInMemoryBackend().build()
+        api.start()
+
         "Verify mapping of query to PersonSf" {
             val query1 = jsonNonStrict.parse<Query>(Query.serializer(), getStringFromResource(QUERY_JSON1))
             val query2 = jsonNonStrict.parse<Query>(Query.serializer(), getStringFromResource(QUERY_JSON2))

@@ -264,6 +264,7 @@ sealed class Cache {
 @ExperimentalStdlibApi
 internal fun work(ws: WorkSettings): Pair<WorkSettings, ExitReason> {
 
+    S3Client.hello()
     log.info { "bootstrap work session starting" }
 
     workMetrics.clearAll()

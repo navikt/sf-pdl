@@ -20,6 +20,7 @@ const val EV_S3_ACCESS_KEY: String = "S3_ACCESS_KEY"
 const val EV_S3_SECRET_KEY: String = "S3_SECRET_KEY"
 const val EV_S3_REGION: String = "S3_REGION"
 const val EV_S3_URL: String = "S3_URL"
+
 const val SF_PDL_FILE = "filter.json"
 const val SF_PDL_BUCKET = "sf-pdl-bucket"
 object S3Client {
@@ -73,5 +74,9 @@ object S3Client {
                 .download(SF_PDL_BUCKET, SF_PDL_FILE, tempFile)
                 .waitForCompletion()
         return tempFile
+    }
+
+    fun hello() {
+        log.info { "S3 client init done - hello" }
     }
 }
