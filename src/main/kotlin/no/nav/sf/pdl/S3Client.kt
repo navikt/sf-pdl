@@ -29,7 +29,7 @@ object S3Client {
 
     private val s3: AmazonS3
     private val s3SecretKey = AVault.getSecretOrDefault(VAULT_S3_SECRET_KEY, "")
-    private val s3AccessKey = AnEnvironment.getEnvOrDefault(VAULT_S3_SECRET_KEY, "")
+    private val s3AccessKey = AnEnvironment.getEnvOrDefault(VAULT_S3_ACCESS_KEY, "")
     private val s3Region = AnEnvironment.getEnvOrDefault(EV_S3_REGION, "us-east-1")
 
     init {
