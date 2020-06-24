@@ -122,8 +122,17 @@ data class WMetrics(
             .build()
             .name("filter_disproved")
             .help("filter disproved")
+            .register(),
+    val consumerIssues: Gauge = Gauge
+            .build()
+            .name("consumer_issues")
+            .help("consumer issues")
+            .register(),
+    val producerIssues: Gauge = Gauge
+            .build()
+            .name("producer_issues")
+            .help("producer issues")
             .register()
-
 ) {
     enum class AddressType {
         VEGAADRESSE, MATRIKKELADRESSE, UKJENTBOSTED, INGEN
@@ -143,6 +152,8 @@ data class WMetrics(
         this.cacheIsNewOrUpdated_no_blocked.clear()
         this.filterApproved.clear()
         this.filterDisproved.clear()
+        this.consumerIssues.clear()
+        this.producerIssues.clear()
     }
 }
 
@@ -356,10 +367,14 @@ internal fun work(ws: WorkSettings): Pair<WorkSettings, ExitReason> {
                         }.let { sent ->
                             when (sent) {
                                 true -> KafkaConsumerStates.IsOk
-                                false -> KafkaConsumerStates.HasIssues.also { log.error { "Producer has issues sending to topic" } }
+                                false -> KafkaConsumerStates.HasIssues.also {
+                                    workMetrics.producerIssues.inc()
+                                    log.error { "Producer has issues sending to topic" }
+                                }
                             }
                         }
             } else {
+                workMetrics.consumerIssues.inc()
                 KafkaConsumerStates.HasIssues
             }
         } // Consumer pdl topic

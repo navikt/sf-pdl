@@ -82,6 +82,8 @@ configurations {
 
 
 dependencies {
+    compile "com.amazonaws:aws-java-sdk-s3:1.11.703"
+
     implementation platform('org.jetbrains.kotlin:kotlin-bom')
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlin_coroutine"
     implementation "org.jetbrains.kotlinx:kotlinx-serialization-runtime:$kotlin_serialization"
