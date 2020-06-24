@@ -28,15 +28,14 @@ const val SF_PDL_BUCKET = "sf-pdl-bucket"
 object S3Client {
 
     private val s3: AmazonS3
-    private val s3SecretKey = AVault.getSecretOrDefault(VAULT_S3_SECRET_KEY, "")
-    private val s3AccessKey = AnEnvironment.getEnvOrDefault(VAULT_S3_ACCESS_KEY, "")
+    private val s3SecretKey = AVault.getSecretOrDefault(VAULT_S3_SECRET_KEY, "<MISSING SECRET KEY>")
+    private val s3AccessKey = AVault.getSecretOrDefault(VAULT_S3_ACCESS_KEY, "<MISSING ACCESS KEY>")
     private val s3Region = AnEnvironment.getEnvOrDefault(EV_S3_REGION, "us-east-1")
 
     init {
         val s3Url = when (getEnvOrDefault("S3_INSTANCE", "LOCAL")) {
-            "PRODUCTION" -> getEnvOrDefault("S3_URL", "")
-            "PREPROD" -> getEnvOrDefault("S3_URL", "")
-            else -> "http://localhost:8001"
+            "LOCAL" -> "http://localhost:8001"
+            else -> getEnvOrDefault("S3_URL", "<MISSING URL>")
         }
         val credentials = BasicAWSCredentials(s3AccessKey, s3SecretKey)
         log.info("New Client: (host: " + s3Url + " - " + s3Region + ", accesskey-length: " + s3AccessKey.length + "S3 secret key Length: " + s3SecretKey.length)
