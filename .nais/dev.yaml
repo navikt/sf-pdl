@@ -62,3 +62,7 @@ spec:
       value: '600000'
     - name: VAULT_INSTANCE
       value: PREPROD
+    - name: S3_INSTANCE
+      value: PREPROD
+    - name: S3_URL
+      value: http://objectstore.rook-ceph.svc.nais.local/

@@ -12,26 +12,32 @@ import com.amazonaws.services.s3.transfer.TransferManager
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder
 import java.io.File
 import mu.KotlinLogging
+import no.nav.sf.library.AVault
 import no.nav.sf.library.AnEnvironment
+import no.nav.sf.library.AnEnvironment.Companion.getEnvOrDefault
 
 private val log = KotlinLogging.logger {}
 
-const val EV_S3_ACCESS_KEY: String = "S3_ACCESS_KEY"
-const val EV_S3_SECRET_KEY: String = "S3_SECRET_KEY"
 const val EV_S3_REGION: String = "S3_REGION"
-const val EV_S3_URL: String = "S3_URL"
+
+const val VAULT_S3_SECRET_KEY: String = "S3SecretKey"
+const val VAULT_S3_ACCESS_KEY: String = "S3AccessKey"
 
 const val SF_PDL_FILE = "filter.json"
 const val SF_PDL_BUCKET = "sf-pdl-bucket"
 object S3Client {
 
     private val s3: AmazonS3
-    val s3SecretKey = AnEnvironment.getEnvOrDefault(EV_S3_SECRET_KEY, "")
-    val s3AccessKey = AnEnvironment.getEnvOrDefault(EV_S3_ACCESS_KEY, "")
-    val s3Region = AnEnvironment.getEnvOrDefault(EV_S3_REGION, "us-east-1")
-    val s3Url = AnEnvironment.getEnvOrDefault(EV_S3_URL, "http://localhost:8001")
+    private val s3SecretKey = AVault.getSecretOrDefault(VAULT_S3_SECRET_KEY, "")
+    private val s3AccessKey = AnEnvironment.getEnvOrDefault(VAULT_S3_SECRET_KEY, "")
+    private val s3Region = AnEnvironment.getEnvOrDefault(EV_S3_REGION, "us-east-1")
 
     init {
+        val s3Url = when (getEnvOrDefault("S3_INSTANCE", "LOCAL")) {
+            "PRODUCTION" -> getEnvOrDefault("S3_URL", "")
+            "PREPROD" -> getEnvOrDefault("S3_URL", "")
+            else -> "http://localhost:8001"
+        }
         val credentials = BasicAWSCredentials(s3AccessKey, s3SecretKey)
         log.info("New Client: (host: " + s3Url + " - " + s3Region + ", accesskey-length: " + s3AccessKey.length + "S3 secret key Length: " + s3SecretKey.length)
         s3 = AmazonS3ClientBuilder.standard()
@@ -45,11 +51,11 @@ object S3Client {
     private fun createBucketIfMissing() {
         val bucketList = s3.listBuckets().filter { b -> b.name == SF_PDL_BUCKET }
         if (bucketList.isEmpty()) {
-            log.info("Creating new bucket as its missing: " + SF_PDL_BUCKET)
+            log.info("Creating new bucket as its missing: $SF_PDL_BUCKET")
             s3.createBucket(CreateBucketRequest(SF_PDL_BUCKET).withCannedAcl(CannedAccessControlList.Private))
         }
         if (!s3.doesObjectExist(SF_PDL_BUCKET, SF_PDL_FILE)) {
-            log.info("Creating empty file for persisting what have been pushed: " + SF_PDL_FILE)
+            log.info("Creating empty file for persisting what have been pushed: $SF_PDL_FILE")
             s3.putObject(SF_PDL_BUCKET, SF_PDL_FILE, "")
         }
     }
