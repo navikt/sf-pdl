@@ -339,7 +339,7 @@ internal fun work(ws: WorkSettings): Pair<WorkSettings, ExitReason> {
         exitReason = ExitReason.NoKafkaConsumer
 
         kafkaConsumerPdl.consume { cRecords ->
-            log.info { "${cRecords.count()} - consumer records ready to process" }
+            // log.info { "${cRecords.count()} - consumer records ready to process" }
             workMetrics.noOfKakfaRecordsPdl.inc(cRecords.count().toDouble())
             // leaving if nothing to do
             exitReason = ExitReason.NoEvents
