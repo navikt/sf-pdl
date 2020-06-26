@@ -411,7 +411,7 @@ internal fun work(ws: WorkSettings): Pair<WorkSettings, ExitReason> {
 
     log.info { "bootstrap work session finished" }
 
-    if (exitReason is ExitReason.Work) {
+    if (exitReason is ExitReason.Work || exitReason is ExitReason.NoEvents) {
         log.info { "Successful work session finished, will persist filter as current cache base" }
         File("tmp.json").writeText(json.toJson(FilterBase.Exists.serializer(), personFilter).toString())
         S3Client.persistToS3(File("tmp.json"))
