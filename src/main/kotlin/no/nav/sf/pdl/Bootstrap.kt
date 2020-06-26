@@ -5,7 +5,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.ImplicitReflectionSerializer
 import mu.KotlinLogging
-import no.nav.sf.library.AVault
 import no.nav.sf.library.AnEnvironment
 import no.nav.sf.library.PrestopHook
 import no.nav.sf.library.ShutdownHook
@@ -43,8 +42,7 @@ object Bootstrap {
                 loop(work(ws)
                     .let { prevWS ->
                         prevWS.first.copy(
-                                filter = FilterBase.fromJson(AVault.getSecretOrDefault(VAULT_workFilter)),
-                                prevFilter = prevWS.first.filter
+                                prevFilter = FilterBase.fromS3() // Fetch filter from last successful work session
                         )
                     }
                     .also { conditionalWait() })

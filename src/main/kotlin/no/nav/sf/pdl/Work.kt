@@ -61,13 +61,7 @@ data class WorkSettings(
 ),
     val filter: FilterBase = FilterBase.fromJson(AVault.getSecretOrDefault(VAULT_workFilter)),
 
-    val prevFilter: FilterBase = ABucket.getOrDefault("").let { storedFilterJson ->
-            if (storedFilterJson.isEmpty()) {
-                FilterBase.Missing
-            } else {
-                FilterBase.fromJson(storedFilterJson)
-            }
-    }
+    val prevFilter: FilterBase = FilterBase.fromS3()
 )
 
 data class WMetrics(
@@ -223,6 +217,15 @@ sealed class FilterBase {
         }
                 .onFailure { log.error { "Parsing of person filter in vault failed - ${it.localizedMessage}" } }
                 .getOrDefault(Missing)
+
+        fun fromS3(): FilterBase =
+                ABucket.getOrDefault("").let { storedFilterJson ->
+                    if (storedFilterJson.isEmpty()) {
+                        Missing
+                    } else {
+                        fromJson(storedFilterJson)
+                    }
+                }
     }
 }
 
@@ -316,11 +319,20 @@ internal fun work(ws: WorkSettings): Pair<WorkSettings, ExitReason> {
             config = ws.kafkaProducerPerson
     ).produce {
 
+        if (cache.isEmpty) {
+            log.info { "Cache is empty - will consume from beginning of pdl topic" }
+        } else if (ws.filter.hashCode() != ws.prevFilter.hashCode()) {
+            if (ws.prevFilter is FilterBase.Missing) {
+                log.info { "No filter found in S3 - will consume from beginning of topic" }
+            } else {
+                log.info { "Difference between filter in vault and filter on S3. Vault filter: ${ws.filter}, S3 filter: ${ws.prevFilter as FilterBase.Exists} - will consume from beginning of topic" }
+            }
+        }
+
         val kafkaConsumerPdl = AKafkaConsumer<String, String>(
                 config = ws.kafkaConsumerPdl,
                 // Filter change will not trigger until we got S3, only empty cache
-                fromBeginning = ((ws.filter.hashCode() != ws.prevFilter.hashCode()) || cache.isEmpty)
-                        .also { log.info { "Start from beginning due to filter change or empty cache" } }
+                fromBeginning = (ws.filter.hashCode() != ws.prevFilter.hashCode()) || cache.isEmpty
         )
         exitReason = ExitReason.NoKafkaConsumer
 
@@ -403,6 +415,8 @@ internal fun work(ws: WorkSettings): Pair<WorkSettings, ExitReason> {
         log.info { "Successful work session finished, will persist filter as current cache base" }
         File("tmp.json").writeText(json.toJson(FilterBase.Exists.serializer(), personFilter).toString())
         S3Client.persistToS3(File("tmp.json"))
+    } else {
+        log.warn { "Failed work session - will not update cache base" }
     }
 
     return Pair(ws, exitReason)
