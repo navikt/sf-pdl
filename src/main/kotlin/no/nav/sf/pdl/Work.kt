@@ -327,6 +327,8 @@ internal fun work(ws: WorkSettings): Pair<WorkSettings, ExitReason> {
             } else {
                 log.info { "Difference between filter in vault and filter on S3. Vault filter: ${ws.filter}, S3 filter: ${ws.prevFilter as FilterBase.Exists} - will consume from beginning of topic" }
             }
+        } else {
+            log.info { "Filter unchanged since last successful work session. Will consume from current offset" }
         }
 
         val kafkaConsumerPdl = AKafkaConsumer<String, String>(
