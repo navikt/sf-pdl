@@ -61,7 +61,13 @@ data class WorkSettings(
 ),
     val filter: FilterBase = FilterBase.fromJson(AVault.getSecretOrDefault(VAULT_workFilter)),
 
-    val prevFilter: FilterBase = FilterBase.fromJson(ABucket.getOrDefault(""))
+    val prevFilter: FilterBase = ABucket.getOrDefault("").let { storedFilterJson ->
+            if (storedFilterJson.isEmpty()) {
+                FilterBase.Missing
+            } else {
+                FilterBase.fromJson(storedFilterJson)
+            }
+    }
 )
 
 data class WMetrics(
