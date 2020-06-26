@@ -377,7 +377,7 @@ internal fun work(ws: WorkSettings): Pair<WorkSettings, ExitReason> {
             val areOk = results.fold(true) { acc, resp -> acc && (resp.first == KafkaConsumerStates.IsOk) }
 
             if (areOk) {
-                log.info { "${results.size} consumer records resulted in number of Person ${results.filter { it.second is PersonSf }.count()}, Tombestone ${results.filter { it.second is PersonTombestone }.count()}, Invalid  ${results.filter { it.second is PersonInvalid }.count()}" }
+                // log.info { "${results.size} consumer records resulted in number of Person ${results.filter { it.second is PersonSf }.count()}, Tombestone ${results.filter { it.second is PersonTombestone }.count()}, Invalid  ${results.filter { it.second is PersonInvalid }.count()}" }
                 results.filter { it.second is PersonTombestone || (it.second is PersonSf && personFilter.approved(it.second as PersonSf)) }.map {
                     when (val personBase = it.second) {
                         is PersonTombestone -> {
