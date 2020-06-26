@@ -35,9 +35,9 @@ class WorkTests : StringSpec() {
         api.start()
 
         "Verify mapping of query to PersonSf" {
-            val query1 = jsonNonStrict.parse<Query>(Query.serializer(), getStringFromResource(QUERY_JSON1))
-            val query2 = jsonNonStrict.parse<Query>(Query.serializer(), getStringFromResource(QUERY_JSON2))
-            val query3 = jsonNonStrict.parse<Query>(Query.serializer(), getStringFromResource(QUERY_JSON3))
+            val query1 = jsonNonStrict.parse(Query.serializer(), getStringFromResource(QUERY_JSON1))
+            val query2 = jsonNonStrict.parse(Query.serializer(), getStringFromResource(QUERY_JSON2))
+            val query3 = jsonNonStrict.parse(Query.serializer(), getStringFromResource(QUERY_JSON3))
 
             query1.toPersonSf() shouldNotBe PersonInvalid
             query2.toPersonSf() shouldNotBe PersonInvalid

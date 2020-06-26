@@ -2,6 +2,7 @@ package no.nav.sf.pdl
 
 import io.confluent.kafka.serializers.KafkaAvroDeserializer
 import io.prometheus.client.Gauge
+import java.io.File
 import kotlinx.serialization.ImplicitReflectionSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UnstableDefault
@@ -34,22 +35,33 @@ const val VAULT_workFilter = "WorkFilter"
 val kafkaSchemaReg = AnEnvironment.getEnvOrDefault(EV_kafkaSchemaReg, "http://localhost:8081")
 val kafkaPersonTopic = AnEnvironment.getEnvOrDefault(EV_kafkaProducerTopic, "$PROGNAME-producer")
 
+interface ABucket {
+    companion object {
+        fun getOrDefault(d: String) =
+                runCatching { return S3Client.loadFromS3().bufferedReader().readLine() ?: "" }
+                        .onSuccess { log.info { "Successfully retrieved value from s3" } }
+                        .onFailure { log.error { "Failed to retrieve value from s3" } }
+                        .getOrDefault(d)
+    }
+}
+
 data class WorkSettings(
     val kafkaConsumerPerson: Map<String, Any> = AKafkaConsumer.configBase + mapOf<String, Any>(
-            ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to ByteArrayDeserializer::class.java,
-            ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to ByteArrayDeserializer::class.java
-    ),
+        ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to ByteArrayDeserializer::class.java,
+        ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to ByteArrayDeserializer::class.java
+),
     val kafkaProducerPerson: Map<String, Any> = AKafkaProducer.configBase + mapOf<String, Any>(
-            ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG to ByteArraySerializer::class.java,
-            ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG to ByteArraySerializer::class.java
-    ),
+        ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG to ByteArraySerializer::class.java,
+        ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG to ByteArraySerializer::class.java
+),
     val kafkaConsumerPdl: Map<String, Any> = AKafkaConsumer.configBase + mapOf<String, Any>(
-            ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to KafkaAvroDeserializer::class.java,
-            ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to KafkaAvroDeserializer::class.java,
-            "schema.registry.url" to kafkaSchemaReg
-    ),
+        ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to KafkaAvroDeserializer::class.java,
+        ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to KafkaAvroDeserializer::class.java,
+        "schema.registry.url" to kafkaSchemaReg
+),
     val filter: FilterBase = FilterBase.fromJson(AVault.getSecretOrDefault(VAULT_workFilter)),
-    val prevFilter: FilterBase = filter // No use until S3 is implemented. Can only trigger reread from cache null
+
+    val prevFilter: FilterBase = FilterBase.fromJson(ABucket.getOrDefault(""))
 )
 
 data class WMetrics(
@@ -263,8 +275,6 @@ sealed class Cache {
 @ImplicitReflectionSerializer
 @ExperimentalStdlibApi
 internal fun work(ws: WorkSettings): Pair<WorkSettings, ExitReason> {
-
-    S3Client.hello()
     log.info { "bootstrap work session starting" }
 
     workMetrics.clearAll()
@@ -286,7 +296,7 @@ internal fun work(ws: WorkSettings): Pair<WorkSettings, ExitReason> {
      */
     val tmp = Cache.load(ws.kafkaConsumerPerson, kafkaPersonTopic)
     if (tmp is Cache.Missing) {
-        log.error { "Could not read activity cache, leaving" }
+        log.error { "Could not read cache, leaving" }
         return Pair(ws, ExitReason.NoCache)
     }
 
@@ -382,5 +392,12 @@ internal fun work(ws: WorkSettings): Pair<WorkSettings, ExitReason> {
     } // Producer person topic
 
     log.info { "bootstrap work session finished" }
+
+    if (exitReason is ExitReason.Work) {
+        log.info { "Successful work session finished, will persist filter as current cache base" }
+        File("tmp.json").writeText(json.toJson(FilterBase.Exists.serializer(), personFilter).toString())
+        S3Client.persistToS3(File("tmp.json"))
+    }
+
     return Pair(ws, exitReason)
 }
