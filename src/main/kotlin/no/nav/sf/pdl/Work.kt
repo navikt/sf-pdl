@@ -178,7 +178,7 @@ sealed class ExitReason {
     object NoEvents : ExitReason()
     object NoCache : ExitReason()
     object Work : ExitReason()
-    fun isOK() : Boolean = this is Work || this is NoEvents
+    fun isOK(): Boolean = this is Work || this is NoEvents
 }
 
 /**
