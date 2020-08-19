@@ -2,7 +2,6 @@ package no.nav.sf.pdl
 
 import io.confluent.kafka.serializers.KafkaAvroDeserializer
 import io.prometheus.client.Gauge
-import java.io.File
 import kotlinx.serialization.ImplicitReflectionSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UnstableDefault
@@ -32,6 +31,7 @@ const val EV_kafkaSchemaReg = "KAFKA_SCREG"
 
 // Work vault dependencies
 const val VAULT_workFilter = "WorkFilter"
+const val VAULT_filterEnabled = "FilterEnabled"
 val kafkaSchemaReg = AnEnvironment.getEnvOrDefault(EV_kafkaSchemaReg, "http://localhost:8081")
 val kafkaPersonTopic = AnEnvironment.getEnvOrDefault(EV_kafkaProducerTopic, "$PROGNAME-producer")
 
@@ -42,26 +42,35 @@ interface ABucket {
                         .onSuccess { log.info { "Successfully retrieved value from s3" } }
                         .onFailure { log.error { "Failed to retrieve value from s3" } }
                         .getOrDefault(d)
+        fun getFlagOrDefault(b: Boolean) =
+                runCatching { return (S3Client.loadFlagFromS3().bufferedReader().readLine() ?: "") == true.toString() }
+                        .onSuccess { log.info { "Successfully retrieved flag value from s3" } }
+                        .onFailure { log.error { "Failed to retrieve flag value from s3" } }
+                        .getOrDefault(b)
     }
 }
 
 data class WorkSettings(
     val kafkaConsumerPerson: Map<String, Any> = AKafkaConsumer.configBase + mapOf<String, Any>(
-        ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to ByteArrayDeserializer::class.java,
-        ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to ByteArrayDeserializer::class.java
+    ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to ByteArrayDeserializer::class.java,
+    ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to ByteArrayDeserializer::class.java
 ),
     val kafkaProducerPerson: Map<String, Any> = AKafkaProducer.configBase + mapOf<String, Any>(
-        ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG to ByteArraySerializer::class.java,
-        ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG to ByteArraySerializer::class.java
+    ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG to ByteArraySerializer::class.java,
+    ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG to ByteArraySerializer::class.java
 ),
     val kafkaConsumerPdl: Map<String, Any> = AKafkaConsumer.configBase + mapOf<String, Any>(
-        ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to KafkaAvroDeserializer::class.java,
-        ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to KafkaAvroDeserializer::class.java,
-        "schema.registry.url" to kafkaSchemaReg
+    ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to KafkaAvroDeserializer::class.java,
+    ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to KafkaAvroDeserializer::class.java,
+    "schema.registry.url" to kafkaSchemaReg
 ),
     val filter: FilterBase = FilterBase.fromJson(AVault.getSecretOrDefault(VAULT_workFilter)),
 
-    val prevFilter: FilterBase = FilterBase.fromS3()
+    val filterEnabled: Boolean = AVault.getSecretOrDefault(VAULT_filterEnabled) == true.toString(),
+
+    val prevFilter: FilterBase = FilterBase.fromS3(),
+
+    val prevEnabled: Boolean = FilterBase.flagFromS3()
 )
 
 data class WMetrics(
@@ -178,7 +187,7 @@ sealed class ExitReason {
     object NoEvents : ExitReason()
     object NoCache : ExitReason()
     object Work : ExitReason()
-    fun isOK() : Boolean = this is Work || this is NoEvents
+    fun isOK(): Boolean = this is Work || this is NoEvents
 }
 
 /**
@@ -227,6 +236,24 @@ sealed class FilterBase {
                         fromJson(storedFilterJson)
                     }
                 }
+
+        fun flagFromS3(): Boolean =
+                ABucket.getFlagOrDefault(false)
+
+        fun filterSettingsDiffer(
+            currentFilterEnabled: Boolean,
+            currentFilter: FilterBase,
+            prevFilterEnabled: Boolean,
+            prevFilter: FilterBase
+        ): Boolean {
+            return if (!currentFilterEnabled && !prevFilterEnabled) {
+                false // Filter still turned off
+            } else if (currentFilterEnabled != prevFilterEnabled) {
+                true // Filter has been toggled on or off
+            } else {
+                currentFilter.hashCode() != prevFilter.hashCode() // Has the filter been changed
+            }
+        }
     }
 }
 
@@ -293,11 +320,12 @@ internal fun work(ws: WorkSettings): Pair<WorkSettings, ExitReason> {
      * Check - no filter means nothing to transfer, leaving
      */
     if (ws.filter is FilterBase.Missing) {
-        log.warn { "No active filter for activities, leaving" }
+        log.warn { "No filter for activities, leaving" }
         return Pair(ws, ExitReason.NoFilter)
     }
     val personFilter = ws.filter as FilterBase.Exists
-    log.info { "Continue work with filter" }
+    val filterEnabled = ws.filterEnabled
+    log.info { "Continue work with filter enabled: $filterEnabled" }
     /**
      * Check - no cache means no answer for a new event;
      * - is a new activity id
@@ -322,11 +350,11 @@ internal fun work(ws: WorkSettings): Pair<WorkSettings, ExitReason> {
 
         if (cache.isEmpty) {
             log.info { "Cache is empty - will consume from beginning of pdl topic" }
-        } else if (ws.filter.hashCode() != ws.prevFilter.hashCode()) {
+        } else if (FilterBase.filterSettingsDiffer(ws.filterEnabled, ws.filter, ws.prevEnabled, ws.prevFilter)) {
             if (ws.prevFilter is FilterBase.Missing) {
                 log.info { "No filter found in S3 - will consume from beginning of topic" }
             } else {
-                log.info { "Difference between filter in vault and filter on S3. Vault filter: ${ws.filter}, S3 filter: ${ws.prevFilter as FilterBase.Exists} - will consume from beginning of topic" }
+                log.info { "Difference between filter settings in vault and filter on S3. Vault filter: ${ws.filter} enabled ${ws.filterEnabled}, S3 filter: ${ws.prevFilter as FilterBase.Exists} enabled: ${ws.prevEnabled} - will consume from beginning of topic" }
             }
         } else {
             log.info { "Filter unchanged since last successful work session. Will consume from current offset" }
@@ -334,13 +362,11 @@ internal fun work(ws: WorkSettings): Pair<WorkSettings, ExitReason> {
 
         val kafkaConsumerPdl = AKafkaConsumer<String, String>(
                 config = ws.kafkaConsumerPdl,
-                // Filter change will not trigger until we got S3, only empty cache
-                fromBeginning = (ws.filter.hashCode() != ws.prevFilter.hashCode()) || cache.isEmpty
+                fromBeginning = FilterBase.filterSettingsDiffer(ws.filterEnabled, ws.filter, ws.prevEnabled, ws.prevFilter) || cache.isEmpty
         )
         exitReason = ExitReason.NoKafkaConsumer
 
         kafkaConsumerPdl.consume { cRecords ->
-            // log.info { "${cRecords.count()} - consumer records ready to process" }
             workMetrics.noOfKakfaRecordsPdl.inc(cRecords.count().toDouble())
             // leaving if nothing to do
             exitReason = ExitReason.NoEvents
@@ -380,8 +406,7 @@ internal fun work(ws: WorkSettings): Pair<WorkSettings, ExitReason> {
             val areOk = results.fold(true) { acc, resp -> acc && (resp.first == KafkaConsumerStates.IsOk) }
 
             if (areOk) {
-                // log.info { "${results.size} consumer records resulted in number of Person ${results.filter { it.second is PersonSf }.count()}, Tombestone ${results.filter { it.second is PersonTombestone }.count()}, Invalid  ${results.filter { it.second is PersonInvalid }.count()}" }
-                results.filter { it.second is PersonTombestone || (it.second is PersonSf && personFilter.approved(it.second as PersonSf)) }.map {
+                results.filter { it.second is PersonTombestone || !filterEnabled || (it.second is PersonSf && personFilter.approved(it.second as PersonSf)) }.map {
                     when (val personBase = it.second) {
                         is PersonTombestone -> {
                             Pair<PersonProto.PersonKey, PersonProto.PersonValue?>(personBase.toPersonTombstoneProtoKey(), null)
@@ -415,9 +440,9 @@ internal fun work(ws: WorkSettings): Pair<WorkSettings, ExitReason> {
     log.info { "bootstrap work session finished" }
 
     if (exitReason.isOK()) {
-        log.info { "Successful work session finished, will persist filter as current cache base" }
-        File("tmp.json").writeText(json.toJson(FilterBase.Exists.serializer(), personFilter).toString())
-        S3Client.persistToS3(File("tmp.json"))
+        log.info { "Successful work session finished, will persist filter settings as current cache base" }
+        S3Client.persistToS3(json.toJson(FilterBase.Exists.serializer(), personFilter).toString())
+        S3Client.persistFlagToS3(filterEnabled)
     } else {
         log.warn { "Failed work session - will not update cache base" }
     }

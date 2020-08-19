@@ -24,6 +24,7 @@ const val VAULT_S3_SECRET_KEY: String = "S3SecretKey"
 const val VAULT_S3_ACCESS_KEY: String = "S3AccessKey"
 
 const val SF_PDL_FILE = "filter.json"
+const val SF_PDL_FLAG = "filter.enabled"
 const val SF_PDL_BUCKET = "sf-pdl-bucket"
 
 object S3Client {
@@ -46,6 +47,7 @@ object S3Client {
                 .withCredentials(AWSStaticCredentialsProvider(credentials))
                 .build()
         createBucketIfMissing()
+        createFilesIfMissing()
     }
 
     private fun createBucketIfMissing() {
@@ -54,17 +56,34 @@ object S3Client {
             log.info("Creating new bucket as its missing: $SF_PDL_BUCKET")
             s3.createBucket(CreateBucketRequest(SF_PDL_BUCKET).withCannedAcl(CannedAccessControlList.Private))
         }
+    }
+
+    private fun createFilesIfMissing() {
         if (!s3.doesObjectExist(SF_PDL_BUCKET, SF_PDL_FILE)) {
             log.info("Creating empty file for persisting what have been pushed: $SF_PDL_FILE")
             s3.putObject(SF_PDL_BUCKET, SF_PDL_FILE, "")
+        }
+        if (!s3.doesObjectExist(SF_PDL_BUCKET, SF_PDL_FILE)) {
+            log.info("Creating empty file for persisting flag: $SF_PDL_FLAG")
+            s3.putObject(SF_PDL_BUCKET, SF_PDL_FLAG, "")
         }
     }
 
     /**
      * Lagrer en filreferanse til S3
      */
-    fun persistToS3(file: File): PutObjectResult {
-        return s3.putObject(SF_PDL_BUCKET, SF_PDL_FILE, file)
+    private fun persistToS3(file: File, filenameOnS3: String): PutObjectResult {
+        return s3.putObject(SF_PDL_BUCKET, filenameOnS3, file)
+    }
+
+    fun persistToS3(text: String): PutObjectResult {
+        File("tmp.json").writeText(text)
+        return persistToS3(File("tmp.json"), SF_PDL_FILE)
+    }
+
+    fun persistFlagToS3(bool: Boolean): PutObjectResult {
+        File("flag.tmp").writeText(bool.toString())
+        return persistToS3(File("flag.tmp"), SF_PDL_FLAG)
     }
 
     private fun transferManager(): TransferManager {
@@ -78,6 +97,17 @@ object S3Client {
         val tempFile = createTempFile()
         transferManager()
                 .download(SF_PDL_BUCKET, SF_PDL_FILE, tempFile)
+                .waitForCompletion()
+        return tempFile
+    }
+
+    /**
+     * Laster object fra S3 og returnerer en filreferanse
+     */
+    fun loadFlagFromS3(): File {
+        val tempFile = createTempFile("flag")
+        transferManager()
+                .download(SF_PDL_BUCKET, SF_PDL_FLAG, tempFile)
                 .waitForCompletion()
         return tempFile
     }
