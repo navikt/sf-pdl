@@ -398,16 +398,18 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
         return ExitReason.NoFilter
     }
 
+    workMetrics.noOfKakfaRecordsPdl.inc(initPopulation.records.size.toDouble())
+
     var exitReason: ExitReason = ExitReason.Work
 
     AKafkaProducer<ByteArray, ByteArray>(
             config = ws.kafkaProducerPerson
     ).produce {
-        initPopulation.records.filter { it.second is PersonTombestone || !filterEnabled || (it.second is PersonSf && personFilter.approved(it.second as PersonSf)) }.map {
-            if (it.second is PersonSf) {
-                (it.second as PersonSf).toPersonProto()
+        initPopulation.records.filter { it.value is PersonTombestone || !filterEnabled || (it.value is PersonSf && personFilter.approved(it.value as PersonSf)) }.map {
+            if (it.value is PersonSf) {
+                (it.value as PersonSf).toPersonProto()
             } else {
-                Pair<PersonProto.PersonKey, PersonProto.PersonValue?>((it.second as PersonTombestone).toPersonTombstoneProtoKey(), null)
+                Pair<PersonProto.PersonKey, PersonProto.PersonValue?>((it.value as PersonTombestone).toPersonTombstoneProtoKey(), null)
             }
         }.fold(true) { acc, pair ->
             acc && pair.second?.let {

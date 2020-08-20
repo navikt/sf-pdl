@@ -19,11 +19,11 @@ private val log = KotlinLogging.logger {}
 sealed class InitPopulation {
     object Interrupted : InitPopulation()
     object Failure : InitPopulation()
-    data class Exist(val records: List<Pair<String, PersonBase>>) : InitPopulation()
+    data class Exist(val records: Map<String, PersonBase>) : InitPopulation()
 }
 
 fun InitPopulation.Exist.isValid(): Boolean {
-    return records.filterIsInstance<PersonInvalid>().isEmpty()
+    return records.values.filterIsInstance<PersonInvalid>().isEmpty()
 }
 
 @ImplicitReflectionSerializer
@@ -48,7 +48,7 @@ fun <K, V> getInitPopulation(
                         c.runCatching { seekToBeginning(emptyList()) }
                                 .onFailure { log.error { "Failure during SeekToBeginning - ${it.message}" } }
 
-                        tailrec fun loop(records: List<Pair<String, PersonBase>>): InitPopulation = when {
+                        tailrec fun loop(records: Map<String, PersonBase>): InitPopulation = when {
                             ShutdownHook.isActive() || PrestopHook.isActive() -> InitPopulation.Interrupted
                             else -> {
                                 val cr = c.runCatching { Pair(true, poll(Duration.ofMillis(3_000)) as ConsumerRecords<String, String>) }
@@ -90,7 +90,7 @@ fun <K, V> getInitPopulation(
                                 }
                             }
                         }
-                        loop(emptyList()).also { log.info { "Closing KafkaConsumer" } }
+                        loop(emptyMap()).also { log.info { "Closing KafkaConsumer" } }
                     }
         } catch (e: Exception) {
             log.error { "Failure during kafka consumer construction - ${e.message}" }
