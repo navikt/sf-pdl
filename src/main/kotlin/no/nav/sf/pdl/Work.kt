@@ -27,13 +27,16 @@ private val log = KotlinLogging.logger {}
 
 // Work environment dependencies
 const val EV_kafkaProducerTopic = "KAFKA_PRODUCER_TOPIC"
+const val EV_kafkaConsumerTopic = "KAFKA_TOPIC"
 const val EV_kafkaSchemaReg = "KAFKA_SCREG"
 
 // Work vault dependencies
 const val VAULT_workFilter = "WorkFilter"
 const val VAULT_filterEnabled = "FilterEnabled"
+const val VAULT_initialLoad = "InitialLoad"
 val kafkaSchemaReg = AnEnvironment.getEnvOrDefault(EV_kafkaSchemaReg, "http://localhost:8081")
 val kafkaPersonTopic = AnEnvironment.getEnvOrDefault(EV_kafkaProducerTopic, "$PROGNAME-producer")
+val kafkaPDLTopic = AnEnvironment.getEnvOrDefault(EV_kafkaConsumerTopic, "$PROGNAME-consumer")
 
 interface ABucket {
     companion object {
@@ -70,7 +73,9 @@ data class WorkSettings(
 
     val prevFilter: FilterBase = FilterBase.fromS3(),
 
-    val prevEnabled: Boolean = FilterBase.flagFromS3()
+    val prevEnabled: Boolean = FilterBase.flagFromS3(),
+
+    val initialLoad: Boolean = AVault.getSecretOrDefault(VAULT_initialLoad) == true.toString()
 )
 
 data class WMetrics(
@@ -186,6 +191,7 @@ sealed class ExitReason {
     object NoKafkaConsumer : ExitReason()
     object NoEvents : ExitReason()
     object NoCache : ExitReason()
+    object InvalidCache : ExitReason()
     object Work : ExitReason()
     fun isOK(): Boolean = this is Work || this is NoEvents
 }
@@ -257,6 +263,31 @@ sealed class FilterBase {
     }
 }
 
+sealed class Population {
+    object Missing : Population()
+    object Invalid : Population()
+
+    data class Exist(val map: Map<String, String?>) : Population()
+
+    companion object {
+        fun load(kafkaConsumerConfig: Map<String, Any>, topic: String): Population = kotlin.runCatching {
+            when (val result = getAllRecords<String, String>(kafkaConsumerConfig, listOf(topic))) {
+                is AllRecords.Exist -> {
+                    if (result.hasMissingKey())
+                        Population.Invalid
+                                .also { log.error { "Topic has null in key" } } // Allow null vaule because of Tombestone
+                    else {
+                        Population.Exist(result.getKeysValues().map { it.k to it.v }.toMap()).also { log.info { "Population size is ${it.map.size}" } }
+                    }
+                }
+                else -> Population.Missing
+            }
+        }
+                .onFailure { log.error { "Error building Population map - ${it.message}" } }
+                .getOrDefault(Population.Invalid)
+    }
+}
+
 /**
  * A minimum cache as a map of persons aktørId and hash code of person details
  */
@@ -295,7 +326,8 @@ sealed class Cache {
                 is AllRecords.Exist -> {
                     if (result.hasMissingKey())
                         Missing
-                                .also { log.error { "Cache has null in key" } } // Allow null vaule because of Tombestone
+                                .also { log.error { "Cache has null in key" } }
+                        // Allow null value because of Tombestone
                     else {
                         Exist(result.getKeysValues().map { it.k.protobufSafeParseKey().aktoerId to it.v.protobufSafeParseValue().hashCode() }.toMap()).also { log.info { "Cache size is ${it.map.size}" } }
                     }
@@ -306,6 +338,96 @@ sealed class Cache {
                 .onFailure { log.error { "Error building Cache - ${it.message}" } }
                 .getOrDefault(Invalid)
     }
+}
+
+@ImplicitReflectionSerializer
+internal fun createPersonPair(value: String): Pair<KafkaConsumerStates, PersonBase> {
+    return when (val query = value.getQueryFromJson()) {
+        InvalidQuery -> {
+            log.error { "Unable to parse topic value PDL" }
+            Pair(KafkaConsumerStates.HasIssues, PersonInvalid)
+        }
+        is Query -> {
+            when (val personSf = query.toPersonSf()) {
+                is PersonSf -> {
+                    workMetrics.noOfPersonSf.inc()
+                    Pair(KafkaConsumerStates.IsOk, personSf)
+                }
+                is PersonInvalid -> {
+                    Pair(KafkaConsumerStates.HasIssues, PersonInvalid)
+                }
+                else -> {
+                    log.error { "Returned unhandled PersonBase from Query.toPersonSf" }
+                    Pair(KafkaConsumerStates.HasIssues, PersonInvalid)
+                }
+            }
+        }
+    }
+}
+
+internal fun createTombeStonePair(key: String): Pair<KafkaConsumerStates, PersonBase> {
+    val personTombestone = PersonTombestone(aktoerId = key)
+    workMetrics.noOfTombestone.inc()
+    return Pair(KafkaConsumerStates.IsOk, personTombestone)
+}
+
+@ImplicitReflectionSerializer
+internal fun initLoad(ws: WorkSettings): ExitReason {
+    /**
+     * Check - no filter means nothing to transfer, leaving
+     */
+    if (ws.filter is FilterBase.Missing) {
+        log.warn { "initLoad - No filter for activities, leaving" }
+        return ExitReason.NoFilter
+    }
+    val personFilter = ws.filter as FilterBase.Exists
+    val filterEnabled = ws.filterEnabled
+    log.info { "initLoad - Continue work with filter enabled: $filterEnabled" }
+
+    val tmp = Population.load(ws.kafkaConsumerPdl, kafkaPDLTopic)
+    if (tmp is Population.Missing) {
+        log.error { "Could not read population, leaving" }
+        return ExitReason.NoCache
+    } else if (tmp is Population.Invalid) {
+        log.error { "Invalid population, leaving" }
+        return ExitReason.InvalidCache
+    }
+    val population = tmp as Population.Exist
+
+    AKafkaProducer<ByteArray, ByteArray>(
+            config = ws.kafkaProducerPerson
+    ).produce {
+        val results: List<Pair<KafkaConsumerStates, PersonBase>> = population.map.map { e ->
+            e.value?.let { v ->
+                createPersonPair(v)
+            } ?: createTombeStonePair(e.key)
+        }
+        val areOk = results.fold(true) { acc, resp -> acc && (resp.first == KafkaConsumerStates.IsOk) }
+
+        if (areOk) {
+            results.filter { it.second is PersonTombestone || !filterEnabled || (it.second is PersonSf && personFilter.approved(it.second as PersonSf)) }.map {
+                if (it.second is PersonSf) {
+                    (it.second as PersonSf).toPersonProto()
+                } else {
+                    Pair<PersonProto.PersonKey, PersonProto.PersonValue?>((it.second as PersonTombestone).toPersonTombstoneProtoKey(), null)
+                }
+            }.fold(true) { acc, pair ->
+                        acc && pair.second?.let {
+                            send(kafkaPersonTopic, pair.first.toByteArray(), it.toByteArray()).also { workMetrics.publishedPersons.inc() }
+                        } ?: sendNullValue(kafkaPersonTopic, pair.first.toByteArray()).also { workMetrics.publishedTombestones.inc() }
+                    }.let { sent ->
+                        when (sent) {
+                            true -> KafkaConsumerStates.IsOk
+                            false -> KafkaConsumerStates.HasIssues.also {
+                                workMetrics.producerIssues.inc()
+                                log.error { "Init load - Producer has issues sending to topic" }
+                            }
+                        }
+                    }
+        }
+    }
+
+    return ExitReason.Work
 }
 
 @UnstableDefault
@@ -336,6 +458,9 @@ internal fun work(ws: WorkSettings): Pair<WorkSettings, ExitReason> {
     if (tmp is Cache.Missing) {
         log.error { "Could not read cache, leaving" }
         return Pair(ws, ExitReason.NoCache)
+    } else if (tmp is Cache.Invalid) {
+        log.error { "Invalid cache, leaving" }
+        return Pair(ws, ExitReason.InvalidCache)
     }
 
     val cache = tmp as Cache.Exist

@@ -28,7 +28,17 @@ object Bootstrap {
 
     fun start(ws: WorkSettings = WorkSettings()) {
         log.info { "Starting" }
-        enableNAISAPI { loop(ws) }
+        enableNAISAPI {
+            if (ws.initialLoad) {
+                log.info { "Initial load flag set - will build populationCache from beginning of pdl topic and post latest to sf-person" }
+                if (!initLoad(ws).isOK()) {
+                    log.info { "Failed loading population" }
+                    return@enableNAISAPI
+                }
+                log.info { "Initial load done." }
+            }
+            loop(ws)
+        }
         log.info { "Finished!" }
     }
 
