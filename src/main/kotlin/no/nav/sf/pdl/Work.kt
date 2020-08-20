@@ -384,50 +384,47 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
     val filterEnabled = ws.filterEnabled
     log.info { "initLoad - Continue work with filter enabled: $filterEnabled" }
 
-    val tmp = Population.load(ws.kafkaConsumerPdl, kafkaPDLTopic)
-    if (tmp is Population.Missing) {
-        log.error { "Could not read population, leaving" }
-        return ExitReason.NoCache
-    } else if (tmp is Population.Invalid) {
-        log.error { "Invalid population, leaving" }
-        return ExitReason.InvalidCache
+    val initTmp = getInitPopulation<String, String>(ws.kafkaConsumerPdl)
+
+    if (initTmp !is InitPopulation.Exist) {
+        log.error { "initLoad - could not create init population" }
+        return ExitReason.NoFilter
     }
-    val population = tmp as Population.Exist
+
+    val initPopulation = (initTmp as InitPopulation.Exist)
+
+    if (!initPopulation.isValid()) {
+        log.error { "initLoad - init population invalid" }
+        return ExitReason.NoFilter
+    }
+
+    var exitReason: ExitReason = ExitReason.Work
 
     AKafkaProducer<ByteArray, ByteArray>(
             config = ws.kafkaProducerPerson
     ).produce {
-        val results: List<Pair<KafkaConsumerStates, PersonBase>> = population.map.map { e ->
-            e.value?.let { v ->
-                createPersonPair(v)
-            } ?: createTombeStonePair(e.key)
-        }
-        val areOk = results.fold(true) { acc, resp -> acc && (resp.first == KafkaConsumerStates.IsOk) }
-
-        if (areOk) {
-            results.filter { it.second is PersonTombestone || !filterEnabled || (it.second is PersonSf && personFilter.approved(it.second as PersonSf)) }.map {
-                if (it.second is PersonSf) {
-                    (it.second as PersonSf).toPersonProto()
-                } else {
-                    Pair<PersonProto.PersonKey, PersonProto.PersonValue?>((it.second as PersonTombestone).toPersonTombstoneProtoKey(), null)
+        initPopulation.records.filter { it.second is PersonTombestone || !filterEnabled || (it.second is PersonSf && personFilter.approved(it.second as PersonSf)) }.map {
+            if (it.second is PersonSf) {
+                (it.second as PersonSf).toPersonProto()
+            } else {
+                Pair<PersonProto.PersonKey, PersonProto.PersonValue?>((it.second as PersonTombestone).toPersonTombstoneProtoKey(), null)
+            }
+        }.fold(true) { acc, pair ->
+            acc && pair.second?.let {
+                send(kafkaPersonTopic, pair.first.toByteArray(), it.toByteArray()).also { workMetrics.publishedPersons.inc() }
+            } ?: sendNullValue(kafkaPersonTopic, pair.first.toByteArray()).also { workMetrics.publishedTombestones.inc() }
+        }.let { sent ->
+            when (sent) {
+                true -> exitReason = ExitReason.Work
+                false -> {
+                    exitReason = ExitReason.InvalidCache
+                    workMetrics.producerIssues.inc()
+                    log.error { "Init load - Producer has issues sending to topic" }
                 }
-            }.fold(true) { acc, pair ->
-                        acc && pair.second?.let {
-                            send(kafkaPersonTopic, pair.first.toByteArray(), it.toByteArray()).also { workMetrics.publishedPersons.inc() }
-                        } ?: sendNullValue(kafkaPersonTopic, pair.first.toByteArray()).also { workMetrics.publishedTombestones.inc() }
-                    }.let { sent ->
-                        when (sent) {
-                            true -> KafkaConsumerStates.IsOk
-                            false -> KafkaConsumerStates.HasIssues.also {
-                                workMetrics.producerIssues.inc()
-                                log.error { "Init load - Producer has issues sending to topic" }
-                            }
-                        }
-                    }
+            }
         }
     }
-
-    return ExitReason.Work
+    return exitReason
 }
 
 @UnstableDefault
