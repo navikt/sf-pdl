@@ -399,7 +399,7 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
     }
 
     workMetrics.noOfKakfaRecordsPdl.inc(initPopulation.records.size.toDouble())
-    log.info{"Initial load unique population count : ${initPopulation.records.size}"}
+    log.info { "Initial load unique population count : ${initPopulation.records.size}" }
 
     var exitReason: ExitReason = ExitReason.Work
 
@@ -487,7 +487,7 @@ internal fun work(ws: WorkSettings): Pair<WorkSettings, ExitReason> {
 
         val kafkaConsumerPdl = AKafkaConsumer<String, String>(
                 config = ws.kafkaConsumerPdl,
-                fromBeginning = FilterBase.filterSettingsDiffer(ws.filterEnabled, ws.filter, ws.prevEnabled, ws.prevFilter) || cache.isEmpty
+                fromBeginning = !ws.initialLoad && (FilterBase.filterSettingsDiffer(ws.filterEnabled, ws.filter, ws.prevEnabled, ws.prevFilter) || cache.isEmpty)
         )
         exitReason = ExitReason.NoKafkaConsumer
 
