@@ -36,6 +36,7 @@ object Bootstrap {
                     return@enableNAISAPI
                 }
                 log.info { "Initial load done." }
+                conditionalWait()
             }
             loop(ws)
         }

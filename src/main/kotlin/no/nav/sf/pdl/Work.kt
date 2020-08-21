@@ -399,6 +399,7 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
     }
 
     workMetrics.noOfKakfaRecordsPdl.inc(initPopulation.records.size.toDouble())
+    log.info{"Initial load unique population count : ${initPopulation.records.size}"}
 
     var exitReason: ExitReason = ExitReason.Work
 
