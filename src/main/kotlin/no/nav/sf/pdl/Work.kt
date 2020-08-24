@@ -259,7 +259,8 @@ sealed class FilterBase {
                         it.region == p.region && (it.municipals.isEmpty() || it.municipals.contains(p.kommunenummer))
             }
             if (initial) {
-                if (approved) workMetrics.initialFilterApproved.inc() else workMetrics.initialFilterDisproved.inc()
+                // Will trigger on each historical message Hard to understand
+                // if (approved) workMetrics.initialFilterApproved.inc() else workMetrics.initialFilterDisproved.inc()
             } else {
                 if (approved) workMetrics.filterApproved.inc() else workMetrics.filterDisproved.inc()
             }
