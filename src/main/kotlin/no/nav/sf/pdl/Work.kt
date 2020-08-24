@@ -420,6 +420,7 @@ internal fun createTombeStonePair(key: String): Pair<KafkaConsumerStates, Person
 
 @ImplicitReflectionSerializer
 internal fun initLoad(ws: WorkSettings): ExitReason {
+    workMetrics.clearAll()
     /**
      * Check - no filter means nothing to transfer, leaving
      */
