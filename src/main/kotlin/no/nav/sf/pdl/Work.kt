@@ -194,6 +194,11 @@ data class WMetrics(
             .build()
             .name("producer_issues")
             .help("producer issues")
+            .register(),
+    val latestInitBatch: Gauge = Gauge
+            .build()
+            .name("latest_init_batch")
+            .help("latest init batch")
             .register()
 ) {
     enum class AddressType {
@@ -201,6 +206,7 @@ data class WMetrics(
     }
 
     fun clearAll() {
+        this.latestInitBatch.clear()
         this.noOfPersonSf.clear()
         this.noOfTombestone.clear()
         this.noOfKakfaRecordsPdl.clear()
@@ -434,6 +440,8 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
     log.info { "initLoad - Continue work with filter enabled: $filterEnabled" }
 
     for (firstDigit in 0..9) {
+        log.info { "Commencing pdl topic read for population initialization batch ${firstDigit + 1}/10..." }
+        workMetrics.latestInitBatch.set((firstDigit + 1).toDouble())
         val exitReason = initLoadPortion(firstDigit, ws, personFilter, filterEnabled)
         if (exitReason != ExitReason.Work) {
             return exitReason
