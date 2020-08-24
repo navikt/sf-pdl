@@ -89,6 +89,18 @@ data class WMetrics(
             .name("no_initial_kafkarecords_pdl_gauge")
             .help("No. of kafka records pdl")
             .register(),
+    val noOfInitialTombestone: Gauge = Gauge
+            .build()
+            .name("no_initial_tombestones")
+            .help("No. of kafka records pdl")
+            .register(),
+
+    val noOfInitialPersonSf: Gauge = Gauge
+            .build()
+            .name("no_initial_parsed_persons")
+            .help("No. of parsed person sf")
+            .register(),
+
     val noOfTombestone: Gauge = Gauge
             .build()
             .name("no_tombestones")
@@ -113,9 +125,19 @@ data class WMetrics(
             .labelNames("type")
             .help("No. of address types used in last work session")
             .register(),
+    val initiallyPublishedPersons: Gauge = Gauge
+            .build()
+            .name("initially_published_person_gauge")
+            .help("No. of persons published to kafka in last work session")
+            .register(),
     val publishedPersons: Gauge = Gauge
             .build()
             .name("published_person_gauge")
+            .help("No. of persons published to kafka in last work session")
+            .register(),
+    val initiallyPublishedTombestones: Gauge = Gauge
+            .build()
+            .name("initially_published_tombestone_gauge")
             .help("No. of persons published to kafka in last work session")
             .register(),
     val publishedTombestones: Gauge = Gauge
@@ -153,6 +175,16 @@ data class WMetrics(
             .name("filter_disproved")
             .help("filter disproved")
             .register(),
+    val initialFilterApproved: Gauge = Gauge
+            .build()
+            .name("initial_filter_approved")
+            .help("filter approved")
+            .register(),
+    val initialFilterDisproved: Gauge = Gauge
+            .build()
+            .name("initial_filter_disproved")
+            .help("filter disproved")
+            .register(),
     val consumerIssues: Gauge = Gauge
             .build()
             .name("consumer_issues")
@@ -173,16 +205,22 @@ data class WMetrics(
         this.noOfTombestone.clear()
         this.noOfKakfaRecordsPdl.clear()
         this.noOfInitialKakfaRecordsPdl.clear()
+        this.noOfInitialPersonSf.clear()
+        this.noOfInitialTombestone.clear()
         this.sizeOfCache.clear()
         this.usedAddressTypes.clear()
         this.publishedPersons.clear()
         this.publishedTombestones.clear()
+        this.initiallyPublishedPersons.clear()
+        this.initiallyPublishedTombestones.clear()
         this.cacheIsNewOrUpdated_differentHash.clear()
         this.cacheIsNewOrUpdated_existing_to_tombestone.clear()
         this.cacheIsNewOrUpdated_noKey.clear()
         this.cacheIsNewOrUpdated_no_blocked.clear()
         this.filterApproved.clear()
         this.filterDisproved.clear()
+        this.initialFilterApproved.clear()
+        this.initialFilterDisproved.clear()
         this.consumerIssues.clear()
         this.producerIssues.clear()
     }
@@ -215,12 +253,16 @@ sealed class FilterBase {
         val regions: List<Region>
     ) : FilterBase() {
 
-        fun approved(p: PersonSf): Boolean {
+        fun approved(p: PersonSf, initial: Boolean = false): Boolean {
             val approved = regions.any {
                 !p.doed &&
                         it.region == p.region && (it.municipals.isEmpty() || it.municipals.contains(p.kommunenummer))
             }
-            if (approved) workMetrics.filterApproved.inc() else workMetrics.filterDisproved.inc()
+            if (initial) {
+                if (approved) workMetrics.initialFilterApproved.inc() else workMetrics.initialFilterDisproved.inc()
+            } else {
+                if (approved) workMetrics.filterApproved.inc() else workMetrics.filterDisproved.inc()
+            }
             return approved
         }
     }
@@ -416,6 +458,8 @@ fun initLoadPortion(firstDigit: Int, ws: WorkSettings, personFilter: FilterBase.
     }
 
     workMetrics.noOfInitialKakfaRecordsPdl.inc(initPopulation.records.size.toDouble())
+    workMetrics.noOfInitialTombestone.inc(initPopulation.records.filter { cr -> cr.value is PersonTombestone }.size.toDouble())
+    workMetrics.noOfInitialPersonSf.inc(initPopulation.records.filter { cr -> cr.value is PersonSf }.size.toDouble())
     log.info { "Initial (portion ${firstDigit + 1} of 10) load unique population count : ${initPopulation.records.size}" }
 
     var exitReason: ExitReason = ExitReason.Work
@@ -431,8 +475,8 @@ fun initLoadPortion(firstDigit: Int, ws: WorkSettings, personFilter: FilterBase.
             }
         }.fold(true) { acc, pair ->
             acc && pair.second?.let {
-                send(kafkaPersonTopic, pair.first.toByteArray(), it.toByteArray()).also { workMetrics.publishedPersons.inc() }
-            } ?: sendNullValue(kafkaPersonTopic, pair.first.toByteArray()).also { workMetrics.publishedTombestones.inc() }
+                send(kafkaPersonTopic, pair.first.toByteArray(), it.toByteArray()).also { workMetrics.initiallyPublishedPersons.inc() }
+            } ?: sendNullValue(kafkaPersonTopic, pair.first.toByteArray()).also { workMetrics.initiallyPublishedTombestones.inc() }
         }.let { sent ->
             when (sent) {
                 true -> exitReason = ExitReason.Work

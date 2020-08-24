@@ -65,7 +65,7 @@ fun <K, V> getInitPopulation(
                                         cr ->
                                         if (cr.value() == null) {
                                             val personTombestone = PersonTombestone(aktoerId = cr.key())
-                                            workMetrics.noOfTombestone.inc()
+                                            // workMetrics.noOfTombestone.inc()
                                             Pair(cr.key(), personTombestone)
                                         } else {
                                             when (val query = cr.value().getQueryFromJson()) {
@@ -76,7 +76,7 @@ fun <K, V> getInitPopulation(
                                                 is Query -> {
                                                     when (val personSf = query.toPersonSf()) {
                                                         is PersonSf -> {
-                                                            workMetrics.noOfPersonSf.inc()
+                                                            // workMetrics.noOfPersonSf.inc()
                                                             Pair(cr.key(), personSf)
                                                         }
                                                         is PersonInvalid -> {
@@ -91,7 +91,7 @@ fun <K, V> getInitPopulation(
                                             }
                                         }
                                     }.filter { // Apply filter if enabled
-                                        p -> !filterEnabled || p.second is PersonTombestone || (p.second is PersonSf && filter.approved(p.second as PersonSf))
+                                        p -> !filterEnabled || p.second is PersonTombestone || (p.second is PersonSf && filter.approved(p.second as PersonSf, true))
                                     }))
                                 }
                             }
