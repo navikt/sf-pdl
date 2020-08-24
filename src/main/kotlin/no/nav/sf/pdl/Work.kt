@@ -84,7 +84,11 @@ data class WMetrics(
             .name("no_kafkarecords_pdl_gauge")
             .help("No. of kafka records pdl")
             .register(),
-
+    val noOfInitialKakfaRecordsPdl: Gauge = Gauge
+            .build()
+            .name("no_initial_kafkarecords_pdl_gauge")
+            .help("No. of kafka records pdl")
+            .register(),
     val noOfTombestone: Gauge = Gauge
             .build()
             .name("no_tombestones")
@@ -168,6 +172,7 @@ data class WMetrics(
         this.noOfPersonSf.clear()
         this.noOfTombestone.clear()
         this.noOfKakfaRecordsPdl.clear()
+        this.noOfInitialKakfaRecordsPdl.clear()
         this.sizeOfCache.clear()
         this.usedAddressTypes.clear()
         this.publishedPersons.clear()
@@ -384,29 +389,41 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
     val filterEnabled = ws.filterEnabled
     log.info { "initLoad - Continue work with filter enabled: $filterEnabled" }
 
-    val initTmp = getInitPopulation<String, String>(ws.kafkaConsumerPdl)
+    for (firstDigit in 0..9) {
+        val exitReason = initLoadPortion(firstDigit, ws, personFilter, filterEnabled)
+        if (exitReason != ExitReason.Work) {
+            return exitReason
+        }
+    }
+
+    return ExitReason.Work
+}
+
+@ImplicitReflectionSerializer
+fun initLoadPortion(firstDigit: Int, ws: WorkSettings, personFilter: FilterBase.Exists, filterEnabled: Boolean): ExitReason {
+    val initTmp = getInitPopulation<String, String>(firstDigit, ws.kafkaConsumerPdl, personFilter, filterEnabled)
 
     if (initTmp !is InitPopulation.Exist) {
-        log.error { "initLoad - could not create init population" }
+        log.error { "initLoad (portion ${firstDigit + 1} of 10) - could not create init population" }
         return ExitReason.NoFilter
     }
 
     val initPopulation = (initTmp as InitPopulation.Exist)
 
     if (!initPopulation.isValid()) {
-        log.error { "initLoad - init population invalid" }
+        log.error { "initLoad (portion ${firstDigit + 1} of 10) - init population invalid" }
         return ExitReason.NoFilter
     }
 
-    workMetrics.noOfKakfaRecordsPdl.inc(initPopulation.records.size.toDouble())
-    log.info { "Initial load unique population count : ${initPopulation.records.size}" }
+    workMetrics.noOfInitialKakfaRecordsPdl.inc(initPopulation.records.size.toDouble())
+    log.info { "Initial (portion ${firstDigit + 1} of 10) load unique population count : ${initPopulation.records.size}" }
 
     var exitReason: ExitReason = ExitReason.Work
 
     AKafkaProducer<ByteArray, ByteArray>(
             config = ws.kafkaProducerPerson
     ).produce {
-        initPopulation.records.filter { it.value is PersonTombestone || !filterEnabled || (it.value is PersonSf && personFilter.approved(it.value as PersonSf)) }.map {
+        initPopulation.records.map { // Assuming initPopulation is already filtered
             if (it.value is PersonSf) {
                 (it.value as PersonSf).toPersonProto()
             } else {
@@ -422,7 +439,7 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
                 false -> {
                     exitReason = ExitReason.InvalidCache
                     workMetrics.producerIssues.inc()
-                    log.error { "Init load - Producer has issues sending to topic" }
+                    log.error { "Init load (portion ${firstDigit + 1} of 10) - Producer has issues sending to topic" }
                 }
             }
         }

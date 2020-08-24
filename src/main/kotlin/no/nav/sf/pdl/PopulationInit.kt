@@ -28,7 +28,10 @@ fun InitPopulation.Exist.isValid(): Boolean {
 
 @ImplicitReflectionSerializer
 fun <K, V> getInitPopulation(
+    firstDigit: Int,
     config: Map<String, Any>,
+    filter: FilterBase.Exists,
+    filterEnabled: Boolean,
     topics: List<String> = AnEnvironment.getEnvOrDefault(EV_kafkaTopics, PROGNAME).getKafkaTopics()
 ): InitPopulation =
         try {
@@ -41,32 +44,33 @@ fun <K, V> getInitPopulation(
                                     }
                             )
                         }.onFailure {
-                            log.error { "Failure during topic partition(s) assignment for $topics - ${it.message}" }
+                            log.error { "InitPopulation (portion ${firstDigit + 1} of 10) Failure during topic partition(s) assignment for $topics - ${it.message}" }
                         }
                     }
                     .use { c ->
                         c.runCatching { seekToBeginning(emptyList()) }
-                                .onFailure { log.error { "Failure during SeekToBeginning - ${it.message}" } }
+                                .onFailure { log.error { "InitPopulation (portion ${firstDigit + 1} of 10) Failure during SeekToBeginning - ${it.message}" } }
 
                         tailrec fun loop(records: Map<String, PersonBase>): InitPopulation = when {
                             ShutdownHook.isActive() || PrestopHook.isActive() -> InitPopulation.Interrupted
                             else -> {
                                 val cr = c.runCatching { Pair(true, poll(Duration.ofMillis(3_000)) as ConsumerRecords<String, String>) }
-                                        .onFailure { log.error { "Failure during poll - ${it.localizedMessage}" } }
+                                        .onFailure { log.error { "InitPopulation (portion ${firstDigit + 1} of 10) Failure during poll - ${it.localizedMessage}" } }
                                         .getOrDefault(Pair(false, ConsumerRecords<String, String>(emptyMap())))
                                 when {
                                     !cr.first -> InitPopulation.Failure
                                     cr.second.isEmpty -> InitPopulation.Exist(records)
-                                    else -> loop((records + cr.second.map { cr ->
+                                    // Only deal with messages with key starting with firstDigit (current portion of 10):
+                                    else -> loop((records + cr.second.filter { cr -> Character.getNumericValue(cr.key()[0]) == firstDigit }.map {
+                                        cr ->
                                         if (cr.value() == null) {
                                             val personTombestone = PersonTombestone(aktoerId = cr.key())
                                             workMetrics.noOfTombestone.inc()
                                             Pair(cr.key(), personTombestone)
                                         } else {
-                                            // log.info { "debug Consumer record value consumed: ${cr.value()} " }
                                             when (val query = cr.value().getQueryFromJson()) {
                                                 InvalidQuery -> {
-                                                    log.error { "Unable to parse topic value PDL" }
+                                                    log.error { "InitPopulation (portion ${firstDigit + 1} of 10) Unable to parse topic value PDL" }
                                                     Pair(cr.key(), PersonInvalid)
                                                 }
                                                 is Query -> {
@@ -79,20 +83,22 @@ fun <K, V> getInitPopulation(
                                                             Pair(cr.key(), PersonInvalid)
                                                         }
                                                         else -> {
-                                                            log.error { "Returned unhandled PersonBase from Query.toPersonSf" }
+                                                            log.error { "InitPopulation (portion ${firstDigit + 1} of 10) Returned unhandled PersonBase from Query.toPersonSf" }
                                                             Pair(cr.key(), PersonInvalid)
                                                         }
                                                     }
                                                 }
                                             }
                                         }
+                                    }.filter { // Apply filter if enabled
+                                        p -> !filterEnabled || p.second is PersonTombestone || (p.second is PersonSf && filter.approved(p.second as PersonSf))
                                     }))
                                 }
                             }
                         }
-                        loop(emptyMap()).also { log.info { "Closing KafkaConsumer" } }
+                        loop(emptyMap()).also { log.info { "InitPopulation (portion ${firstDigit + 1} of 10) Closing KafkaConsumer" } }
                     }
         } catch (e: Exception) {
-            log.error { "Failure during kafka consumer construction - ${e.message}" }
+            log.error { "InitPopulation (portion ${firstDigit + 1} of 10) Failure during kafka consumer construction - ${e.message}" }
             InitPopulation.Failure
         }
