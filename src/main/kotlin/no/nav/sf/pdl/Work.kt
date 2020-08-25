@@ -199,6 +199,11 @@ data class WMetrics(
             .build()
             .name("latest_init_batch")
             .help("latest init batch")
+            .register(),
+    val initRecordsParsed: Gauge = Gauge
+            .build()
+            .name("init_records_parsed")
+            .help("init_records_parsed")
             .register()
 ) {
     enum class AddressType {
@@ -206,6 +211,7 @@ data class WMetrics(
     }
 
     fun clearAll() {
+        this.initRecordsParsed.clear()
         this.latestInitBatch.clear()
         this.noOfPersonSf.clear()
         this.noOfTombestone.clear()
@@ -281,11 +287,11 @@ sealed class FilterBase {
     )
 
     companion object {
-        fun fromJson(data: String): FilterBase = runCatching {
-            log.info { "Ready to parse filter as json - $data" }
+        fun fromJson(data: String, srcText: String = "vault"): FilterBase = runCatching {
+            log.info { "Ready to parse filter from $srcText as json - $data" }
             json.parse(Exists.serializer(), data)
         }
-                .onFailure { log.error { "Parsing of person filter in vault failed - ${it.localizedMessage}" } }
+                .onFailure { log.error { "Parsing of person filter from $srcText failed - ${it.localizedMessage}" } }
                 .getOrDefault(Missing)
 
         fun fromS3(): FilterBase =
@@ -293,7 +299,7 @@ sealed class FilterBase {
                     if (storedFilterJson.isEmpty()) {
                         Missing
                     } else {
-                        fromJson(storedFilterJson)
+                        fromJson(storedFilterJson, "S3")
                     }
                 }
 
@@ -439,10 +445,10 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
     val filterEnabled = ws.filterEnabled
     log.info { "initLoad - Continue work with filter enabled: $filterEnabled" }
 
-    for (firstDigit in 0..9) {
-        log.info { "Commencing pdl topic read for population initialization batch ${firstDigit + 1}/10..." }
-        workMetrics.latestInitBatch.set((firstDigit + 1).toDouble())
-        val exitReason = initLoadPortion(firstDigit, ws, personFilter, filterEnabled)
+    for (lastDigit in 0..9) {
+        log.info { "Commencing pdl topic read for population initialization batch ${lastDigit + 1}/10..." }
+        workMetrics.latestInitBatch.set((lastDigit + 1).toDouble())
+        val exitReason = initLoadPortion(lastDigit, ws, personFilter, filterEnabled)
         if (exitReason != ExitReason.Work) {
             return exitReason
         }
@@ -452,25 +458,25 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
 }
 
 @ImplicitReflectionSerializer
-fun initLoadPortion(firstDigit: Int, ws: WorkSettings, personFilter: FilterBase.Exists, filterEnabled: Boolean): ExitReason {
-    val initTmp = getInitPopulation<String, String>(firstDigit, ws.kafkaConsumerPdl, personFilter, filterEnabled)
+fun initLoadPortion(lastDigit: Int, ws: WorkSettings, personFilter: FilterBase.Exists, filterEnabled: Boolean): ExitReason {
+    val initTmp = getInitPopulation<String, String>(lastDigit, ws.kafkaConsumerPdl, personFilter, filterEnabled)
 
     if (initTmp !is InitPopulation.Exist) {
-        log.error { "initLoad (portion ${firstDigit + 1} of 10) - could not create init population" }
+        log.error { "initLoad (portion ${lastDigit + 1} of 10) - could not create init population" }
         return ExitReason.NoFilter
     }
 
     val initPopulation = (initTmp as InitPopulation.Exist)
 
     if (!initPopulation.isValid()) {
-        log.error { "initLoad (portion ${firstDigit + 1} of 10) - init population invalid" }
+        log.error { "initLoad (portion ${lastDigit + 1} of 10) - init population invalid" }
         return ExitReason.NoFilter
     }
 
     workMetrics.noOfInitialKakfaRecordsPdl.inc(initPopulation.records.size.toDouble())
     workMetrics.noOfInitialTombestone.inc(initPopulation.records.filter { cr -> cr.value is PersonTombestone }.size.toDouble())
     workMetrics.noOfInitialPersonSf.inc(initPopulation.records.filter { cr -> cr.value is PersonSf }.size.toDouble())
-    log.info { "Initial (portion ${firstDigit + 1} of 10) load unique population count : ${initPopulation.records.size}" }
+    log.info { "Initial (portion ${lastDigit + 1} of 10) load unique population count : ${initPopulation.records.size}" }
 
     var exitReason: ExitReason = ExitReason.Work
 
@@ -493,7 +499,7 @@ fun initLoadPortion(firstDigit: Int, ws: WorkSettings, personFilter: FilterBase.
                 false -> {
                     exitReason = ExitReason.InvalidCache
                     workMetrics.producerIssues.inc()
-                    log.error { "Init load (portion ${firstDigit + 1} of 10) - Producer has issues sending to topic" }
+                    log.error { "Init load (portion ${lastDigit + 1} of 10) - Producer has issues sending to topic" }
                 }
             }
         }
