@@ -1,7 +1,6 @@
 package no.nav.sf.pdl
 
 import io.confluent.kafka.serializers.KafkaAvroDeserializer
-import io.prometheus.client.Gauge
 import kotlinx.serialization.ImplicitReflectionSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UnstableDefault
@@ -75,168 +74,10 @@ data class WorkSettings(
 
     val prevEnabled: Boolean = FilterBase.flagFromS3(),
 
-    val initialLoad: Boolean = AVault.getSecretOrDefault(VAULT_initialLoad) == true.toString()
+    val initialLoad: Boolean = AVault.getSecretOrDefault(VAULT_initialLoad) == true.toString(),
+
+    val cache: Cache.Exist = Cache.newEmpty()
 )
-
-data class WMetrics(
-    val noOfKakfaRecordsPdl: Gauge = Gauge
-            .build()
-            .name("no_kafkarecords_pdl_gauge")
-            .help("No. of kafka records pdl")
-            .register(),
-    val noOfInitialKakfaRecordsPdl: Gauge = Gauge
-            .build()
-            .name("no_initial_kafkarecords_pdl_gauge")
-            .help("No. of kafka records pdl")
-            .register(),
-    val noOfInitialTombestone: Gauge = Gauge
-            .build()
-            .name("no_initial_tombestones")
-            .help("No. of kafka records pdl")
-            .register(),
-
-    val noOfInitialPersonSf: Gauge = Gauge
-            .build()
-            .name("no_initial_parsed_persons")
-            .help("No. of parsed person sf")
-            .register(),
-
-    val noOfTombestone: Gauge = Gauge
-            .build()
-            .name("no_tombestones")
-            .help("No. of kafka records pdl")
-            .register(),
-
-    val noOfPersonSf: Gauge = Gauge
-            .build()
-            .name("no_parsed_persons")
-            .help("No. of parsed person sf")
-            .register(),
-
-    val sizeOfCache: Gauge = Gauge
-            .build()
-            .name("size_of_cache")
-            .help("Size of person cache")
-            .register(),
-
-    val usedAddressTypes: Gauge = Gauge
-            .build()
-            .name("used_address_gauge")
-            .labelNames("type")
-            .help("No. of address types used in last work session")
-            .register(),
-    val initiallyPublishedPersons: Gauge = Gauge
-            .build()
-            .name("initially_published_person_gauge")
-            .help("No. of persons published to kafka in last work session")
-            .register(),
-    val publishedPersons: Gauge = Gauge
-            .build()
-            .name("published_person_gauge")
-            .help("No. of persons published to kafka in last work session")
-            .register(),
-    val initiallyPublishedTombestones: Gauge = Gauge
-            .build()
-            .name("initially_published_tombestone_gauge")
-            .help("No. of persons published to kafka in last work session")
-            .register(),
-    val publishedTombestones: Gauge = Gauge
-            .build()
-            .name("published_tombestone_gauge")
-            .help("No. of tombestones published to kafka in last work session")
-            .register(),
-    val cacheIsNewOrUpdated_noKey: Gauge = Gauge
-            .build()
-            .name("cache_no_key")
-            .help("cache no key")
-            .register(),
-    val cacheIsNewOrUpdated_differentHash: Gauge = Gauge
-            .build()
-            .name("cache_different_hash")
-            .help("cache different hash")
-            .register(),
-    val cacheIsNewOrUpdated_existing_to_tombestone: Gauge = Gauge
-            .build()
-            .name("cache_existing_to")
-            .help("cache existing to")
-            .register(),
-    val cacheIsNewOrUpdated_no_blocked: Gauge = Gauge
-            .build()
-            .name("cache_no_blocked")
-            .help("cache no blocked")
-            .register(),
-    val filterApproved: Gauge = Gauge
-            .build()
-            .name("filter_approved")
-            .help("filter approved")
-            .register(),
-    val filterDisproved: Gauge = Gauge
-            .build()
-            .name("filter_disproved")
-            .help("filter disproved")
-            .register(),
-    val initialFilterApproved: Gauge = Gauge
-            .build()
-            .name("initial_filter_approved")
-            .help("filter approved")
-            .register(),
-    val initialFilterDisproved: Gauge = Gauge
-            .build()
-            .name("initial_filter_disproved")
-            .help("filter disproved")
-            .register(),
-    val consumerIssues: Gauge = Gauge
-            .build()
-            .name("consumer_issues")
-            .help("consumer issues")
-            .register(),
-    val producerIssues: Gauge = Gauge
-            .build()
-            .name("producer_issues")
-            .help("producer issues")
-            .register(),
-    val latestInitBatch: Gauge = Gauge
-            .build()
-            .name("latest_init_batch")
-            .help("latest init batch")
-            .register(),
-    val initRecordsParsed: Gauge = Gauge
-            .build()
-            .name("init_records_parsed")
-            .help("init_records_parsed")
-            .register()
-) {
-    enum class AddressType {
-        VEGAADRESSE, MATRIKKELADRESSE, UKJENTBOSTED, INGEN
-    }
-
-    fun clearAll() {
-        this.initRecordsParsed.clear()
-        this.latestInitBatch.clear()
-        this.noOfPersonSf.clear()
-        this.noOfTombestone.clear()
-        this.noOfKakfaRecordsPdl.clear()
-        this.noOfInitialKakfaRecordsPdl.clear()
-        this.noOfInitialPersonSf.clear()
-        this.noOfInitialTombestone.clear()
-        this.sizeOfCache.clear()
-        this.usedAddressTypes.clear()
-        this.publishedPersons.clear()
-        this.publishedTombestones.clear()
-        this.initiallyPublishedPersons.clear()
-        this.initiallyPublishedTombestones.clear()
-        this.cacheIsNewOrUpdated_differentHash.clear()
-        this.cacheIsNewOrUpdated_existing_to_tombestone.clear()
-        this.cacheIsNewOrUpdated_noKey.clear()
-        this.cacheIsNewOrUpdated_no_blocked.clear()
-        this.filterApproved.clear()
-        this.filterDisproved.clear()
-        this.initialFilterApproved.clear()
-        this.initialFilterDisproved.clear()
-        this.consumerIssues.clear()
-        this.producerIssues.clear()
-    }
-}
 
 val workMetrics = WMetrics()
 
@@ -323,31 +164,6 @@ sealed class FilterBase {
     }
 }
 
-sealed class Population {
-    object Missing : Population()
-    object Invalid : Population()
-
-    data class Exist(val map: Map<String, String?>) : Population()
-
-    companion object {
-        fun load(kafkaConsumerConfig: Map<String, Any>, topic: String): Population = kotlin.runCatching {
-            when (val result = getAllRecords<String, String>(kafkaConsumerConfig, listOf(topic))) {
-                is AllRecords.Exist -> {
-                    if (result.hasMissingKey())
-                        Population.Invalid
-                                .also { log.error { "Topic has null in key" } } // Allow null vaule because of Tombestone
-                    else {
-                        Population.Exist(result.getKeysValues().map { it.k to it.v }.toMap()).also { log.info { "Population size is ${it.map.size}" } }
-                    }
-                }
-                else -> Population.Missing
-            }
-        }
-                .onFailure { log.error { "Error building Population map - ${it.message}" } }
-                .getOrDefault(Population.Invalid)
-    }
-}
-
 /**
  * A minimum cache as a map of persons aktørId and hash code of person details
  */
@@ -378,6 +194,8 @@ sealed class Cache {
                 false
             }
         }
+
+        internal fun withNewRecords(newRecords: Map<String, Int?>): Exist = Exist(map + newRecords)
     }
 
     companion object {
@@ -397,39 +215,15 @@ sealed class Cache {
         }
                 .onFailure { log.error { "Error building Cache - ${it.message}" } }
                 .getOrDefault(Invalid)
+
+        fun newEmpty(): Exist = Exist(emptyMap())
     }
 }
 
-@ImplicitReflectionSerializer
-internal fun createPersonPair(value: String): Pair<KafkaConsumerStates, PersonBase> {
-    return when (val query = value.getQueryFromJson()) {
-        InvalidQuery -> {
-            log.error { "Unable to parse topic value PDL" }
-            Pair(KafkaConsumerStates.HasIssues, PersonInvalid)
-        }
-        is Query -> {
-            when (val personSf = query.toPersonSf()) {
-                is PersonSf -> {
-                    workMetrics.noOfPersonSf.inc()
-                    Pair(KafkaConsumerStates.IsOk, personSf)
-                }
-                is PersonInvalid -> {
-                    Pair(KafkaConsumerStates.HasIssues, PersonInvalid)
-                }
-                else -> {
-                    log.error { "Returned unhandled PersonBase from Query.toPersonSf" }
-                    Pair(KafkaConsumerStates.HasIssues, PersonInvalid)
-                }
-            }
-        }
-    }
-}
-
-internal fun createTombeStonePair(key: String): Pair<KafkaConsumerStates, PersonBase> {
-    val personTombestone = PersonTombestone(aktoerId = key)
-    workMetrics.noOfTombestone.inc()
-    return Pair(KafkaConsumerStates.IsOk, personTombestone)
-}
+// fun <K, V> KafkaProducer<K, V>.sendNullValueAndCollect(topic: String, key: K, dst: MutableMap<String, Int?>) : Boolean {
+//    dst[key as String] = null
+//    return this.sendNullValue(topic, key)
+// }
 
 @ImplicitReflectionSerializer
 internal fun initLoad(ws: WorkSettings): ExitReason {
@@ -510,7 +304,7 @@ fun initLoadPortion(lastDigit: Int, ws: WorkSettings, personFilter: FilterBase.E
 @UnstableDefault
 @ImplicitReflectionSerializer
 @ExperimentalStdlibApi
-internal fun work(ws: WorkSettings): Pair<WorkSettings, ExitReason> {
+internal fun work(ws: WorkSettings): Triple<WorkSettings, ExitReason, Cache.Exist> {
     log.info { "bootstrap work session starting" }
 
     workMetrics.clearAll()
@@ -520,30 +314,40 @@ internal fun work(ws: WorkSettings): Pair<WorkSettings, ExitReason> {
      */
     if (ws.filter is FilterBase.Missing) {
         log.warn { "No filter for activities, leaving" }
-        return Pair(ws, ExitReason.NoFilter)
+        return Triple(ws, ExitReason.NoFilter, ws.cache)
     }
     val personFilter = ws.filter as FilterBase.Exists
     val filterEnabled = ws.filterEnabled
     log.info { "Continue work with filter enabled: $filterEnabled" }
+
     /**
      * Check - no cache means no answer for a new event;
      * - is a new activity id
      * - existing activity id, but updated activity details
      * -> leaving
      */
-    val tmp = Cache.load(ws.kafkaConsumerPerson, kafkaPersonTopic)
-    if (tmp is Cache.Missing) {
-        log.error { "Could not read cache, leaving" }
-        return Pair(ws, ExitReason.NoCache)
-    } else if (tmp is Cache.Invalid) {
-        log.error { "Invalid cache, leaving" }
-        return Pair(ws, ExitReason.InvalidCache)
+
+    var tmp: Cache
+    if (ws.cache.isEmpty) {
+        log.info { "No cache in memory will load cache from topic $kafkaPersonTopic" }
+        tmp = Cache.load(ws.kafkaConsumerPerson, kafkaPersonTopic)
+        if (tmp is Cache.Missing) {
+            log.error { "Could not read cache, leaving" }
+            return Triple(ws, ExitReason.NoCache, ws.cache)
+        } else if (tmp is Cache.Invalid) {
+            log.error { "Invalid cache, leaving" }
+            return Triple(ws, ExitReason.InvalidCache, ws.cache)
+        }
+    } else {
+        log.info { "Will use cache from previous work run" }
+        tmp = ws.cache
     }
 
     val cache = tmp as Cache.Exist
-    workMetrics.sizeOfCache.set(cache.map.size.toDouble())
+    val newRecords: MutableMap<String, Int?> = mutableMapOf()
 
-    log.info { "Continue work with Cache" }
+    workMetrics.sizeOfCache.set(cache.map.size.toDouble())
+    log.info { "Current cache size is ${cache.map.size} - continue work..." }
 
     var exitReason: ExitReason = ExitReason.NoKafkaProducer
     AKafkaProducer<ByteArray, ByteArray>(
@@ -621,8 +425,13 @@ internal fun work(ws: WorkSettings): Pair<WorkSettings, ExitReason> {
                 }.filter { cache.isNewOrUpdated(it) }
                         .fold(true) { acc, pair ->
                             acc && pair.second?.let {
+                                newRecords[pair.first.aktoerId] = it.hashCode()
                                 send(kafkaPersonTopic, pair.first.toByteArray(), it.toByteArray()).also { workMetrics.publishedPersons.inc() }
-                            } ?: sendNullValue(kafkaPersonTopic, pair.first.toByteArray()).also { workMetrics.publishedTombestones.inc() }
+                                // it.k.protobufSafeParseKey().aktoerId to it.v.protobufSafeParseValue().hashCode()
+                                // newRecords[pair.first.aktoerId] = it.hashCode()
+                            } ?: sendNullValue(kafkaPersonTopic, pair.first.toByteArray()).also {
+                                workMetrics.publishedTombestones.inc()
+                            }
                         }.let { sent ->
                             when (sent) {
                                 true -> KafkaConsumerStates.IsOk
@@ -645,9 +454,10 @@ internal fun work(ws: WorkSettings): Pair<WorkSettings, ExitReason> {
         log.info { "Successful work session finished, will persist filter settings as current cache base" }
         S3Client.persistToS3(json.toJson(FilterBase.Exists.serializer(), personFilter).toString())
         S3Client.persistFlagToS3(filterEnabled)
+        return Triple(ws, exitReason, cache.withNewRecords(newRecords))
     } else {
         log.warn { "Failed work session - will not update cache base" }
     }
 
-    return Pair(ws, exitReason)
+    return Triple(ws, exitReason, cache)
 }

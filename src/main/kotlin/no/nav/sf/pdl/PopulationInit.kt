@@ -4,12 +4,8 @@ import java.time.Duration
 import java.util.Properties
 import kotlinx.serialization.ImplicitReflectionSerializer
 import mu.KotlinLogging
-import no.nav.sf.library.AnEnvironment
-import no.nav.sf.library.EV_kafkaTopics
-import no.nav.sf.library.PROGNAME
 import no.nav.sf.library.PrestopHook
 import no.nav.sf.library.ShutdownHook
-import no.nav.sf.library.getKafkaTopics
 import org.apache.kafka.clients.consumer.ConsumerRecords
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.common.TopicPartition
@@ -32,7 +28,7 @@ fun <K, V> getInitPopulation(
     config: Map<String, Any>,
     filter: FilterBase.Exists,
     filterEnabled: Boolean,
-    topics: List<String> = AnEnvironment.getEnvOrDefault(EV_kafkaTopics, PROGNAME).getKafkaTopics()
+    topics: List<String> = listOf(kafkaPDLTopic)
 ): InitPopulation =
         try {
             KafkaConsumer<K, V>(Properties().apply { config.forEach { set(it.key, it.value) } })

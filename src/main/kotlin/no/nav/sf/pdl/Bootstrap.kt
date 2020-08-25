@@ -54,7 +54,8 @@ object Bootstrap {
                     .let { prevWS ->
                         prevWS.first.copy(
                                 prevFilter = FilterBase.fromS3(), // Fetch filter from last successful work session
-                                prevEnabled = FilterBase.flagFromS3()
+                                prevEnabled = FilterBase.flagFromS3(),
+                                cache = prevWS.third
                         )
                     }
                     .also { conditionalWait() })
