@@ -1,21 +1,13 @@
 package no.nav.sf.pdl
 
-import kotlinx.serialization.ImplicitReflectionSerializer
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.UnstableDefault
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonConfiguration
-import kotlinx.serialization.parse
 import mu.KotlinLogging
+import no.nav.sf.library.jsonNonStrict
 
 private val log = KotlinLogging.logger { }
 
-private val jsonNonStrict = Json(JsonConfiguration.Stable.copy(ignoreUnknownKeys = true, isLenient = true))
-
-@UnstableDefault
-@ImplicitReflectionSerializer
 fun String.getQueryFromJson(): QueryBase = runCatching {
-    jsonNonStrict.parse<Query>(this)
+    jsonNonStrict.parse(Query.serializer(), this)
 }
         .onFailure {
             log.error { "Cannot convert kafka value to query - ${it.localizedMessage}" }
@@ -121,7 +113,6 @@ data class Person(
 }
 
 internal const val UKJENT_FRA_PDL = "<UKJENT_FRA_PDL>"
-@ImplicitReflectionSerializer
 fun Query.toPersonSf(): PersonBase {
     return runCatching {
         val kommunenummer = this.findKommunenummer()

@@ -1,9 +1,7 @@
 package no.nav.sf.pdl
 
 import io.confluent.kafka.serializers.KafkaAvroDeserializer
-import kotlinx.serialization.ImplicitReflectionSerializer
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.UnstableDefault
 import mu.KotlinLogging
 import no.nav.pdlsf.proto.PersonProto
 import no.nav.sf.library.AKafkaConsumer
@@ -111,10 +109,7 @@ sealed class FilterBase {
                 !p.doed &&
                         it.region == p.region && (it.municipals.isEmpty() || it.municipals.contains(p.kommunenummer))
             }
-            if (initial) {
-                // Will trigger on each historical message Hard to understand
-                // if (approved) workMetrics.initialFilterApproved.inc() else workMetrics.initialFilterDisproved.inc()
-            } else {
+            if (!initial) {
                 if (approved) workMetrics.filterApproved.inc() else workMetrics.filterDisproved.inc()
             }
             return approved
@@ -220,12 +215,6 @@ sealed class Cache {
     }
 }
 
-// fun <K, V> KafkaProducer<K, V>.sendNullValueAndCollect(topic: String, key: K, dst: MutableMap<String, Int?>) : Boolean {
-//    dst[key as String] = null
-//    return this.sendNullValue(topic, key)
-// }
-
-@ImplicitReflectionSerializer
 internal fun initLoad(ws: WorkSettings): ExitReason {
     workMetrics.clearAll()
     /**
@@ -251,7 +240,6 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
     return ExitReason.Work
 }
 
-@ImplicitReflectionSerializer
 fun initLoadPortion(lastDigit: Int, ws: WorkSettings, personFilter: FilterBase.Exists, filterEnabled: Boolean): ExitReason {
     val initTmp = getInitPopulation<String, String>(lastDigit, ws.kafkaConsumerPdl, personFilter, filterEnabled)
 
@@ -301,9 +289,6 @@ fun initLoadPortion(lastDigit: Int, ws: WorkSettings, personFilter: FilterBase.E
     return exitReason
 }
 
-@UnstableDefault
-@ImplicitReflectionSerializer
-@ExperimentalStdlibApi
 internal fun work(ws: WorkSettings): Triple<WorkSettings, ExitReason, Cache.Exist> {
     log.info { "bootstrap work session starting" }
 

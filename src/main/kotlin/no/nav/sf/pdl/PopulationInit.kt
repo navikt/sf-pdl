@@ -2,7 +2,6 @@ package no.nav.sf.pdl
 
 import java.time.Duration
 import java.util.Properties
-import kotlinx.serialization.ImplicitReflectionSerializer
 import mu.KotlinLogging
 import no.nav.sf.library.PrestopHook
 import no.nav.sf.library.ShutdownHook
@@ -22,7 +21,6 @@ fun InitPopulation.Exist.isValid(): Boolean {
     return records.values.filterIsInstance<PersonInvalid>().isEmpty()
 }
 
-@ImplicitReflectionSerializer
 fun <K, V> getInitPopulation(
     lastDigit: Int,
     config: Map<String, Any>,
@@ -57,29 +55,29 @@ fun <K, V> getInitPopulation(
                                     !cr.first -> InitPopulation.Failure
                                     cr.second.isEmpty -> InitPopulation.Exist(records)
                                     // Only deal with messages with key starting with firstDigit (current portion of 10):
-                                    else -> loop((records + cr.second.filter { cr -> Character.getNumericValue(cr.key().last()) == lastDigit }.map {
-                                        cr ->
+                                    else -> loop((records + cr.second.filter { r -> Character.getNumericValue(r.key().last()) == lastDigit }.map {
+                                        r ->
                                         workMetrics.initRecordsParsed.inc()
-                                        if (cr.value() == null) {
-                                            val personTombestone = PersonTombestone(aktoerId = cr.key())
-                                            Pair(cr.key(), personTombestone)
+                                        if (r.value() == null) {
+                                            val personTombestone = PersonTombestone(aktoerId = r.key())
+                                            Pair(r.key(), personTombestone)
                                         } else {
-                                            when (val query = cr.value().getQueryFromJson()) {
+                                            when (val query = r.value().getQueryFromJson()) {
                                                 InvalidQuery -> {
                                                     log.error { "InitPopulation (portion ${lastDigit + 1} of 10) Unable to parse topic value PDL" }
-                                                    Pair(cr.key(), PersonInvalid)
+                                                    Pair(r.key(), PersonInvalid)
                                                 }
                                                 is Query -> {
                                                     when (val personSf = query.toPersonSf()) {
                                                         is PersonSf -> {
-                                                            Pair(cr.key(), personSf)
+                                                            Pair(r.key(), personSf)
                                                         }
                                                         is PersonInvalid -> {
-                                                            Pair(cr.key(), PersonInvalid)
+                                                            Pair(r.key(), PersonInvalid)
                                                         }
                                                         else -> {
                                                             log.error { "InitPopulation (portion ${lastDigit + 1} of 10) Returned unhandled PersonBase from Query.toPersonSf" }
-                                                            Pair(cr.key(), PersonInvalid)
+                                                            Pair(r.key(), PersonInvalid)
                                                         }
                                                     }
                                                 }

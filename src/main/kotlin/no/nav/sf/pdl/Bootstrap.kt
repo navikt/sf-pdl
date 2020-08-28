@@ -3,7 +3,6 @@ package no.nav.sf.pdl
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.ImplicitReflectionSerializer
 import mu.KotlinLogging
 import no.nav.sf.library.AnEnvironment
 import no.nav.sf.library.PrestopHook
@@ -20,8 +19,6 @@ private val bootstrapWaitTime = AnEnvironment.getEnvOrDefault(EV_bootstrapWaitTi
  * - conditionalWait, waits a certain time, checking the hooks once a while
  */
 
-@ImplicitReflectionSerializer
-@ExperimentalStdlibApi
 object Bootstrap {
 
     private val log = KotlinLogging.logger { }
