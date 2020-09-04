@@ -195,6 +195,8 @@ fun Person.Bostedsadresse.UkjentBosted.findKommuneNummer(): Kommunenummer {
     } else if ((this.bostedskommune.length == 4) || this.bostedskommune.all { c -> c.isDigit() }) {
         return Kommunenummer.Exist(this.bostedskommune)
     } else {
+        workMetrics.noInvalidKommuneNummer.inc()
+        workMetrics.invalidKommuneNummer.labels(this.bostedskommune).inc()
         return Kommunenummer.Invalid
     }
 }

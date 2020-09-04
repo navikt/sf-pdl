@@ -128,6 +128,17 @@ data class WMetrics(
             .build()
             .name("init_records_parsed")
             .help("init_records_parsed")
+            .register(),
+    val noInvalidKommuneNummer: Gauge = Gauge
+            .build()
+            .name("no_invalid_kommunenummer")
+            .help("no_invalid_kommunenummer")
+            .register(),
+    val invalidKommuneNummer: Gauge = Gauge
+            .build()
+            .name("invalid_kommunenummer")
+            .labelNames("kommunenummer")
+            .help("invalid_kommunenummer")
             .register()
 ) {
     enum class AddressType {
@@ -135,6 +146,8 @@ data class WMetrics(
     }
 
     fun clearAll() {
+        this.noInvalidKommuneNummer.clear()
+        this.invalidKommuneNummer.clear()
         this.initRecordsParsed.clear()
         this.latestInitBatch.clear()
         this.noOfPersonSf.clear()

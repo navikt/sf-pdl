@@ -83,8 +83,8 @@ fun <K, V> getInitPopulation(
                                                 }
                                             }
                                         }
-                                    }.filter { // Apply filter if enabled
-                                        p -> !filterEnabled || p.second is PersonTombestone || (p.second is PersonSf && filter.approved(p.second as PersonSf, true))
+                                    }.filter {
+                                        p -> p.second is PersonTombestone || (p.second is PersonSf && !((p as PersonSf).doed) && (!filterEnabled || filter.approved(p.second as PersonSf, true)))
                                     }))
                                 }
                             }

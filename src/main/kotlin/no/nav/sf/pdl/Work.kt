@@ -106,8 +106,7 @@ sealed class FilterBase {
 
         fun approved(p: PersonSf, initial: Boolean = false): Boolean {
             val approved = regions.any {
-                !p.doed &&
-                        it.region == p.region && (it.municipals.isEmpty() || it.municipals.contains(p.kommunenummer))
+                it.region == p.region && (it.municipals.isEmpty() || it.municipals.contains(p.kommunenummer))
             }
             if (!initial) {
                 if (approved) workMetrics.filterApproved.inc() else workMetrics.filterDisproved.inc()
@@ -397,7 +396,7 @@ internal fun work(ws: WorkSettings): Triple<WorkSettings, ExitReason, Cache.Exis
             val areOk = results.fold(true) { acc, resp -> acc && (resp.first == KafkaConsumerStates.IsOk) }
 
             if (areOk) {
-                results.filter { it.second is PersonTombestone || !filterEnabled || (it.second is PersonSf && personFilter.approved(it.second as PersonSf)) }.map {
+                results.filter { it.second is PersonTombestone || (it.second is PersonSf && !((it as PersonSf).doed) && (!filterEnabled || personFilter.approved(it.second as PersonSf))) }.map {
                     when (val personBase = it.second) {
                         is PersonTombestone -> {
                             Pair<PersonProto.PersonKey, PersonProto.PersonValue?>(personBase.toPersonTombstoneProtoKey(), null)
