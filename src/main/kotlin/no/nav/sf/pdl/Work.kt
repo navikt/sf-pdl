@@ -396,7 +396,7 @@ internal fun work(ws: WorkSettings): Triple<WorkSettings, ExitReason, Cache.Exis
             val areOk = results.fold(true) { acc, resp -> acc && (resp.first == KafkaConsumerStates.IsOk) }
 
             if (areOk) {
-                results.filter { it.second is PersonTombestone || (it.second is PersonSf && !((it as PersonSf).doed) && (!filterEnabled || personFilter.approved(it.second as PersonSf))) }.map {
+                results.filter { it.second is PersonTombestone || (it.second is PersonSf && !((it.second as PersonSf).doed) && (!filterEnabled || personFilter.approved(it.second as PersonSf))) }.map {
                     when (val personBase = it.second) {
                         is PersonTombestone -> {
                             Pair<PersonProto.PersonKey, PersonProto.PersonValue?>(personBase.toPersonTombstoneProtoKey(), null)

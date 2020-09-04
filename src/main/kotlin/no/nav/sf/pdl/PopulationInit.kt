@@ -84,7 +84,7 @@ fun <K, V> getInitPopulation(
                                             }
                                         }
                                     }.filter {
-                                        p -> p.second is PersonTombestone || (p.second is PersonSf && !((p as PersonSf).doed) && (!filterEnabled || filter.approved(p.second as PersonSf, true)))
+                                        p -> p.second is PersonTombestone || (p.second is PersonSf && !((p.second as PersonSf).doed) && (!filterEnabled || filter.approved(p.second as PersonSf, true)))
                                     }))
                                 }
                             }
