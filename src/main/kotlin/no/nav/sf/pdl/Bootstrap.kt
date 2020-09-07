@@ -26,16 +26,31 @@ object Bootstrap {
     fun start(ws: WorkSettings = WorkSettings()) {
         log.info { "Starting" }
         enableNAISAPI {
-            if (ws.initialLoad) {
-                log.info { "Initial load flag set - will build populationCache from beginning of pdl topic and post latest to sf-person" }
+            if (ws.initialLoad || FilterBase.filterSettingsDiffer(ws.filterEnabled, ws.filter, ws.prevEnabled, ws.prevFilter)) {
+                if (ws.initialLoad) {
+                    log.info { "Initial load flag set will trigger initial load - will build populationCache from beginning of pdl topic and post latest to sf-person" }
+                } else {
+                    log.info { "Filter changed since last run will trigger initial load - will build populationCache from beginning of pdl topic and post latest to sf-person" }
+                }
+
+                val startupOffset = getStartupOffset<String, Any>(ws.kafkaConsumerPdl)
+                if (startupOffset == 0L) {
+                    log.error { "Failed finding startupOffset" }
+                    return@enableNAISAPI
+                }
                 if (!initLoad(ws).isOK()) {
-                    log.info { "Failed loading population" }
+                    log.error { "Failed loading population" }
                     return@enableNAISAPI
                 }
                 log.info { "Initial load done." }
                 conditionalWait()
+                loop(ws.copy(
+                        startUpOffset = startupOffset
+                )
+                )
+            } else {
+                loop(ws)
             }
-            loop(ws)
         }
         log.info { "Finished!" }
     }

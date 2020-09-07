@@ -74,7 +74,9 @@ data class WorkSettings(
 
     val initialLoad: Boolean = AVault.getSecretOrDefault(VAULT_initialLoad) == true.toString(),
 
-    val cache: Cache.Exist = Cache.newEmpty()
+    val cache: Cache.Exist = Cache.newEmpty(),
+
+    val startUpOffset: Long = -1L
 )
 
 val workMetrics = WMetrics()
@@ -240,6 +242,7 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
 }
 
 fun initLoadPortion(lastDigit: Int, ws: WorkSettings, personFilter: FilterBase.Exists, filterEnabled: Boolean): ExitReason {
+
     val initTmp = getInitPopulation<String, String>(lastDigit, ws.kafkaConsumerPdl, personFilter, filterEnabled)
 
     if (initTmp !is InitPopulation.Exist) {
@@ -352,7 +355,8 @@ internal fun work(ws: WorkSettings): Triple<WorkSettings, ExitReason, Cache.Exis
 
         val kafkaConsumerPdl = AKafkaConsumer<String, String>(
                 config = ws.kafkaConsumerPdl,
-                fromBeginning = !ws.initialLoad && (FilterBase.filterSettingsDiffer(ws.filterEnabled, ws.filter, ws.prevEnabled, ws.prevFilter) || cache.isEmpty)
+                fromBeginning = false,
+                fromOffset = ws.startUpOffset
         )
         exitReason = ExitReason.NoKafkaConsumer
 

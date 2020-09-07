@@ -44,7 +44,6 @@ fun <K, V> getInitPopulation(
                     .use { c ->
                         c.runCatching { seekToBeginning(emptyList()) }
                                 .onFailure { log.error { "InitPopulation (portion ${lastDigit + 1} of 10) Failure during SeekToBeginning - ${it.message}" } }
-
                         tailrec fun loop(records: Map<String, PersonBase>): InitPopulation = when {
                             ShutdownHook.isActive() || PrestopHook.isActive() -> InitPopulation.Interrupted
                             else -> {
@@ -94,4 +93,37 @@ fun <K, V> getInitPopulation(
         } catch (e: Exception) {
             log.error { "InitPopulation (portion ${lastDigit + 1} of 10) Failure during kafka consumer construction - ${e.message}" }
             InitPopulation.Failure
+        }
+
+fun <K, V> getStartupOffset(
+    config: Map<String, Any>,
+    topics: List<String> = listOf(kafkaPDLTopic)
+): Long =
+        try {
+            var startUpOffset = 0L
+            KafkaConsumer<K, V>(Properties().apply { config.forEach { set(it.key, it.value) } })
+                    .apply {
+                        this.runCatching {
+                            assign(
+                                    topics.flatMap { topic ->
+                                        partitionsFor(topic).map { TopicPartition(it.topic(), it.partition()) }
+                                    }
+                            )
+                        }.onFailure {
+                            log.error { "Get Startup offset - Failure during topic partition(s) assignment for $topics - ${it.message}" }
+                        }
+                    }
+                    .use { c ->
+                        c.runCatching {
+                            log.info { "Attempt to register current latest offset as baseline for later" }
+                            seekToEnd(emptyList())
+                            log.info { "Registered number of assigned partitions ${assignment().size}" }
+                            startUpOffset = position(assignment().first())
+                            log.info { "startUpOffset registered as $startUpOffset" }
+                        }.onFailure { log.error { "Failure during attempt to register current latest offset - ${it.message}" } }
+                    }
+            startUpOffset
+        } catch (e: Exception) {
+            log.error { "get Startup Offset Failure during kafka consumer construction - ${e.message}" }
+            0L
         }
