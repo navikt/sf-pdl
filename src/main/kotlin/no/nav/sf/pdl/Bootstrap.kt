@@ -67,7 +67,8 @@ object Bootstrap {
                         prevWS.first.copy(
                                 prevFilter = FilterBase.fromS3(), // Fetch filter from last successful work session
                                 prevEnabled = FilterBase.flagFromS3(),
-                                cache = prevWS.third
+                                cache = prevWS.third,
+                                startUpOffset = -1L // Only seek to startUpOffset on first work session
                         )
                     }
                     .also { conditionalWait() })

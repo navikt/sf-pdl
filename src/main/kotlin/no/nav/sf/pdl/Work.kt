@@ -237,7 +237,9 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
             return exitReason
         }
     }
-
+    log.info { "Successful init session finished, will persist filter settings as current cache base" }
+    S3Client.persistToS3(json.toJson(FilterBase.Exists.serializer(), personFilter).toString())
+    S3Client.persistFlagToS3(filterEnabled)
     return ExitReason.Work
 }
 
