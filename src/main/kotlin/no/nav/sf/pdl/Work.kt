@@ -229,7 +229,7 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
     val filterEnabled = ws.filterEnabled
     log.info { "initLoad - Continue work with filter enabled: $filterEnabled" }
 
-    for (lastDigit in 0..9) {
+    for (lastDigit in 4..5) { // TODO change back to 0..9
         log.info { "Commencing pdl topic read for population initialization batch ${lastDigit + 1}/10..." }
         workMetrics.latestInitBatch.set((lastDigit + 1).toDouble())
         val exitReason = initLoadPortion(lastDigit, ws, personFilter, filterEnabled)
