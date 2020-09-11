@@ -28,6 +28,13 @@ enum class AdressebeskyttelseGradering {
     UGRADERT
 }
 @Serializable
+enum class GtType {
+    KOMMUNE,
+    BYDEL,
+    UTLAND,
+    UDEFINERT
+}
+@Serializable
 data class Metadata(
     val historisk: Boolean = true,
     val master: String
@@ -59,7 +66,8 @@ data class Person(
     val bostedsadresse: List<Bostedsadresse>,
     val doedsfall: List<Doedsfall>,
     val sikkerhetstiltak: List<Sikkerhetstiltak>,
-    val navn: List<Navn>
+    val navn: List<Navn>,
+    val geografiskTilknytning: GeografiskTilknytning?
 
 ) {
 
@@ -110,12 +118,22 @@ data class Person(
         val gradering: AdressebeskyttelseGradering,
         val metadata: Metadata
     )
+
+    @Serializable
+    data class GeografiskTilknytning(
+        val gtType: GtType,
+        val gtKommune: String,
+        val gtBydel: String,
+        val gtLand: String,
+        val metadata: Metadata
+    )
 }
 
 internal const val UKJENT_FRA_PDL = "<UKJENT_FRA_PDL>"
 fun Query.toPersonSf(): PersonBase {
     return runCatching {
-        val kommunenummer = this.findKommunenummer()
+        val kommunenummer = this.findGtKommunenummer()
+//        val kommunenummer = this.findKommunenummer()
         PersonSf(
                 aktoerId = this.findAktoerId(),
                 identifikasjonsnummer = this.findFolkeregisterIdent(),
@@ -131,6 +149,50 @@ fun Query.toPersonSf(): PersonBase {
     }
             .onFailure { log.error { "Error creating PersonSf from Query ${it.localizedMessage}" } }
             .getOrDefault(PersonInvalid)
+}
+
+private fun Query.findGtKommunenummer(): String {
+    val kommunenr: Kommunenummer = this.hentPerson.geografiskTilknytning?.let { gt ->
+        when (gt.gtType) {
+            GtType.KOMMUNE -> {
+                if (gt.gtKommune.isNullOrEmpty()) {
+                    workMetrics.gtKommunenrFraKommuneMissing.inc()
+                    Kommunenummer.Missing
+                } else if ((gt.gtKommune.length == 4) || gt.gtKommune.all { c -> c.isDigit() }) {
+                    workMetrics.gtKommunenrFraKommune.inc()
+                    Kommunenummer.Exist(gt.gtKommune)
+                } else {
+                    workMetrics.gtKommuneInvalid.inc()
+                    Kommunenummer.Invalid
+                }
+            }
+            GtType.BYDEL -> {
+                if (gt.gtBydel.isNullOrEmpty()) {
+                    workMetrics.gtKommunenrFraBydelMissing.inc()
+                    Kommunenummer.Missing
+                } else if ((gt.gtBydel.length == 6) || gt.gtBydel.all { c -> c.isDigit() }) {
+                    workMetrics.gtKommunenrFraBydel.inc()
+                    Kommunenummer.Exist(gt.gtBydel.substring(0, 3))
+                } else {
+                    workMetrics.gtBydelInvalid.inc()
+                    Kommunenummer.Invalid
+                }
+            }
+            GtType.UTLAND -> {
+                workMetrics.gtUtland.inc()
+                Kommunenummer.GtUtland
+            }
+            GtType.UDEFINERT -> {
+                workMetrics.gtUdefinert.inc()
+                Kommunenummer.GtUdefinert
+            }
+        }
+    } ?: Kommunenummer.Missing
+    if (kommunenr is Kommunenummer.Exist)
+        return kommunenr.knummer
+    else {
+        return UKJENT_FRA_PDL
+    }
 }
 
 private fun Query.findAktoerId(): String {
@@ -164,6 +226,8 @@ private fun Query.findAdressebeskyttelse(): AdressebeskyttelseGradering {
 
 sealed class Kommunenummer {
     object Missing : Kommunenummer()
+    object GtUtland : Kommunenummer()
+    object GtUdefinert : Kommunenummer()
     object Invalid : Kommunenummer()
 
     data class Exist(val knummer: String) : Kommunenummer()
@@ -201,33 +265,33 @@ fun Person.Bostedsadresse.UkjentBosted.findKommuneNummer(): Kommunenummer {
     }
 }
 
-fun Query.findKommunenummer(): String {
-    return this.hentPerson.bostedsadresse.let { bostedsadresse ->
-        if (bostedsadresse.isNullOrEmpty()) {
-            workMetrics.usedAddressTypes.labels(WMetrics.AddressType.INGEN.name).inc()
-            UKJENT_FRA_PDL
-        } else {
-            bostedsadresse.firstOrNull { !it.metadata.historisk }?.let {
-                it.vegadresse?.let { vegadresse ->
-                    if (vegadresse.findKommuneNummer() is Kommunenummer.Exist) {
-                        workMetrics.usedAddressTypes.labels(WMetrics.AddressType.VEGAADRESSE.name).inc()
-                        vegadresse.kommunenummer
-                    } else null
-                } ?: it.matrikkeladresse?.let { matrikkeladresse ->
-                    if (matrikkeladresse.findKommuneNummer() is Kommunenummer.Exist) {
-                        workMetrics.usedAddressTypes.labels(WMetrics.AddressType.MATRIKKELADRESSE.name).inc()
-                        matrikkeladresse.kommunenummer
-                    } else null
-                } ?: it.ukjentBosted?.let { ukjentBosted ->
-                    if (ukjentBosted.findKommuneNummer() is Kommunenummer.Exist) {
-                        workMetrics.usedAddressTypes.labels(WMetrics.AddressType.UKJENTBOSTED.name).inc()
-                        ukjentBosted.bostedskommune
-                    } else null
-                }
-            } ?: UKJENT_FRA_PDL.also { workMetrics.usedAddressTypes.labels(WMetrics.AddressType.INGEN.name).inc() }
-        }
-    }
-}
+// fun Query.findKommunenummer(): String {
+//    return this.hentPerson.bostedsadresse.let { bostedsadresse ->
+//        if (bostedsadresse.isNullOrEmpty()) {
+//            workMetrics.usedAddressTypes.labels(WMetrics.AddressType.INGEN.name).inc()
+//            UKJENT_FRA_PDL
+//        } else {
+//            bostedsadresse.firstOrNull { !it.metadata.historisk }?.let {
+//                it.vegadresse?.let { vegadresse ->
+//                    if (vegadresse.findKommuneNummer() is Kommunenummer.Exist) {
+//                        workMetrics.usedAddressTypes.labels(WMetrics.AddressType.VEGAADRESSE.name).inc()
+//                        vegadresse.kommunenummer
+//                    } else null
+//                } ?: it.matrikkeladresse?.let { matrikkeladresse ->
+//                    if (matrikkeladresse.findKommuneNummer() is Kommunenummer.Exist) {
+//                        workMetrics.usedAddressTypes.labels(WMetrics.AddressType.MATRIKKELADRESSE.name).inc()
+//                        matrikkeladresse.kommunenummer
+//                    } else null
+//                } ?: it.ukjentBosted?.let { ukjentBosted ->
+//                    if (ukjentBosted.findKommuneNummer() is Kommunenummer.Exist) {
+//                        workMetrics.usedAddressTypes.labels(WMetrics.AddressType.UKJENTBOSTED.name).inc()
+//                        ukjentBosted.bostedskommune
+//                    } else null
+//                }
+//            } ?: UKJENT_FRA_PDL.also { workMetrics.usedAddressTypes.labels(WMetrics.AddressType.INGEN.name).inc() }
+//        }
+//    }
+// }
 
 fun String.regionOfKommuneNummer(): String {
     return if (this == UKJENT_FRA_PDL) this else this.substring(0, 2)

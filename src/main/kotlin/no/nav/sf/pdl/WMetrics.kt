@@ -139,7 +139,59 @@ data class WMetrics(
             .name("invalid_kommunenummer")
             .labelNames("kommunenummer")
             .help("invalid_kommunenummer")
+            .register(),
+// GT metrics start
+    val gtKommunenrFraKommuneMissing: Gauge = Gauge
+            .build()
+            .name("gt_kommunenr_fra_kommune_missing")
+            .labelNames("kommunenummer")
+            .help("invalid_kommunenummer")
+            .register(),
+    val gtKommunenrFraKommune: Gauge = Gauge
+            .build()
+            .name("gt_kommunenr_fra_kommune")
+            .labelNames("kommunenummer")
+            .help("invalid_kommunenummer")
+            .register(),
+    val gtKommuneInvalid: Gauge = Gauge
+            .build()
+            .name("gt_kommunenr_invalid")
+            .labelNames("kommunenummer")
+            .help("invalid_kommunenummer")
+            .register(),
+    val gtKommunenrFraBydelMissing: Gauge = Gauge
+            .build()
+            .name("gt_kommunenr_fra_bydel_missing")
+            .labelNames("kommunenummer")
+            .help("invalid_kommunenummer")
+            .register(),
+    val gtKommunenrFraBydel: Gauge = Gauge
+            .build()
+            .name("gt_kommunenr_fra_bydel")
+            .labelNames("kommunenummer")
+            .help("invalid_kommunenummer")
+            .register(),
+    val gtBydelInvalid: Gauge = Gauge
+            .build()
+            .name("gt_kommunenr_fra_bydel_invalid")
+            .labelNames("kommunenummer")
+            .help("invalid_kommunenummer")
+            .register(),
+    val gtUtland: Gauge = Gauge
+            .build()
+            .name("gt_kommunenr_gttype_utland")
+            .labelNames("kommunenummer")
+            .help("invalid_kommunenummer")
+            .register(),
+    val gtUdefinert: Gauge = Gauge
+            .build()
+            .name("gt_kommunenr_gttype_udefinert")
+            .labelNames("kommunenummer")
+            .help("invalid_kommunenummer")
             .register()
+
+// GT metrics end
+
 ) {
     enum class AddressType {
         VEGAADRESSE, MATRIKKELADRESSE, UKJENTBOSTED, INGEN
