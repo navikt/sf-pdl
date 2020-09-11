@@ -33,7 +33,7 @@ object Bootstrap {
                     log.info { "Filter changed since last run will trigger initial load - will build populationCache from beginning of pdl topic and post latest to sf-person" }
                 }
 
-                val startupOffset = getStartupOffset<String, Any>(ws.kafkaConsumerPdl)
+                val startupOffset = getStartupOffset<String, Any>(ws.kafkaConsumerPdlAlternative)
                 if (startupOffset == 0L) {
                     log.error { "Failed finding startupOffset" }
                     return@enableNAISAPI

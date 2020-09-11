@@ -64,6 +64,11 @@ data class WorkSettings(
     ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to KafkaAvroDeserializer::class.java,
     "schema.registry.url" to kafkaSchemaReg
 ),
+    val kafkaConsumerPdlAlternative: Map<String, Any> = AKafkaConsumer.configAlternativeBase + mapOf<String, Any>(
+            ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to KafkaAvroDeserializer::class.java,
+            ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to KafkaAvroDeserializer::class.java,
+            "schema.registry.url" to kafkaSchemaReg
+    ),
     val filter: FilterBase = FilterBase.fromJson(AVault.getSecretOrDefault(VAULT_workFilter)),
 
     val filterEnabled: Boolean = AVault.getSecretOrDefault(VAULT_filterEnabled) == true.toString(),
@@ -229,7 +234,7 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
     val filterEnabled = ws.filterEnabled
     log.info { "initLoad - Continue work with filter enabled: $filterEnabled" }
 
-    for (lastDigit in 4..5) { // TODO change back to 0..9
+    for (lastDigit in 4..4) { // TODO change back to 0..9
         log.info { "Commencing pdl topic read for population initialization batch ${lastDigit + 1}/10..." }
         workMetrics.latestInitBatch.set((lastDigit + 1).toDouble())
         val exitReason = initLoadPortion(lastDigit, ws, personFilter, filterEnabled)
@@ -245,7 +250,7 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
 
 fun initLoadPortion(lastDigit: Int, ws: WorkSettings, personFilter: FilterBase.Exists, filterEnabled: Boolean): ExitReason {
 
-    val initTmp = getInitPopulation<String, String>(lastDigit, ws.kafkaConsumerPdl, personFilter, filterEnabled)
+    val initTmp = getInitPopulation<String, String>(lastDigit, ws.kafkaConsumerPdlAlternative, personFilter, filterEnabled)
 
     if (initTmp !is InitPopulation.Exist) {
         log.error { "initLoad (portion ${lastDigit + 1} of 10) - could not create init population" }
