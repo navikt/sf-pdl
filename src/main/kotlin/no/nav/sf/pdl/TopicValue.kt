@@ -67,7 +67,7 @@ data class Person(
     val doedsfall: List<Doedsfall>,
     val sikkerhetstiltak: List<Sikkerhetstiltak>,
     val navn: List<Navn>,
-    val geografiskTilknytning: GeografiskTilknytning? = null
+    val geografiskTilknytning: GeografiskTilknytning?
 
 ) {
 
