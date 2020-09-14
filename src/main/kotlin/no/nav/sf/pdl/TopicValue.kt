@@ -121,13 +121,15 @@ data class Person(
 
     @Serializable
     data class GeografiskTilknytning(
-        val gtType: GtType,
-        val gtKommune: String?,
-        val gtBydel: String?,
-        val gtLand: String?,
-        val metadata: Metadata
+            val gtType: GtType,
+            val gtKommune: String?,
+            val gtBydel: String?,
+            val gtLand: String?,
+            val metadata: Metadata
     )
 }
+
+
 
 internal const val UKJENT_FRA_PDL = "<UKJENT_FRA_PDL>"
 fun Query.toPersonSf(): PersonBase {
@@ -152,6 +154,7 @@ fun Query.toPersonSf(): PersonBase {
 }
 
 private fun Query.findGtKommunenummer(): String {
+
     val kommunenr: Kommunenummer = this.hentPerson.geografiskTilknytning?.let { gt ->
         when (gt.gtType) {
             GtType.KOMMUNE -> {
@@ -188,10 +191,11 @@ private fun Query.findGtKommunenummer(): String {
             }
         }
     } ?: Kommunenummer.Missing
-    if (kommunenr is Kommunenummer.Exist)
-        return kommunenr.knummer
+
+    return if (kommunenr is Kommunenummer.Exist)
+        kommunenr.knummer
     else {
-        return UKJENT_FRA_PDL
+        UKJENT_FRA_PDL
     }
 }
 
