@@ -121,15 +121,13 @@ data class Person(
 
     @Serializable
     data class GeografiskTilknytning(
-            val gtType: GtType,
-            val gtKommune: String?,
-            val gtBydel: String?,
-            val gtLand: String?,
-            val metadata: Metadata
+        val gtType: GtType,
+        val gtKommune: String?,
+        val gtBydel: String?,
+        val gtLand: String?,
+        val metadata: Metadata
     )
 }
-
-
 
 internal const val UKJENT_FRA_PDL = "<UKJENT_FRA_PDL>"
 fun Query.toPersonSf(): PersonBase {
