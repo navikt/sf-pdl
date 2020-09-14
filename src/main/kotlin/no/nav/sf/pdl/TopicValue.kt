@@ -10,7 +10,7 @@ fun String.getQueryFromJson(): QueryBase = runCatching {
     jsonNonStrict.parse(Query.serializer(), this)
 }
         .onFailure {
-            log.error { "Cannot convert kafka value to query - ${it.localizedMessage}" }
+            log.error { "Cannot convert kafka value to query - ${it.localizedMessage}, message - $this" }
         }
         .getOrDefault(InvalidQuery)
 
