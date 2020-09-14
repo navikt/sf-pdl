@@ -131,6 +131,7 @@ data class Person(
 
 internal const val UKJENT_FRA_PDL = "<UKJENT_FRA_PDL>"
 fun Query.toPersonSf(): PersonBase {
+    log.error { "${this.toString()}" }
     return runCatching {
         val kommunenummer = this.findGtKommunenummer()
 //        val kommunenummer = this.findKommunenummer()
