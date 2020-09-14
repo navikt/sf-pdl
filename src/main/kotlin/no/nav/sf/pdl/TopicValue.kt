@@ -67,7 +67,7 @@ data class Person(
     val doedsfall: List<Doedsfall>,
     val sikkerhetstiltak: List<Sikkerhetstiltak>,
     val navn: List<Navn>,
-    val geografiskTilknytning: GeografiskTilknytning?
+    val geografiskTilknytning: GeografiskTilknytning? = null
 
 ) {
 
@@ -122,9 +122,9 @@ data class Person(
     @Serializable
     data class GeografiskTilknytning(
         val gtType: GtType,
-        val gtKommune: String,
-        val gtBydel: String,
-        val gtLand: String,
+        val gtKommune: String?,
+        val gtBydel: String?,
+        val gtLand: String?,
         val metadata: Metadata
     )
 }
