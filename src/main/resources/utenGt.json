@@ -1,0 +1,432 @@
+{
+  "hentPerson": {
+    "adressebeskyttelse": [
+
+    ],
+    "bostedsadresse": [
+      {
+        "angittFlyttedato": "2019-11-14",
+        "coAdressenavn": "",
+        "vegadresse": null,
+        "matrikkeladresse": {
+          "matrikkelId": null,
+          "tilleggsnavn": null,
+          "postnummer": "1163",
+          "kommunenummer": "0301",
+          "koordinater": null
+        },
+        "ukjentBosted": null,
+        "folkeregistermetadata": {
+          "ajourholdstidspunkt": "2019-11-19T08:15:49",
+          "gyldighetstidspunkt": "2019-11-14T00:00:00",
+          "opphoerstidspunkt": null,
+          "kilde": "",
+          "aarsak": "Innvandring",
+          "sekvens": null
+        },
+        "metadata": {
+          "opplysningsId": "cf49c44f-46ea-45f9-b150-0cdef0c8abe7",
+          "master": "Freg",
+          "endringer": [
+            {
+              "type": "OPPRETT",
+              "registrert": "2020-03-03T09:55:27.421",
+              "registrertAv": "Folkeregisteret",
+              "systemkilde": "FREG",
+              "kilde": "FREG"
+            }
+          ]
+        }
+      }
+    ],
+    "deltBosted": [
+
+    ],
+    "doedsfall": [
+
+    ],
+    "falskIdentitet": null,
+    "familierelasjoner": [
+
+    ],
+    "foedsel": [
+      {
+        "foedselsaar": 1929,
+        "foedselsdato": "1929-02-07",
+        "foedeland": "SWE",
+        "foedested": "",
+        "foedekommune": null,
+        "metadata": {
+          "opplysningsId": "07332e0c-b908-46c4-b9dd-8f2e09848a45",
+          "master": "Freg",
+          "endringer": [
+            {
+              "type": "OPPRETT",
+              "registrert": "2019-10-25T08:36:59.237",
+              "registrertAv": "Folkeregisteret",
+              "systemkilde": "FREG",
+              "kilde": "skatteetaten"
+            },
+            {
+              "type": "KORRIGER",
+              "registrert": "2019-11-19T08:15:57.883",
+              "registrertAv": "Folkeregisteret",
+              "systemkilde": "FREG",
+              "kilde": "skatteetaten"
+            }
+          ]
+        }
+      }
+    ],
+    "folkeregisteridentifikator": [
+      {
+        "identifikasjonsnummer": "47022949779",
+        "type": "DNR",
+        "status": "I_BRUK",
+        "folkeregistermetadata": {
+          "ajourholdstidspunkt": "2019-11-19T08:15:49",
+          "gyldighetstidspunkt": "2019-11-19T00:00:00",
+          "opphoerstidspunkt": null,
+          "kilde": "dsf-folkeregister-synkronisering",
+          "aarsak": null,
+          "sekvens": null
+        },
+        "metadata": {
+          "opplysningsId": "3cb7b08b-8c09-4e8c-8b17-d1936059b9fe",
+          "master": "Freg",
+          "endringer": [
+            {
+              "type": "OPPRETT",
+              "registrert": "2019-11-19T08:15:57.883",
+              "registrertAv": "Folkeregisteret",
+              "systemkilde": "FREG",
+              "kilde": "dsf-folkeregister-synkronisering"
+            }
+          ]
+        }
+      },
+      {
+        "identifikasjonsnummer": "47022949930",
+        "type": "DNR",
+        "status": "OPPHOERT",
+        "folkeregistermetadata": {
+          "ajourholdstidspunkt": "2019-11-19T08:15:49",
+          "gyldighetstidspunkt": "2019-11-19T00:00:00",
+          "opphoerstidspunkt": null,
+          "kilde": "dsf-folkeregister-synkronisering",
+          "aarsak": null,
+          "sekvens": null
+        },
+        "metadata": {
+          "opplysningsId": "5df705b0-9f58-444f-902e-8b331bd18204",
+          "master": "Freg",
+          "endringer": [
+            {
+              "type": "OPPRETT",
+              "registrert": "2019-10-25T08:36:59.237",
+              "registrertAv": "Folkeregisteret",
+              "systemkilde": "FREG",
+              "kilde": "SKATTEETATEN"
+            },
+            {
+              "type": "KORRIGER",
+              "registrert": "2019-11-19T08:15:57.883",
+              "registrertAv": "Folkeregisteret",
+              "systemkilde": "FREG",
+              "kilde": "dsf-folkeregister-synkronisering"
+            }
+          ]
+        }
+      }
+    ],
+    "folkeregisterpersonstatus": [
+      {
+        "status": "midlertidig",
+        "forenkletStatus": "dNummer",
+        "folkeregistermetadata": {
+          "ajourholdstidspunkt": "2019-11-19T08:15:49",
+          "gyldighetstidspunkt": "2019-11-19T08:15:49",
+          "opphoerstidspunkt": null,
+          "kilde": "",
+          "aarsak": "Innvandring",
+          "sekvens": null
+        },
+        "metadata": {
+          "opplysningsId": "4c58fb5a-8030-4a56-aa11-f5fbfb1f5c16",
+          "master": "Freg",
+          "endringer": [
+            {
+              "type": "OPPRETT",
+              "registrert": "2019-11-19T08:15:57.883",
+              "registrertAv": "Folkeregisteret",
+              "systemkilde": "FREG",
+              "kilde": "FREG"
+            }
+          ]
+        }
+      },
+      {
+        "status": "midlertidig",
+        "forenkletStatus": "dNummer",
+        "folkeregistermetadata": {
+          "ajourholdstidspunkt": "2019-10-25T08:36:55.507",
+          "gyldighetstidspunkt": "2019-10-25T08:36:55.507",
+          "opphoerstidspunkt": null,
+          "kilde": "SKATTEETATEN",
+          "aarsak": null,
+          "sekvens": null
+        },
+        "metadata": {
+          "opplysningsId": "43ad0805-318f-4a34-aa01-2ef1cc23766a",
+          "master": "Freg",
+          "endringer": [
+            {
+              "type": "OPPRETT",
+              "registrert": "2019-10-25T08:36:59.237",
+              "registrertAv": "Folkeregisteret",
+              "systemkilde": "FREG",
+              "kilde": "SKATTEETATEN"
+            }
+          ]
+        }
+      }
+    ],
+    "fullmakt": [
+
+    ],
+    "identitetsgrunnlag": [
+
+    ],
+    "kontaktadresse": [
+
+    ],
+    "kontaktinformasjonForDoedsbo": [
+
+    ],
+    "kjoenn": [
+      {
+        "kjoenn": "MANN",
+        "folkeregistermetadata": {
+          "ajourholdstidspunkt": "2019-10-25T08:36:55.507",
+          "gyldighetstidspunkt": "2019-10-25T08:36:55.507",
+          "opphoerstidspunkt": null,
+          "kilde": "skatteetaten",
+          "aarsak": "SyntheticDataGen",
+          "sekvens": null
+        },
+        "metadata": {
+          "opplysningsId": "2d595a77-08a4-4f68-83dd-4fdbe4b0e2d3",
+          "master": "Freg",
+          "endringer": [
+            {
+              "type": "OPPRETT",
+              "registrert": "2019-10-25T08:36:59.237",
+              "registrertAv": "Folkeregisteret",
+              "systemkilde": "FREG",
+              "kilde": "skatteetaten"
+            }
+          ]
+        }
+      }
+    ],
+    "navn": [
+      {
+        "fornavn": "MUNTER",
+        "mellomnavn": null,
+        "etternavn": "LOMME",
+        "forkortetNavn": null,
+        "originaltNavn": null,
+        "folkeregistermetadata": {
+          "ajourholdstidspunkt": "2019-11-19T08:15:49",
+          "gyldighetstidspunkt": "2019-11-19T00:00:00",
+          "opphoerstidspunkt": null,
+          "kilde": "",
+          "aarsak": "Innvandring",
+          "sekvens": 0
+        },
+        "metadata": {
+          "opplysningsId": "46e4bf14-b09c-43a6-8f1a-e88c474cd05f",
+          "master": "Freg",
+          "endringer": [
+            {
+              "type": "OPPRETT",
+              "registrert": "2019-10-25T08:36:59.237",
+              "registrertAv": "Folkeregisteret",
+              "systemkilde": "FREG",
+              "kilde": "skatteetaten"
+            },
+            {
+              "type": "KORRIGER",
+              "registrert": "2019-11-19T08:15:57.883",
+              "registrertAv": "Folkeregisteret",
+              "systemkilde": "FREG",
+              "kilde": "FREG"
+            }
+          ]
+        }
+      }
+    ],
+    "opphold": [
+
+    ],
+    "oppholdsadresse": [
+
+    ],
+    "sikkerhetstiltak": [
+
+    ],
+    "sivilstand": [
+      {
+        "type": "UOPPGITT",
+        "gyldigFraOgMed": "2019-10-25",
+        "myndighet": null,
+        "kommune": null,
+        "sted": null,
+        "utland": null,
+        "relatertVedSivilstand": null,
+        "bekreftelsesdato": null,
+        "folkeregistermetadata": {
+          "ajourholdstidspunkt": "2019-10-25T08:36:55.507",
+          "gyldighetstidspunkt": "2019-10-25T08:36:55.507",
+          "opphoerstidspunkt": null,
+          "kilde": "skatteetaten",
+          "aarsak": "SyntheticDataGen",
+          "sekvens": null
+        },
+        "metadata": {
+          "opplysningsId": "5ab317f4-9183-48ca-ad50-eab21b1f1a6d",
+          "master": "Freg",
+          "endringer": [
+            {
+              "type": "OPPRETT",
+              "registrert": "2020-01-20T08:46:48.626",
+              "registrertAv": "Folkeregisteret",
+              "systemkilde": "FREG",
+              "kilde": "skatteetaten"
+            }
+          ]
+        }
+      },
+      {
+        "type": "SKILT",
+        "gyldigFraOgMed": null,
+        "myndighet": null,
+        "kommune": null,
+        "sted": null,
+        "utland": null,
+        "relatertVedSivilstand": null,
+        "bekreftelsesdato": null,
+        "folkeregistermetadata": {
+          "ajourholdstidspunkt": "2019-11-19T08:15:49",
+          "gyldighetstidspunkt": "2019-11-19T08:15:49",
+          "opphoerstidspunkt": null,
+          "kilde": "",
+          "aarsak": "Innvandring",
+          "sekvens": null
+        },
+        "metadata": {
+          "opplysningsId": "136201e4-f819-4930-890f-c9cf0b99928c",
+          "master": "Freg",
+          "endringer": [
+            {
+              "type": "OPPRETT",
+              "registrert": "2020-01-20T08:46:48.626",
+              "registrertAv": "Folkeregisteret",
+              "systemkilde": "FREG",
+              "kilde": "FREG"
+            }
+          ]
+        }
+      }
+    ],
+    "statsborgerskap": [
+      {
+        "land": "SWE",
+        "gyldigFraOgMed": null,
+        "gyldigTilOgMed": null,
+        "folkeregistermetadata": {
+          "ajourholdstidspunkt": "2019-11-19T08:15:49",
+          "gyldighetstidspunkt": "1929-02-07T00:00:00",
+          "opphoerstidspunkt": null,
+          "kilde": "",
+          "aarsak": "Innvandring",
+          "sekvens": null
+        },
+        "metadata": {
+          "opplysningsId": "a92414bc-f8c2-4935-96d9-332690525866",
+          "master": "Freg",
+          "endringer": [
+            {
+              "type": "OPPRETT",
+              "registrert": "2020-02-04T13:57:43.448",
+              "registrertAv": "Folkeregisteret",
+              "systemkilde": "FREG",
+              "kilde": "FREG"
+            }
+          ]
+        }
+      }
+    ],
+    "tilrettelagtKommunikasjon": [
+
+    ],
+    "utenlandskIdentifikasjonsnummer": [
+
+    ],
+    "telefonnummer": [
+
+    ],
+    "innflyttingTilNorge": [
+      {
+        "fraflyttingsland": "SWE",
+        "fraflyttingsstedIUtlandet": null,
+        "folkeregistermetadata": {
+          "ajourholdstidspunkt": "2019-11-19T08:15:49",
+          "gyldighetstidspunkt": "2019-11-14T00:00:00",
+          "opphoerstidspunkt": null,
+          "kilde": "",
+          "aarsak": "Innvandring",
+          "sekvens": null
+        },
+        "metadata": {
+          "opplysningsId": "eec6e6a0-1f1d-442c-b870-085615128238",
+          "master": "Freg",
+          "endringer": [
+            {
+              "type": "OPPRETT",
+              "registrert": "2020-03-03T09:55:27.421",
+              "registrertAv": "Folkeregisteret",
+              "systemkilde": "FREG",
+              "kilde": "FREG"
+            }
+          ]
+        }
+      }
+    ],
+    "utflyttingFraNorge": [
+
+    ]
+  },
+  "hentIdenter": {
+    "identer": [
+      {
+        "ident": "FOLKEREGISTERIDENT",
+        "historisk": false,
+        "gruppe": "FOLKEREGISTERIDENT",
+        "metadata": null
+      },
+      {
+        "ident": "FOLKEREGISTERIDENT_OLD",
+        "historisk": true,
+        "gruppe": "FOLKEREGISTERIDENT",
+        "metadata": null
+      },
+      {
+        "ident": "AKTORID",
+        "historisk": false,
+        "gruppe": "AKTORID",
+        "metadata": null
+      }
+    ]
+  }
+}

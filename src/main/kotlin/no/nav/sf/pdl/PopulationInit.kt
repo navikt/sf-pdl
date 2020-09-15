@@ -61,7 +61,6 @@ fun <K, V> getInitPopulation(
                                             val personTombestone = PersonTombestone(aktoerId = r.key())
                                             Pair(r.key(), personTombestone)
                                         } else {
-                                            log.info { "Value - ${r.value()}" }
                                             when (val query = r.value().getQueryFromJson()) {
                                                 InvalidQuery -> {
                                                     log.error { "InitPopulation (portion ${lastDigit + 1} of 10) Unable to parse topic value PDL" }

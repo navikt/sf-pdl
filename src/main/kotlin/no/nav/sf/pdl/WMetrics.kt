@@ -144,19 +144,16 @@ data class WMetrics(
     val gtKommunenrFraKommuneMissing: Gauge = Gauge
             .build()
             .name("gt_kommunenr_fra_kommune_missing")
-            .labelNames("kommunenummer")
             .help("invalid_kommunenummer")
             .register(),
     val gtKommunenrFraKommune: Gauge = Gauge
             .build()
             .name("gt_kommunenr_fra_kommune")
-            .labelNames("kommunenummer")
             .help("invalid_kommunenummer")
             .register(),
     val gtKommuneInvalid: Gauge = Gauge
             .build()
             .name("gt_kommunenr_invalid")
-            .labelNames("kommunenummer")
             .help("invalid_kommunenummer")
             .register(),
     val gtKommunenrFraBydelMissing: Gauge = Gauge

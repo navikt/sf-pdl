@@ -67,7 +67,7 @@ data class Person(
     val doedsfall: List<Doedsfall>,
     val sikkerhetstiltak: List<Sikkerhetstiltak>,
     val navn: List<Navn>,
-    val geografiskTilknytning: GeografiskTilknytning?
+    val geografiskTilknytning: GeografiskTilknytning? = null
 
 ) {
 
@@ -152,9 +152,8 @@ fun Query.toPersonSf(): PersonBase {
 }
 
 private fun Query.findGtKommunenummer(): String {
-
     val kommunenr: Kommunenummer = this.hentPerson.geografiskTilknytning?.let { gt ->
-        when (gt.gtType) {
+    when (gt.gtType) {
             GtType.KOMMUNE -> {
                 if (gt.gtKommune.isNullOrEmpty()) {
                     workMetrics.gtKommunenrFraKommuneMissing.inc()
