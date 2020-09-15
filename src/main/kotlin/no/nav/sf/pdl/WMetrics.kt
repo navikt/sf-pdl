@@ -144,42 +144,47 @@ data class WMetrics(
     val gtKommunenrFraKommuneMissing: Gauge = Gauge
             .build()
             .name("gt_kommunenr_fra_kommune_missing")
-            .help("invalid_kommunenummer")
+            .help("gt_kommunenr_fra_kommune_missing")
             .register(),
     val gtKommunenrFraKommune: Gauge = Gauge
             .build()
             .name("gt_kommunenr_fra_kommune")
-            .help("invalid_kommunenummer")
+            .help("gt_kommunenr_fra_kommune")
             .register(),
     val gtKommuneInvalid: Gauge = Gauge
             .build()
             .name("gt_kommunenr_invalid")
-            .help("invalid_kommunenummer")
+            .help("gt_kommunenr_invalid")
             .register(),
     val gtKommunenrFraBydelMissing: Gauge = Gauge
             .build()
             .name("gt_kommunenr_fra_bydel_missing")
-            .help("invalid_kommunenummer")
+            .help("gt_kommunenr_fra_bydel_missing")
             .register(),
     val gtKommunenrFraBydel: Gauge = Gauge
             .build()
             .name("gt_kommunenr_fra_bydel")
-            .help("invalid_kommunenummer")
+            .help("gt_kommunenr_fra_bydel")
             .register(),
     val gtBydelInvalid: Gauge = Gauge
             .build()
             .name("gt_kommunenr_fra_bydel_invalid")
-            .help("invalid_kommunenummer")
+            .help("gt_kommunenr_fra_bydel_invalid")
             .register(),
     val gtUtland: Gauge = Gauge
             .build()
             .name("gt_kommunenr_gttype_utland")
-            .help("invalid_kommunenummer")
+            .help("gt_kommunenr_gttype_utland")
             .register(),
     val gtUdefinert: Gauge = Gauge
             .build()
             .name("gt_kommunenr_gttype_udefinert")
-            .help("invalid_kommunenummer")
+            .help("gt_kommunenr_gttype_udefinert")
+            .register(),
+    val gtMissing: Gauge = Gauge
+            .build()
+            .name("gt_missing")
+            .help("gt_missing")
             .register()
 
 // GT metrics end

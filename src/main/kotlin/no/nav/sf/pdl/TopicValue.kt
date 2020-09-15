@@ -187,7 +187,7 @@ private fun Query.findGtKommunenummer(): String {
                 Kommunenummer.GtUdefinert
             }
         }
-    } ?: Kommunenummer.Missing
+    } ?: workMetrics.gtMissing.inc().let { Kommunenummer.Missing }
 
     return if (kommunenr is Kommunenummer.Exist)
         kommunenr.knummer
