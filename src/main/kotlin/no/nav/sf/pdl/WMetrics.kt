@@ -195,6 +195,16 @@ data class WMetrics(
     }
 
     fun clearAll() {
+        this.gtKommunenrFraKommuneMissing.clear()
+        this.gtKommunenrFraKommune.clear()
+        this.gtKommuneInvalid.clear()
+        this.gtKommunenrFraBydelMissing.clear()
+        this.gtKommunenrFraBydel.clear()
+        this.gtBydelInvalid.clear()
+        this.gtUtland.clear()
+        this.gtUdefinert.clear()
+        this.gtMissing.clear()
+
         this.noInvalidKommuneNummer.clear()
         this.invalidKommuneNummer.clear()
         this.initRecordsParsed.clear()
