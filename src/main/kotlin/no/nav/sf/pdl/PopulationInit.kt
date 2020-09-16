@@ -3,8 +3,13 @@ package no.nav.sf.pdl
 import java.time.Duration
 import java.util.Properties
 import mu.KotlinLogging
+import no.nav.pdlsf.proto.PersonProto
+import no.nav.sf.library.AKafkaProducer
 import no.nav.sf.library.PrestopHook
 import no.nav.sf.library.ShutdownHook
+import no.nav.sf.library.json
+import no.nav.sf.library.send
+import no.nav.sf.library.sendNullValue
 import org.apache.kafka.clients.consumer.ConsumerRecords
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.common.TopicPartition
@@ -19,6 +24,83 @@ sealed class InitPopulation {
 
 fun InitPopulation.Exist.isValid(): Boolean {
     return records.values.filterIsInstance<PersonInvalid>().isEmpty()
+}
+
+internal fun initLoad(ws: WorkSettings): ExitReason {
+    workMetrics.clearAll()
+    /**
+     * Check - no filter means nothing to transfer, leaving
+     */
+    if (ws.filter is FilterBase.Missing) {
+        log.warn { "initLoad - No filter for activities, leaving" }
+        return ExitReason.NoFilter
+    }
+    val personFilter = ws.filter as FilterBase.Exists
+    val filterEnabled = ws.filterEnabled
+    log.info { "initLoad - Continue work with filter enabled: $filterEnabled" }
+
+    for (lastDigit in 0..9) {
+        log.info { "Commencing pdl topic read for population initialization batch ${lastDigit + 1}/10..." }
+        workMetrics.latestInitBatch.set((lastDigit + 1).toDouble())
+        val exitReason = initLoadPortion(lastDigit, ws, personFilter, filterEnabled)
+        if (exitReason != ExitReason.Work) {
+            return exitReason
+        }
+    }
+    log.info { "Successful init session finished, will persist filter settings as current cache base" }
+    S3Client.persistToS3(json.toJson(FilterBase.Exists.serializer(), personFilter).toString())
+    S3Client.persistFlagToS3(filterEnabled)
+    return ExitReason.Work
+}
+
+fun initLoadPortion(lastDigit: Int, ws: WorkSettings, personFilter: FilterBase.Exists, filterEnabled: Boolean): ExitReason {
+
+    val initTmp = getInitPopulation<String, String>(lastDigit, ws.kafkaConsumerPdlAlternative, personFilter, filterEnabled)
+
+    if (initTmp !is InitPopulation.Exist) {
+        log.error { "initLoad (portion ${lastDigit + 1} of 10) - could not create init population" }
+        return ExitReason.NoFilter
+    }
+
+    val initPopulation = (initTmp as InitPopulation.Exist)
+
+    if (!initPopulation.isValid()) {
+        log.error { "initLoad (portion ${lastDigit + 1} of 10) - init population invalid" }
+        return ExitReason.NoFilter
+    }
+
+    workMetrics.noOfInitialKakfaRecordsPdl.inc(initPopulation.records.size.toDouble())
+    workMetrics.noOfInitialTombestone.inc(initPopulation.records.filter { cr -> cr.value is PersonTombestone }.size.toDouble())
+    workMetrics.noOfInitialPersonSf.inc(initPopulation.records.filter { cr -> cr.value is PersonSf }.size.toDouble())
+    log.info { "Initial (portion ${lastDigit + 1} of 10) load unique population count : ${initPopulation.records.size}" }
+
+    var exitReason: ExitReason = ExitReason.Work
+
+    AKafkaProducer<ByteArray, ByteArray>(
+            config = ws.kafkaProducerPerson
+    ).produce {
+        initPopulation.records.map { // Assuming initPopulation is already filtered
+            if (it.value is PersonSf) {
+                (it.value as PersonSf).toPersonProto()
+            } else {
+                Pair<PersonProto.PersonKey, PersonProto.PersonValue?>((it.value as PersonTombestone).toPersonTombstoneProtoKey(), null)
+            }
+        }.fold(true) { acc, pair ->
+            acc && pair.second?.let {
+                send(kafkaPersonTopic, pair.first.toByteArray(), it.toByteArray()).also { workMetrics.initiallyPublishedPersons.inc() }
+            } ?: sendNullValue(kafkaPersonTopic, pair.first.toByteArray()).also { workMetrics.initiallyPublishedTombestones.inc() }
+        }.let { sent ->
+            when (sent) {
+                true -> exitReason = ExitReason.Work
+                false -> {
+                    exitReason = ExitReason.InvalidCache
+                    workMetrics.producerIssues.inc()
+                    log.error { "Init load (portion ${lastDigit + 1} of 10) - Producer has issues sending to topic" }
+                }
+            }
+        }
+    }
+    return exitReason
 }
 
 fun <K, V> getInitPopulation(

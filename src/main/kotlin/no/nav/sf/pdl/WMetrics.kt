@@ -185,9 +185,15 @@ data class WMetrics(
             .build()
             .name("gt_missing")
             .help("gt_missing")
-            .register()
+            .register(),
 
 // GT metrics end
+    val kommune: Gauge = Gauge
+            .build()
+            .name("kommune")
+            .labelNames("kommune")
+            .help("kommune")
+            .register()
 
 ) {
     enum class AddressType {
@@ -195,6 +201,7 @@ data class WMetrics(
     }
 
     fun clearAll() {
+        this.kommune.clear()
         this.gtKommunenrFraKommuneMissing.clear()
         this.gtKommunenrFraKommune.clear()
         this.gtKommuneInvalid.clear()
