@@ -72,6 +72,17 @@ fun initLoadPortion(lastDigit: Int, ws: WorkSettings, personFilter: FilterBase.E
     workMetrics.noOfInitialKakfaRecordsPdl.inc(initPopulation.records.size.toDouble())
     workMetrics.noOfInitialTombestone.inc(initPopulation.records.filter { cr -> cr.value is PersonTombestone }.size.toDouble())
     workMetrics.noOfInitialPersonSf.inc(initPopulation.records.filter { cr -> cr.value is PersonSf }.size.toDouble())
+
+    initPopulation.records.filter { cr -> cr.value is PersonSf }.forEach {
+        cr ->
+        val kommuneLabel = if ((cr.value as PersonSf).kommunenummer == UKJENT_FRA_PDL) {
+            UKJENT_FRA_PDL
+        } else {
+            PostnummerService.getPostnummer((cr.value as PersonSf).kommunenummer)?.let { it.kommune } ?: NOT_FOUND_IN_REGISTER
+        }
+        workMetrics.kommune.labels(kommuneLabel).inc()
+    }
+
     log.info { "Initial (portion ${lastDigit + 1} of 10) load unique population count : ${initPopulation.records.size}" }
 
     var exitReason: ExitReason = ExitReason.Work
