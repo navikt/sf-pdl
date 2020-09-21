@@ -145,15 +145,33 @@ fun <K, V> getInitPopulation(
                     .use { c ->
                         c.runCatching { seekToBeginning(emptyList()) }
                                 .onFailure { log.error { "InitPopulation (portion ${lastDigit + 1} of 10) Failure during SeekToBeginning - ${it.message}" } }
-                        tailrec fun loop(records: Map<String, PersonBase>): InitPopulation = when {
+                        tailrec fun loop(records: Map<String, PersonBase>, retriesWhenEmpty: Int = 10): InitPopulation = when {
                             ShutdownHook.isActive() || PrestopHook.isActive() -> InitPopulation.Interrupted
                             else -> {
-                                val cr = c.runCatching { Pair(true, poll(Duration.ofMillis(3_000)) as ConsumerRecords<String, String?>) }
+                                val cr = c.runCatching { Pair(true, poll(Duration.ofMillis(2_000)) as ConsumerRecords<String, String?>) }
                                         .onFailure { log.error { "InitPopulation (portion ${lastDigit + 1} of 10) Failure during poll - ${it.localizedMessage}" } }
                                         .getOrDefault(Pair(false, ConsumerRecords<String, String?>(emptyMap())))
                                 when {
-                                    !cr.first -> InitPopulation.Failure // TODO below as metric per partition
-                                    cr.second.isEmpty -> InitPopulation.Exist(records).also { log.info("Final set of digit $lastDigit ended up with ${records.size} records") }
+                                    !cr.first -> log.error { "Init pop failure" }.let { InitPopulation.Failure } // TODO below as metric per partition
+                                    cr.second.isEmpty ->
+                                        if (records.isEmpty()) {
+                                            if (retriesWhenEmpty > 0) {
+                                                log.info { "Init $lastDigit - Did not find any records will poll again (left $retriesWhenEmpty times)" }
+                                                loop(emptyMap(), retriesWhenEmpty - 1)
+                                            } else {
+                                                log.warn { "Init $lastDigit - Cannot find any records, is topic truly empty?" }
+                                                InitPopulation.Exist(emptyMap())
+                                            }
+                                        } else {
+                                            if (retriesWhenEmpty > 0) {
+                                                log.info { "Init $lastDigit - Did not find any records midst init build will poll again (left $retriesWhenEmpty times)" }
+                                                loop(records, retriesWhenEmpty - 1)
+                                            } else {
+                                                log.warn { "Init $lastDigit - Cannot find any records midst init, assume all is loaded for this partition" }
+                                                InitPopulation.Exist(records)
+                                            }
+                                            InitPopulation.Exist(records).also { log.info("Final set of digit $lastDigit ended up with ${records.size} records") }
+                                        }
                                     // Only deal with messages with key starting with firstDigit (current portion of 10):
                                     else -> loop((records + cr.second.also { workMetrics.recordsPolledAtInit.inc(cr.second.count().toDouble()) }.filter { r ->
                                         workMetrics.lastCharParsed.labels("Charval ${Character.getNumericValue(r.key().last())}").inc()
@@ -168,21 +186,21 @@ fun <K, V> getInitPopulation(
                                                 InvalidQuery -> {
                                                     log.error { "InitPopulation (portion ${lastDigit + 1} of 10) Unable to parse topic value PDL" }
                                                     workMetrics.invalidPersonsParsed.inc()
-                                                    Pair(r.key(), PersonInvalid) // TODO QueryLabels per partition = PersonInvalidDueToInvalidQuery
+                                                    Pair(r.key(), PersonInvalid)
                                                 }
                                                 is Query -> {
                                                     when (val personSf = query.toPersonSf()) {
                                                         is PersonSf -> {
-                                                            Pair(r.key(), personSf) // TODO QueryLabels per partition = PersonSf
+                                                            Pair(r.key(), personSf)
                                                         }
                                                         is PersonInvalid -> {
                                                             workMetrics.invalidPersonsParsed.inc()
-                                                            Pair(r.key(), PersonInvalid) // TODO QueryLabels per partition = PersonInvalid
+                                                            Pair(r.key(), PersonInvalid)
                                                         }
                                                         else -> {
                                                             log.error { "InitPopulation (portion ${lastDigit + 1} of 10) Returned unhandled PersonBase from Query.toPersonSf" }
                                                             workMetrics.invalidPersonsParsed.inc()
-                                                            Pair(r.key(), PersonInvalid) // TODO QueryLabels per partition = PersonInvalidUnhandled
+                                                            Pair(r.key(), PersonInvalid)
                                                         }
                                                     }
                                                 }
