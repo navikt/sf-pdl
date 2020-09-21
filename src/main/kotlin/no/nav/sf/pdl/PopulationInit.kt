@@ -44,6 +44,7 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
         workMetrics.latestInitBatch.set((lastDigit + 1).toDouble())
         val exitReason = initLoadPortion(lastDigit, ws, personFilter, filterEnabled)
         if (exitReason != ExitReason.Work) {
+            log.error { "Unsuccessful init session" }
             return exitReason
         }
     }
@@ -62,26 +63,23 @@ fun initLoadPortion(lastDigit: Int, ws: WorkSettings, personFilter: FilterBase.E
         return ExitReason.NoFilter
     }
 
-    val initPopulation = (initTmp as InitPopulation.Exist)
+    val initPopulationWithDead = (initTmp as InitPopulation.Exist)
 
-    if (!initPopulation.isValid()) {
+    if (!initPopulationWithDead.isValid()) {
         log.error { "initLoad (portion ${lastDigit + 1} of 10) - init population invalid" }
         return ExitReason.NoFilter
     }
 
+    val deadInitPopulationMap = initPopulationWithDead.records.filter { r -> r.value is PersonSf && (r.value as PersonSf).doed }
+
+    log.info { "initLoad (portion ${lastDigit + 1} of 10) - found ${deadInitPopulationMap.size} dead unique aktorsid" }
+    workMetrics.deadPersons.inc(deadInitPopulationMap.size.toDouble())
+
+    val initPopulation = InitPopulation.Exist(initPopulationWithDead.records.filter { r -> !(r.value is PersonSf && (r.value as PersonSf).doed) })
+
     workMetrics.noOfInitialKakfaRecordsPdl.inc(initPopulation.records.size.toDouble())
     workMetrics.noOfInitialTombestone.inc(initPopulation.records.filter { cr -> cr.value is PersonTombestone }.size.toDouble())
     workMetrics.noOfInitialPersonSf.inc(initPopulation.records.filter { cr -> cr.value is PersonSf }.size.toDouble())
-
-    initPopulation.records.filter { cr -> cr.value is PersonSf }.forEach {
-        cr ->
-        val kommuneLabel = if ((cr.value as PersonSf).kommunenummer == UKJENT_FRA_PDL) {
-            UKJENT_FRA_PDL
-        } else {
-            PostnummerService.getPostnummer((cr.value as PersonSf).kommunenummer)?.let { it.kommune } ?: NOT_FOUND_IN_REGISTER
-        }
-        workMetrics.kommune.labels(kommuneLabel).inc()
-    }
 
     log.info { "Initial (portion ${lastDigit + 1} of 10) load unique population count : ${initPopulation.records.size}" }
 
@@ -110,6 +108,16 @@ fun initLoadPortion(lastDigit: Int, ws: WorkSettings, personFilter: FilterBase.E
                 }
             }
         }
+    }
+
+    initPopulation.records.filter { cr -> cr.value is PersonSf }.forEach {
+        cr ->
+        val kommuneLabel = if ((cr.value as PersonSf).kommunenummer == UKJENT_FRA_PDL) {
+            UKJENT_FRA_PDL
+        } else {
+            PostnummerService.getPostnummer((cr.value as PersonSf).kommunenummer)?.let { it.kommune } ?: NOT_FOUND_IN_REGISTER
+        }
+        workMetrics.kommune.labels(kommuneLabel).inc()
     }
     return exitReason
 }
@@ -140,43 +148,48 @@ fun <K, V> getInitPopulation(
                         tailrec fun loop(records: Map<String, PersonBase>): InitPopulation = when {
                             ShutdownHook.isActive() || PrestopHook.isActive() -> InitPopulation.Interrupted
                             else -> {
-                                val cr = c.runCatching { Pair(true, poll(Duration.ofMillis(3_000)) as ConsumerRecords<String, String>) }
+                                val cr = c.runCatching { Pair(true, poll(Duration.ofMillis(3_000)) as ConsumerRecords<String, String?>) }
                                         .onFailure { log.error { "InitPopulation (portion ${lastDigit + 1} of 10) Failure during poll - ${it.localizedMessage}" } }
-                                        .getOrDefault(Pair(false, ConsumerRecords<String, String>(emptyMap())))
+                                        .getOrDefault(Pair(false, ConsumerRecords<String, String?>(emptyMap())))
                                 when {
-                                    !cr.first -> InitPopulation.Failure
-                                    cr.second.isEmpty -> InitPopulation.Exist(records)
+                                    !cr.first -> InitPopulation.Failure // TODO below as metric per partition
+                                    cr.second.isEmpty -> InitPopulation.Exist(records).also { log.info("Final set of digit $lastDigit ended up with ${records.size} records") }
                                     // Only deal with messages with key starting with firstDigit (current portion of 10):
-                                    else -> loop((records + cr.second.filter { r -> Character.getNumericValue(r.key().last()) == lastDigit }.map {
-                                        r ->
-                                        workMetrics.initRecordsParsed.inc()
+                                    else -> loop((records + cr.second.also { workMetrics.recordsPolledAtInit.inc(cr.second.count().toDouble()) }.filter { r ->
+                                        workMetrics.lastCharParsed.labels("Charval ${Character.getNumericValue(r.key().last())}").inc()
+                                        Character.getNumericValue(r.key().last()) == lastDigit
+                                    }.map { r ->
+                                        workMetrics.initRecordsParsed.inc() // TODO as metric per partition
                                         if (r.value() == null) {
                                             val personTombestone = PersonTombestone(aktoerId = r.key())
                                             Pair(r.key(), personTombestone)
                                         } else {
-                                            when (val query = r.value().getQueryFromJson()) {
+                                            when (val query = r.value()?.getQueryFromJson() ?: InvalidQuery) {
                                                 InvalidQuery -> {
                                                     log.error { "InitPopulation (portion ${lastDigit + 1} of 10) Unable to parse topic value PDL" }
-                                                    Pair(r.key(), PersonInvalid)
+                                                    workMetrics.invalidPersonsParsed.inc()
+                                                    Pair(r.key(), PersonInvalid) // TODO QueryLabels per partition = PersonInvalidDueToInvalidQuery
                                                 }
                                                 is Query -> {
                                                     when (val personSf = query.toPersonSf()) {
                                                         is PersonSf -> {
-                                                            Pair(r.key(), personSf)
+                                                            Pair(r.key(), personSf) // TODO QueryLabels per partition = PersonSf
                                                         }
                                                         is PersonInvalid -> {
-                                                            Pair(r.key(), PersonInvalid)
+                                                            workMetrics.invalidPersonsParsed.inc()
+                                                            Pair(r.key(), PersonInvalid) // TODO QueryLabels per partition = PersonInvalid
                                                         }
                                                         else -> {
                                                             log.error { "InitPopulation (portion ${lastDigit + 1} of 10) Returned unhandled PersonBase from Query.toPersonSf" }
-                                                            Pair(r.key(), PersonInvalid)
+                                                            workMetrics.invalidPersonsParsed.inc()
+                                                            Pair(r.key(), PersonInvalid) // TODO QueryLabels per partition = PersonInvalidUnhandled
                                                         }
                                                     }
                                                 }
                                             }
                                         }
-                                    }.filter {
-                                        p -> p.second is PersonTombestone || (p.second is PersonSf && !((p.second as PersonSf).doed) && (!filterEnabled || filter.approved(p.second as PersonSf, true)))
+                                    }.filter { p ->
+                                        p.second is PersonTombestone || (p.second is PersonSf && (!filterEnabled || filter.approved(p.second as PersonSf, true)))
                                     }))
                                 }
                             }
@@ -186,37 +199,4 @@ fun <K, V> getInitPopulation(
         } catch (e: Exception) {
             log.error { "InitPopulation (portion ${lastDigit + 1} of 10) Failure during kafka consumer construction - ${e.message}" }
             InitPopulation.Failure
-        }
-
-fun <K, V> getStartupOffset(
-    config: Map<String, Any>,
-    topics: List<String> = listOf(kafkaPDLTopic)
-): Long =
-        try {
-            var startUpOffset = 0L
-            KafkaConsumer<K, V>(Properties().apply { config.forEach { set(it.key, it.value) } })
-                    .apply {
-                        this.runCatching {
-                            assign(
-                                    topics.flatMap { topic ->
-                                        partitionsFor(topic).map { TopicPartition(it.topic(), it.partition()) }
-                                    }
-                            )
-                        }.onFailure {
-                            log.error { "Get Startup offset - Failure during topic partition(s) assignment for $topics - ${it.message}" }
-                        }
-                    }
-                    .use { c ->
-                        c.runCatching {
-                            log.info { "Attempt to register current latest offset as baseline for later" }
-                            seekToEnd(emptyList())
-                            log.info { "Registered number of assigned partitions ${assignment().size}" }
-                            startUpOffset = position(assignment().first())
-                            log.info { "startUpOffset registered as $startUpOffset" }
-                        }.onFailure { log.error { "Failure during attempt to register current latest offset - ${it.message}" } }
-                    }
-            startUpOffset
-        } catch (e: Exception) {
-            log.error { "get Startup Offset Failure during kafka consumer construction - ${e.message}" }
-            0L
         }

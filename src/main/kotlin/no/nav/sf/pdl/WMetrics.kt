@@ -193,14 +193,39 @@ data class WMetrics(
             .name("kommune")
             .labelNames("kommune")
             .help("kommune")
+            .register(),
+    val deadPersons: Gauge = Gauge
+            .build()
+            .name("dead_persons")
+            .help("dead_persons")
+            .register(),
+    val lastCharParsed: Gauge = Gauge
+            .build()
+            .name("last_char_parsed")
+            .labelNames("char_int")
+            .help("last_char_parsed")
+            .register(),
+    val recordsPolledAtInit: Gauge = Gauge
+            .build()
+            .name("records_polled_at_init")
+            .help("records_polled_at_init")
+            .register(),
+    val invalidPersonsParsed: Gauge = Gauge
+            .build()
+            .name("invalid_persons_parsed")
+            .help("invalid_persons_parsed")
             .register()
-
 ) {
     enum class AddressType {
         VEGAADRESSE, MATRIKKELADRESSE, UKJENTBOSTED, INGEN
     }
 
     fun clearAll() {
+        this.deadPersons.clear()
+        this.lastCharParsed.clear()
+        this.recordsPolledAtInit.clear()
+        this.invalidPersonsParsed.clear()
+
         this.kommune.clear()
         this.gtKommunenrFraKommuneMissing.clear()
         this.gtKommunenrFraKommune.clear()

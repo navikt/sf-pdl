@@ -79,9 +79,7 @@ data class WorkSettings(
 
     val initialLoad: Boolean = AVault.getSecretOrDefault(VAULT_initialLoad) == true.toString(),
 
-    val cache: Cache.Exist = Cache.newEmpty(),
-
-    val startUpOffset: Long = -1L
+    val cache: Cache.Exist = Cache.newEmpty()
 )
 
 val workMetrics = WMetrics()

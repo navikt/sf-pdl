@@ -32,25 +32,14 @@ object Bootstrap {
                 } else {
                     log.info { "Filter changed since last run will trigger initial load - will build populationCache from beginning of pdl topic and post latest to sf-person" }
                 }
-
-                val startupOffset = getStartupOffset<String, Any>(ws.kafkaConsumerPdlAlternative)
-                if (startupOffset == 0L) {
-                    log.error { "Failed finding startupOffset" }
-                    return@enableNAISAPI
-                }
                 if (!initLoad(ws).isOK()) {
                     log.error { "Failed loading population" }
                     return@enableNAISAPI
                 }
                 log.info { "Initial load done." }
                 conditionalWait()
-                loop(ws.copy(
-                        startUpOffset = startupOffset
-                )
-                )
-            } else {
-                loop(ws)
             }
+            loop(ws)
         }
         log.info { "Finished!" }
     }
@@ -67,8 +56,7 @@ object Bootstrap {
                         prevWS.first.copy(
                                 prevFilter = FilterBase.fromS3(), // Fetch filter from last successful work session
                                 prevEnabled = FilterBase.flagFromS3(),
-                                cache = prevWS.third,
-                                startUpOffset = -1L // Only seek to startUpOffset on first work session
+                                cache = prevWS.third
                         )
                     }
                     .also { conditionalWait() })
