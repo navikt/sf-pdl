@@ -242,6 +242,7 @@ fun <K, V> getInitPopulation(
             log.error { "InitPopulation (portion ${lastDigit + 1} of 10) Failure during kafka consumer construction - ${e.message}" }
             InitPopulation.Failure
         }
+var depthCount: Int = 0
 
 fun <K, V> getCollectionUnparsed(
     config: Map<String, Any>,
@@ -266,18 +267,22 @@ fun <K, V> getCollectionUnparsed(
                         tailrec fun loop(records: Map<String, String?>, retriesWhenEmpty: Int = 5): Map<String, String?> = when {
                             ShutdownHook.isActive() || PrestopHook.isActive() -> log.info { "Interrupted" }.let { emptyMap<String, String?>() }
                             else -> {
-                                val cr = c.runCatching { Pair(true, poll(Duration.ofMillis(2_000)) as ConsumerRecords<String, String?>) }
+                                val cr = c.runCatching { Pair(true, poll(Duration.ofMillis(4_000)) as ConsumerRecords<String, String?>) }
                                         .onFailure { log.error { "Count test  Failure during poll - ${it.localizedMessage}" } }
                                         .getOrDefault(Pair(false, ConsumerRecords<String, String?>(emptyMap())))
+                                depthCount = (depthCount + 1) % 100
+                                if (depthCount == 100) {
+                                    log.info { "(100th poll loop) Catched latest chunk of size ${cr.second.count()}. Total map so far is size ${records.size}" }
+                                }
 
-                                log.info { "Catched ${cr.second.count()}? will process" }
                                 when {
                                     !cr.first -> log.error { "Count test failure" }.let { emptyMap<String, String?>() }
                                     cr.second.isEmpty ->
+                                        log.info { "Count - Entering empty state" }.let {
                                         if (records.isEmpty()) {
                                             if (retriesWhenEmpty > 0) {
                                                 log.info { "Count test - Did not find any records will poll again (left $retriesWhenEmpty times)" }
-                                                loop(emptyMap(), retriesWhenEmpty - 1)
+                                                loop(emptyMap<String, String?>(), retriesWhenEmpty - 1)
                                             } else {
                                                 log.warn { "Count test - Cannot find any records, is topic truly empty?" }
                                                 emptyMap<String, String?>()
@@ -288,10 +293,10 @@ fun <K, V> getCollectionUnparsed(
                                             //   loop(records, retriesWhenEmpty - 1)
                                             // } else {
                                             //    log.warn { "Count test - Cannot find any records midst init, assume all is loaded for this partition" }
-                                            records
+                                            records.also { log.info("Count - Final set ended up with ${records.size} records") }
                                             // }
                                             // records.also { log.info("Final set of digit $lastDigit ended up with ${records.size} records") }
-                                        }
+                                        } }
                                     // Only deal with messages with key starting with firstDigit (current portion of 10):
                                     else -> loop((records + cr.second.map { r ->
                                         Pair(r.key(), r.value())
