@@ -4,7 +4,9 @@ import java.time.Duration
 import java.util.Properties
 import mu.KotlinLogging
 import no.nav.pdlsf.proto.PersonProto
+import no.nav.sf.library.AKafkaConsumer
 import no.nav.sf.library.AKafkaProducer
+import no.nav.sf.library.KafkaConsumerStates
 import no.nav.sf.library.PrestopHook
 import no.nav.sf.library.ShutdownHook
 import no.nav.sf.library.json
@@ -28,6 +30,23 @@ fun InitPopulation.Exist.isValid(): Boolean {
 
 internal fun initLoad(ws: WorkSettings): ExitReason {
     workMetrics.clearAll()
+    val result = getCollectionUnparsed<String, String?>(ws.kafkaConsumerPdlAlternative)
+    log.info { "Investigate - Number of unique aktoersid found init wise: ${result.size} is the one found? ${result.containsKey("1000025964669")}" }
+
+    // val result2
+    val kafkaConsumerPdlFromBeginning = AKafkaConsumer<String, String>(
+            config = ws.kafkaConsumerPdlAlternative,
+            fromBeginning = true
+    )
+    val result2: MutableMap<String, String?> = mutableMapOf()
+    kafkaConsumerPdlFromBeginning.consume { cRecords ->
+        // Happy go lucky
+        cRecords.forEach { cr -> result2[cr.key()] = cr.value() }
+        KafkaConsumerStates.IsOk
+    }
+
+    log.info { "Investigate - Number of unique aktoersid found normal consumer: ${result2.size} is the one found? ${result2.containsKey("1000025964669")}" }
+
     /**
      * Check - no filter means nothing to transfer, leaving
      */
@@ -56,7 +75,7 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
 
 fun initLoadPortion(lastDigit: Int, ws: WorkSettings, personFilter: FilterBase.Exists, filterEnabled: Boolean): ExitReason {
 
-    val initTmp = getInitPopulation<String, String>(lastDigit, ws.kafkaConsumerPdlAlternative, personFilter, filterEnabled)
+    val initTmp = getInitPopulation<String, String?>(lastDigit, ws.kafkaConsumerPdlAlternative, personFilter, filterEnabled)
 
     if (initTmp !is InitPopulation.Exist) {
         log.error { "initLoad (portion ${lastDigit + 1} of 10) - could not create init population" }
@@ -173,7 +192,7 @@ fun <K, V> getInitPopulation(
                                             InitPopulation.Exist(records).also { log.info("Final set of digit $lastDigit ended up with ${records.size} records") }
                                         }
                                     // Only deal with messages with key starting with firstDigit (current portion of 10):
-                                    else -> loop((records + cr.second.also { workMetrics.recordsPolledAtInit.inc(cr.second.count().toDouble()) }.filter { r ->
+                                    else -> loop((records + cr.second.filter { r ->
                                         workMetrics.lastCharParsed.labels("Charval ${Character.getNumericValue(r.key().last())}").inc()
                                         Character.getNumericValue(r.key().last()) == lastDigit
                                     }.map { r ->
@@ -217,4 +236,65 @@ fun <K, V> getInitPopulation(
         } catch (e: Exception) {
             log.error { "InitPopulation (portion ${lastDigit + 1} of 10) Failure during kafka consumer construction - ${e.message}" }
             InitPopulation.Failure
+        }
+
+fun <K, V> getCollectionUnparsed(
+    config: Map<String, Any>,
+    topics: List<String> = listOf(kafkaPDLTopic)
+): Map<String, String?> =
+        try {
+            KafkaConsumer<K, V>(Properties().apply { config.forEach { set(it.key, it.value) } })
+                    .apply {
+                        this.runCatching {
+                            assign(
+                                    topics.flatMap { topic ->
+                                        partitionsFor(topic).map { TopicPartition(it.topic(), it.partition()) }
+                                    }
+                            )
+                        }.onFailure {
+                            log.error { "Count test Failure during topic partition(s) assignment for $topics - ${it.message}" }
+                        }
+                    }
+                    .use { c ->
+                        c.runCatching { seekToBeginning(emptyList()) }
+                                .onFailure { log.error { "Count test Failure during SeekToBeginning - ${it.message}" } }
+                        tailrec fun loop(records: Map<String, String?>, retriesWhenEmpty: Int = 5): Map<String, String?> = when {
+                            ShutdownHook.isActive() || PrestopHook.isActive() -> log.info { "Interrupted" }.let { emptyMap<String, String?>() }
+                            else -> {
+                                val cr = c.runCatching { Pair(true, poll(Duration.ofMillis(2_000)) as ConsumerRecords<String, String?>) }
+                                        .onFailure { log.error { "Count test  Failure during poll - ${it.localizedMessage}" } }
+                                        .getOrDefault(Pair(false, ConsumerRecords<String, String?>(emptyMap())))
+                                when {
+                                    !cr.first -> log.error { "Count test failure" }.let { emptyMap<String, String?>() }
+                                    cr.second.isEmpty ->
+                                        if (records.isEmpty()) {
+                                            if (retriesWhenEmpty > 0) {
+                                                log.info { "Count test - Did not find any records will poll again (left $retriesWhenEmpty times)" }
+                                                loop(emptyMap(), retriesWhenEmpty - 1)
+                                            } else {
+                                                log.warn { "Count test - Cannot find any records, is topic truly empty?" }
+                                                emptyMap<String, String?>()
+                                            }
+                                        } else {
+                                            if (retriesWhenEmpty > 0) {
+                                                log.info { "Count test - Did not find any records midst init build will poll again (left $retriesWhenEmpty times)" }
+                                                loop(records, retriesWhenEmpty - 1)
+                                            } else {
+                                                log.warn { "Count test - Cannot find any records midst init, assume all is loaded for this partition" }
+                                                records
+                                            }
+                                            // records.also { log.info("Final set of digit $lastDigit ended up with ${records.size} records") }
+                                        }
+                                    // Only deal with messages with key starting with firstDigit (current portion of 10):
+                                    else -> loop((records + cr.second.map { r ->
+                                        Pair(r.key(), r.value())
+                                    }))
+                                }
+                            }
+                        }
+                        loop(emptyMap()).also { log.info { "Count test -  Closing KafkaConsumer" } }
+                    }
+        } catch (e: Exception) {
+            log.error { "Count test - Failure during kafka consumer construction - ${e.message}" }
+            emptyMap()
         }
