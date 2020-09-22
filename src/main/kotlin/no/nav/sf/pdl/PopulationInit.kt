@@ -39,8 +39,8 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
     val filterEnabled = ws.filterEnabled
     log.info { "initLoad - Continue work with filter enabled: $filterEnabled" }
 
-    for (lastDigit in 0..9) {
-        log.info { "Commencing pdl topic read for population initialization batch ${lastDigit + 1}/10..." }
+    for (lastDigit in 1 downTo 0) {
+        log.info { "(Reverse order) Commencing pdl topic read for population initialization batch ${lastDigit + 1}/10... digit " }
         workMetrics.latestInitBatch.set((lastDigit + 1).toDouble())
         val exitReason = initLoadPortion(lastDigit, ws, personFilter, filterEnabled)
         if (exitReason != ExitReason.Work) {
@@ -145,7 +145,7 @@ fun <K, V> getInitPopulation(
                     .use { c ->
                         c.runCatching { seekToBeginning(emptyList()) }
                                 .onFailure { log.error { "InitPopulation (portion ${lastDigit + 1} of 10) Failure during SeekToBeginning - ${it.message}" } }
-                        tailrec fun loop(records: Map<String, PersonBase>, retriesWhenEmpty: Int = 10): InitPopulation = when {
+                        tailrec fun loop(records: Map<String, PersonBase>, retriesWhenEmpty: Int = 5): InitPopulation = when {
                             ShutdownHook.isActive() || PrestopHook.isActive() -> InitPopulation.Interrupted
                             else -> {
                                 val cr = c.runCatching { Pair(true, poll(Duration.ofMillis(2_000)) as ConsumerRecords<String, String?>) }
