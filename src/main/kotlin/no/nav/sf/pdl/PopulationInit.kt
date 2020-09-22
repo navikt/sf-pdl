@@ -30,9 +30,8 @@ fun InitPopulation.Exist.isValid(): Boolean {
 
 internal fun initLoad(ws: WorkSettings): ExitReason {
     workMetrics.clearAll()
-    val result = getCollectionUnparsed<String, String?>(ws.kafkaConsumerPdlAlternative)
-    log.info { "Investigate - Number of unique aktoersid found init wise: ${result.size} is the one found? ${result.containsKey("1000025964669")}" }
 
+    log.info { "Commencing init count traditional consumer"}
     // val result2
     val kafkaConsumerPdlFromBeginning = AKafkaConsumer<String, String>(
             config = ws.kafkaConsumerPdlAlternative,
@@ -46,6 +45,14 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
     }
 
     log.info { "Investigate - Number of unique aktoersid found normal consumer: ${result2.size} is the one found? ${result2.containsKey("1000025964669")}" }
+    result2.clear()
+
+
+    log.info { "Commencing init count"}
+    val result = getCollectionUnparsed<String, String?>(ws.kafkaConsumerPdlAlternative)
+    log.info { "Investigate - Number of unique aktoersid found init wise: ${result.size} is the one found? ${result.containsKey("1000025964669")}" }
+
+
 
     /**
      * Check - no filter means nothing to transfer, leaving
