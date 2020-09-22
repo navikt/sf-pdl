@@ -4,12 +4,9 @@ import java.time.Duration
 import java.util.Properties
 import mu.KotlinLogging
 import no.nav.pdlsf.proto.PersonProto
-import no.nav.sf.library.AKafkaConsumer
 import no.nav.sf.library.AKafkaProducer
-import no.nav.sf.library.KafkaConsumerStates
 import no.nav.sf.library.PrestopHook
 import no.nav.sf.library.ShutdownHook
-import no.nav.sf.library.json
 import no.nav.sf.library.send
 import no.nav.sf.library.sendNullValue
 import org.apache.kafka.clients.consumer.ConsumerRecords
@@ -31,6 +28,7 @@ fun InitPopulation.Exist.isValid(): Boolean {
 internal fun initLoad(ws: WorkSettings): ExitReason {
     workMetrics.clearAll()
 
+    /*
     log.info { "Commencing init count traditional consumer" }
     // val result2
     val kafkaConsumerPdlFromBeginning = AKafkaConsumer<String, String>(
@@ -47,11 +45,12 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
 
     log.info { "Investigate - Number of unique aktoersid found normal consumer: ${result2.size} is the one found? ${result2.containsKey("1000025964669")}" }
     result2.clear()
-
+*/
     log.info { "Commencing init count" }
-    val result = getCollectionUnparsed<String, String?>(ws.kafkaConsumerPdl) // TODO OBSUsing original client id
+    val result = getCollectionUnparsed<String, String?>(ws.kafkaConsumerPdl) // TODO OBS Using original client id
     log.info { "Investigate - Number of unique aktoersid found init wise: ${result.size} is the one found? ${result.containsKey("1000025964669")}" }
 
+    /*
     /**
      * Check - no filter means nothing to transfer, leaving
      */
@@ -75,6 +74,7 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
     log.info { "Successful init session finished, will persist filter settings as current cache base" }
     S3Client.persistToS3(json.toJson(FilterBase.Exists.serializer(), personFilter).toString())
     S3Client.persistFlagToS3(filterEnabled)
+    */
     return ExitReason.Work
 }
 
@@ -134,12 +134,12 @@ fun initLoadPortion(lastDigit: Int, ws: WorkSettings, personFilter: FilterBase.E
         }
     }
 
-    initPopulation.records.filter { cr -> cr.value is PersonSf }.forEach {
-        cr ->
+    initPopulation.records.filter { cr -> cr.value is PersonSf }.forEach { cr ->
         val kommuneLabel = if ((cr.value as PersonSf).kommunenummer == UKJENT_FRA_PDL) {
             UKJENT_FRA_PDL
         } else {
-            PostnummerService.getPostnummer((cr.value as PersonSf).kommunenummer)?.let { it.kommune } ?: NOT_FOUND_IN_REGISTER
+            PostnummerService.getPostnummer((cr.value as PersonSf).kommunenummer)?.let { it.kommune }
+                    ?: NOT_FOUND_IN_REGISTER
         }
         workMetrics.kommune.labels(kommuneLabel).inc()
     }
@@ -269,6 +269,8 @@ fun <K, V> getCollectionUnparsed(
                                 val cr = c.runCatching { Pair(true, poll(Duration.ofMillis(2_000)) as ConsumerRecords<String, String?>) }
                                         .onFailure { log.error { "Count test  Failure during poll - ${it.localizedMessage}" } }
                                         .getOrDefault(Pair(false, ConsumerRecords<String, String?>(emptyMap())))
+
+                                log.info { "Catched ${cr.second.count()}? will process" }
                                 when {
                                     !cr.first -> log.error { "Count test failure" }.let { emptyMap<String, String?>() }
                                     cr.second.isEmpty ->
@@ -281,13 +283,13 @@ fun <K, V> getCollectionUnparsed(
                                                 emptyMap<String, String?>()
                                             }
                                         } else {
-                                            if (retriesWhenEmpty > 0) {
-                                                log.info { "Count test - Did not find any records midst init build will poll again (left $retriesWhenEmpty times)" }
-                                                loop(records, retriesWhenEmpty - 1)
-                                            } else {
-                                                log.warn { "Count test - Cannot find any records midst init, assume all is loaded for this partition" }
-                                                records
-                                            }
+                                            // if (retriesWhenEmpty > 0) {
+                                            //    log.info { "Count test - Did not find any records midst init build will poll again (left $retriesWhenEmpty times)" }
+                                            //   loop(records, retriesWhenEmpty - 1)
+                                            // } else {
+                                            //    log.warn { "Count test - Cannot find any records midst init, assume all is loaded for this partition" }
+                                            records
+                                            // }
                                             // records.also { log.info("Final set of digit $lastDigit ended up with ${records.size} records") }
                                         }
                                     // Only deal with messages with key starting with firstDigit (current portion of 10):
