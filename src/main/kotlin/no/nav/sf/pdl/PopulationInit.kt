@@ -262,6 +262,7 @@ fun <K, V> getCollectionUnparsed(
                         }
                     }
                     .use { c ->
+                        log.info { "Will seek to beginning" }
                         c.runCatching { seekToBeginning(emptyList()) }
                                 .onFailure { log.error { "Count test Failure during SeekToBeginning - ${it.message}" } }
                         tailrec fun loop(records: Map<String, String?>, retriesWhenEmpty: Int = 5): Map<String, String?> = when {
@@ -271,10 +272,10 @@ fun <K, V> getCollectionUnparsed(
                                         .onFailure { log.error { "Count test  Failure during poll - ${it.localizedMessage}" } }
                                         .getOrDefault(Pair(false, ConsumerRecords<String, String?>(emptyMap())))
                                 depthCount = (depthCount + 1) % 100
-                                if (depthCount == 100) {
+                                if (depthCount == 1) {
                                     log.info { "(100th poll loop) Catched latest chunk of size ${cr.second.count()}. Total map so far is size ${records.size}" }
                                 }
-
+                                workMetrics.recordsPolledAtInit.inc(cr.second.count().toDouble())
                                 when {
                                     !cr.first -> log.error { "Count test failure" }.let { emptyMap<String, String?>() }
                                     cr.second.isEmpty ->
