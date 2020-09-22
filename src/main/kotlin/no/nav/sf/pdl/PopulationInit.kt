@@ -39,6 +39,7 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
     )
     val result2: MutableMap<String, String?> = mutableMapOf()
     kafkaConsumerPdlFromBeginning.consume { cRecords ->
+        if (cRecords.isEmpty) return@consume KafkaConsumerStates.IsFinished
         // Happy go lucky
         cRecords.forEach { cr -> result2[cr.key()] = cr.value() }
         KafkaConsumerStates.IsOk
@@ -48,7 +49,7 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
     result2.clear()
 
     log.info { "Commencing init count" }
-    val result = getCollectionUnparsed<String, String?>(ws.kafkaConsumerPdlAlternative)
+    val result = getCollectionUnparsed<String, String?>(ws.kafkaConsumerPdl) // TODO OBSUsing original client id
     log.info { "Investigate - Number of unique aktoersid found init wise: ${result.size} is the one found? ${result.containsKey("1000025964669")}" }
 
     /**
@@ -63,7 +64,7 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
     log.info { "initLoad - Continue work with filter enabled: $filterEnabled" }
 
     for (lastDigit in 1 downTo 0) {
-        log.info { "(Reverse order) Commencing pdl topic read for population initialization batch ${lastDigit + 1}/10... digit " }
+        log.info { "(Reverse order) Commencing pdl topic read for population initialization batch ${lastDigit + 1}/10... digit $lastDigit" }
         workMetrics.latestInitBatch.set((lastDigit + 1).toDouble())
         val exitReason = initLoadPortion(lastDigit, ws, personFilter, filterEnabled)
         if (exitReason != ExitReason.Work) {
