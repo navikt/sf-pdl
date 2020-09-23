@@ -39,7 +39,7 @@ object Bootstrap {
                 log.info { "Initial load done." }
                 conditionalWait()
             }
-            loop(ws)
+            // loop(ws)
         }
         log.info { "Finished!" }
     }

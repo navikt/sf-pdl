@@ -7,7 +7,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
 import no.nav.pdlsf.proto.PersonProto
+import no.nav.sf.library.AKafkaConsumer
 import no.nav.sf.library.AKafkaProducer
+import no.nav.sf.library.KafkaConsumerStates
 import no.nav.sf.library.PrestopHook
 import no.nav.sf.library.ShutdownHook
 import no.nav.sf.library.send
@@ -53,26 +55,25 @@ private fun conditionalWait(ms: Long = 30000) =
 
 internal fun initLoad(ws: WorkSettings): ExitReason {
     workMetrics.clearAll()
-    conditionalWait(3000)
+    // conditionalWait(3000)
 
-    /*
     log.info { "Commencing init count traditional consumer" }
     // val result2
     val kafkaConsumerPdlFromBeginning = AKafkaConsumer<String, String>(
             config = ws.kafkaConsumerPdlAlternative,
             fromBeginning = true
     )
-    val result2: MutableMap<String, String?> = mutableMapOf()
+    val result2: MutableSet<String> = mutableSetOf()
     kafkaConsumerPdlFromBeginning.consume { cRecords ->
         if (cRecords.isEmpty) return@consume KafkaConsumerStates.IsFinished
         // Happy go lucky
-        cRecords.forEach { cr -> result2[cr.key()] = cr.value() }
+        cRecords.forEach { cr -> result2.add(cr.key()) }
         KafkaConsumerStates.IsOk
     }
 
-    log.info { "Investigate - Number of unique aktoersid found normal consumer: ${result2.size} is the one found? ${result2.containsKey("1000025964669")}" }
+    log.info { "Investigate - Number of unique aktoersid found normal consumer: ${result2.size} is the one found? ${result2.contains("1000025964669")}" }
     result2.clear()
-*/
+
     log.info { "Commencing init count" }
     val result = getCollectionUnparsed<String, String?>(ws.kafkaConsumerPdlAlternative) // TODO OBS Using original client id
     log.info { "Investigate - Number of unique aktoersid found init wise: ${result.size} is the one found? ${result.contains("1000025964669")}" }
@@ -319,15 +320,16 @@ fun <K, V> getCollectionUnparsed(
                                                 emptySet<String>()
                                             }
                                         } else {
-                                            // if (retriesWhenEmpty > 0) {
-                                            //    log.info { "Count test - Did not find any records midst init build will poll again (left $retriesWhenEmpty times)" }
-                                            //   loop(records, retriesWhenEmpty - 1)
-                                            // } else {
-                                            //    log.warn { "Count test - Cannot find any records midst init, assume all is loaded for this partition" }
-                                            set.also { log.info("Count - Final set ended up with ${set.size} records") }
-                                            // }
+                                            if (retriesWhenEmpty > 0) {
+                                                log.info { "Count test - Did not find any records midst init build will poll again (left $retriesWhenEmpty times)" }
+                                                loop(set, retriesWhenEmpty - 1)
+                                            } else {
+                                                log.warn { "Count test - Cannot find any records midst init, assume all is loaded for this partition" }
+                                                set.also { log.info("Count - Final set ended up with ${set.size} records") }
+                                            }
                                             // records.also { log.info("Final set of digit $lastDigit ended up with ${records.size} records") }
-                                        } }
+                                        }
+                                        }
                                     // Only deal with messages with key starting with firstDigit (current portion of 10):
                                     else -> loop(set + cr.second.map { r ->
                                         r.key()
