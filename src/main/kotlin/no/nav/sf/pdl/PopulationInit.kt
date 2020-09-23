@@ -53,7 +53,7 @@ private fun conditionalWait(ms: Long = 30000) =
 
 internal fun initLoad(ws: WorkSettings): ExitReason {
     workMetrics.clearAll()
-    conditionalWait(30000)
+    conditionalWait(3000)
 
     /*
     log.info { "Commencing init count traditional consumer" }
@@ -74,7 +74,7 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
     result2.clear()
 */
     log.info { "Commencing init count" }
-    val result = getCollectionUnparsed<String, String?>(ws.kafkaConsumerPdl) // TODO OBS Using original client id
+    val result = getCollectionUnparsed<String, String?>(ws.kafkaConsumerPdlAlternative) // TODO OBS Using original client id
     log.info { "Investigate - Number of unique aktoersid found init wise: ${result.size} is the one found? ${result.containsKey("1000025964669")}" }
 
     /*
@@ -300,7 +300,9 @@ fun <K, V> getCollectionUnparsed(
                                         .onFailure { log.error { "Count test  Failure during poll - ${it.localizedMessage}" } }
                                         .getOrDefault(Pair(false, ConsumerRecords<String, String?>(emptyMap())))
                                 depthCount = (depthCount + 1) % 100
-                                if (depthCount == 1) {
+                                if (c.position(c.assignment().first()) > 128387940) {
+                                    log.info { "(Step for step close to crash) Catched latest chunk of size ${cr.second.count()}. Position is ${c.position(c.assignment().first())} Total map so far is size ${records.size}" }
+                                } else if (depthCount == 1) {
                                     log.info { "(100th poll loop) Catched latest chunk of size ${cr.second.count()}. Position is ${c.position(c.assignment().first())} Total map so far is size ${records.size}" }
                                 }
                                 workMetrics.recordsPolledAtInit.inc(cr.second.count().toDouble())
