@@ -2,6 +2,9 @@ package no.nav.sf.pdl
 
 import java.time.Duration
 import java.util.Properties
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
 import no.nav.pdlsf.proto.PersonProto
 import no.nav.sf.library.AKafkaProducer
@@ -25,8 +28,32 @@ fun InitPopulation.Exist.isValid(): Boolean {
     return records.values.filterIsInstance<PersonInvalid>().isEmpty()
 }
 
+private fun conditionalWait(ms: Long = 30000) =
+        runBlocking {
+            log.info { "Will wait $ms ms " }
+
+            val cr = launch {
+                runCatching { delay(ms) }
+                        .onSuccess { log.info { "waiting completed" } }
+                        .onFailure { log.info { "waiting interrupted" } }
+            }
+
+            tailrec suspend fun loop(): Unit = when {
+                cr.isCompleted -> Unit
+                ShutdownHook.isActive() || PrestopHook.isActive() -> cr.cancel()
+                else -> {
+                    delay(250L)
+                    loop()
+                }
+            }
+
+            loop()
+            cr.join()
+        }
+
 internal fun initLoad(ws: WorkSettings): ExitReason {
     workMetrics.clearAll()
+    conditionalWait(30000)
 
     /*
     log.info { "Commencing init count traditional consumer" }
@@ -265,15 +292,16 @@ fun <K, V> getCollectionUnparsed(
                         log.info { "Will seek to beginning" }
                         c.runCatching { seekToBeginning(emptyList()) }
                                 .onFailure { log.error { "Count test Failure during SeekToBeginning - ${it.message}" } }
+
                         tailrec fun loop(records: Map<String, String?>, retriesWhenEmpty: Int = 5): Map<String, String?> = when {
                             ShutdownHook.isActive() || PrestopHook.isActive() -> log.info { "Interrupted" }.let { emptyMap<String, String?>() }
                             else -> {
-                                val cr = c.runCatching { Pair(true, poll(Duration.ofMillis(4_000)) as ConsumerRecords<String, String?>) }
+                                val cr = c.runCatching { Pair(true, poll(Duration.ofMillis(1_000)) as ConsumerRecords<String, String?>) }
                                         .onFailure { log.error { "Count test  Failure during poll - ${it.localizedMessage}" } }
                                         .getOrDefault(Pair(false, ConsumerRecords<String, String?>(emptyMap())))
                                 depthCount = (depthCount + 1) % 100
                                 if (depthCount == 1) {
-                                    log.info { "(100th poll loop) Catched latest chunk of size ${cr.second.count()}. Total map so far is size ${records.size}" }
+                                    log.info { "(100th poll loop) Catched latest chunk of size ${cr.second.count()}. Position is ${c.position(c.assignment().first())} Total map so far is size ${records.size}" }
                                 }
                                 workMetrics.recordsPolledAtInit.inc(cr.second.count().toDouble())
                                 when {
