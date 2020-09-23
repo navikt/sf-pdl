@@ -55,30 +55,38 @@ private fun conditionalWait(ms: Long = 30000) =
 
 internal fun initLoad(ws: WorkSettings): ExitReason {
     workMetrics.clearAll()
-    // conditionalWait(3000)
 
     log.info { "Commencing init count traditional consumer" }
     // val result2
-    val kafkaConsumerPdlFromBeginning = AKafkaConsumer<String, String>(
-            config = ws.kafkaConsumerPdlAlternative,
-            fromBeginning = true
-    )
-    val result2: MutableSet<String> = mutableSetOf()
-    kafkaConsumerPdlFromBeginning.consume { cRecords ->
-        if (cRecords.isEmpty) return@consume KafkaConsumerStates.IsFinished
-        // Happy go lucky
 
-        workMetrics.initRecordsParsed.inc(cRecords.count().toDouble())
-        cRecords.forEach { cr -> result2.add(cr.key()) }
-        KafkaConsumerStates.IsOk
+    val resultSet: MutableSet<String> = mutableSetOf()
+
+    for (iteration in 0..9) {
+
+        val kafkaConsumerPdl = AKafkaConsumer<String, String>(
+                config = ws.kafkaConsumerPdlAlternative,
+                fromBeginning = iteration == 0
+        )
+
+        kafkaConsumerPdl.consume { cRecords ->
+            if (cRecords.isEmpty) return@consume KafkaConsumerStates.IsFinished
+
+            workMetrics.initRecordsParsed.inc(cRecords.count().toDouble())
+            cRecords.forEach { cr -> resultSet.add(cr.key()) }
+            KafkaConsumerStates.IsOk
+        }
+
+        log.info { "Investigate iteration $iteration - Number of unique aktoersid found normal consumer: ${resultSet.size} is the one found? ${resultSet.contains("1000025964669")}" }
+        conditionalWait(60000)
     }
 
-    log.info { "Investigate - Number of unique aktoersid found normal consumer: ${result2.size} is the one found? ${result2.contains("1000025964669")}" }
-    result2.clear()
+    log.info { "Investigate finished Final result: ${resultSet.size}" }
 
-    log.info { "Commencing init count" }
-    val result = getCollectionUnparsed<String, String?>(ws.kafkaConsumerPdlAlternative) // TODO OBS Using original client id
-    log.info { "Investigate - Number of unique aktoersid found init wise: ${result.size} is the one found? ${result.contains("1000025964669")}" }
+    resultSet.clear()
+
+    // log.info { "Commencing init count" }
+    // val result = getCollectionUnparsed<String, String?>(ws.kafkaConsumerPdlAlternative) // TODO OBS Using original client id
+    // log.info { "Investigate - Number of unique aktoersid found init wise: ${result.size} is the one found? ${result.contains("1000025964669")}" }
 
     /*
     /**
