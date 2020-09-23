@@ -64,7 +64,8 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
     for (iteration in 0..9) {
 
         val kafkaConsumerPdl = AKafkaConsumer<String, String>(
-                config = ws.kafkaConsumerPdlAlternative,
+                config = ws.kafkaConsumerPdlAlternative, // Alternative client Id
+                topics = listOf(kafkaPDLTopic),
                 fromBeginning = iteration == 0
         )
 
