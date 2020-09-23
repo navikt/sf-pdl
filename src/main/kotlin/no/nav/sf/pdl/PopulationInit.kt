@@ -75,7 +75,7 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
 */
     log.info { "Commencing init count" }
     val result = getCollectionUnparsed<String, String?>(ws.kafkaConsumerPdlAlternative) // TODO OBS Using original client id
-    log.info { "Investigate - Number of unique aktoersid found init wise: ${result.size} is the one found? ${result.containsKey("1000025964669")}" }
+    log.info { "Investigate - Number of unique aktoersid found init wise: ${result.size} is the one found? ${result.contains("1000025964669")}" }
 
     /*
     /**
@@ -274,7 +274,7 @@ var depthCount: Int = 0
 fun <K, V> getCollectionUnparsed(
     config: Map<String, Any>,
     topics: List<String> = listOf(kafkaPDLTopic)
-): Map<String, String?> =
+): Set<String> =
         try {
             KafkaConsumer<K, V>(Properties().apply { config.forEach { set(it.key, it.value) } })
                     .apply {
@@ -293,30 +293,30 @@ fun <K, V> getCollectionUnparsed(
                         c.runCatching { seekToBeginning(emptyList()) }
                                 .onFailure { log.error { "Count test Failure during SeekToBeginning - ${it.message}" } }
 
-                        tailrec fun loop(records: Map<String, String?>, retriesWhenEmpty: Int = 5): Map<String, String?> = when {
-                            ShutdownHook.isActive() || PrestopHook.isActive() -> log.info { "Interrupted" }.let { emptyMap<String, String?>() }
+                        tailrec fun loop(set: Set<String>, retriesWhenEmpty: Int = 5): Set<String> = when {
+                            ShutdownHook.isActive() || PrestopHook.isActive() -> log.info { "Interrupted" }.let { emptySet<String>() }
                             else -> {
                                 val cr = c.runCatching { Pair(true, poll(Duration.ofMillis(1_000)) as ConsumerRecords<String, String?>) }
                                         .onFailure { log.error { "Count test  Failure during poll - ${it.localizedMessage}" } }
                                         .getOrDefault(Pair(false, ConsumerRecords<String, String?>(emptyMap())))
                                 depthCount = (depthCount + 1) % 100
-                                if (c.position(c.assignment().first()) > 128387940) {
-                                    log.info { "(Step for step close to crash) Catched latest chunk of size ${cr.second.count()}. Position is ${c.position(c.assignment().first())} Total map so far is size ${records.size}" }
-                                } else if (depthCount == 1) {
-                                    log.info { "(100th poll loop) Catched latest chunk of size ${cr.second.count()}. Position is ${c.position(c.assignment().first())} Total map so far is size ${records.size}" }
+                                // if (c.position(c.assignment().first()) > 128387940) {
+                                //    log.info { "(Step for step close to crash) Catched latest chunk of size ${cr.second.count()}. Position is ${c.position(c.assignment().first())} Total map so far is size ${records.size}" }
+                                if (depthCount == 1) {
+                                    log.info { "(new 100th poll loop) Catched latest chunk of size ${cr.second.count()}. Position is ${c.position(c.assignment().first())} Total set so far is size ${set.size}" }
                                 }
                                 workMetrics.recordsPolledAtInit.inc(cr.second.count().toDouble())
                                 when {
-                                    !cr.first -> log.error { "Count test failure" }.let { emptyMap<String, String?>() }
+                                    !cr.first -> log.error { "Count test failure" }.let { emptySet<String>() }
                                     cr.second.isEmpty ->
                                         log.info { "Count - Entering empty state" }.let {
-                                        if (records.isEmpty()) {
+                                        if (set.isEmpty()) {
                                             if (retriesWhenEmpty > 0) {
                                                 log.info { "Count test - Did not find any records will poll again (left $retriesWhenEmpty times)" }
-                                                loop(emptyMap<String, String?>(), retriesWhenEmpty - 1)
+                                                loop(emptySet<String>(), retriesWhenEmpty - 1)
                                             } else {
                                                 log.warn { "Count test - Cannot find any records, is topic truly empty?" }
-                                                emptyMap<String, String?>()
+                                                emptySet<String>()
                                             }
                                         } else {
                                             // if (retriesWhenEmpty > 0) {
@@ -324,20 +324,20 @@ fun <K, V> getCollectionUnparsed(
                                             //   loop(records, retriesWhenEmpty - 1)
                                             // } else {
                                             //    log.warn { "Count test - Cannot find any records midst init, assume all is loaded for this partition" }
-                                            records.also { log.info("Count - Final set ended up with ${records.size} records") }
+                                            set.also { log.info("Count - Final set ended up with ${set.size} records") }
                                             // }
                                             // records.also { log.info("Final set of digit $lastDigit ended up with ${records.size} records") }
                                         } }
                                     // Only deal with messages with key starting with firstDigit (current portion of 10):
-                                    else -> loop((records + cr.second.map { r ->
-                                        Pair(r.key(), r.value())
-                                    }))
+                                    else -> loop(set + cr.second.map { r ->
+                                        r.key()
+                                    }.toSet())
                                 }
                             }
                         }
-                        loop(emptyMap()).also { log.info { "Count test -  Closing KafkaConsumer" } }
+                        loop(emptySet()).also { log.info { "Count test -  Closing KafkaConsumer" } }
                     }
         } catch (e: Exception) {
             log.error { "Count test - Failure during kafka consumer construction - ${e.message}" }
-            emptyMap()
+            emptySet()
         }
