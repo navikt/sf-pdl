@@ -2,6 +2,7 @@ package no.nav.sf.pdl
 
 import java.time.Duration
 import java.util.Properties
+import kotlin.streams.toList
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -59,12 +60,12 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
     log.info { "Commencing init count traditional consumer" }
     // val result2
 
-    val resultSet: MutableSet<String> = mutableSetOf()
+    val resultList: MutableList<String> = mutableListOf()
 
     for (iteration in 0..9) {
 
         val kafkaConsumerPdl = AKafkaConsumer<String, String>(
-                config = ws.kafkaConsumerPdlAlternative, // Alternative client Id
+                config = ws.kafkaConsumerPdlAlternative, // Alternative client Id/ group id
                 topics = listOf(kafkaPDLTopic),
                 fromBeginning = iteration == 0
         )
@@ -73,17 +74,19 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
             if (cRecords.isEmpty) return@consume KafkaConsumerStates.IsFinished
 
             workMetrics.initRecordsParsed.inc(cRecords.count().toDouble())
-            cRecords.forEach { cr -> resultSet.add(cr.key()) }
+            cRecords.forEach { cr -> resultList.add(cr.key()) }
             KafkaConsumerStates.IsOk
         }
 
-        log.info { "Investigate iteration $iteration - Number of unique aktoersid found normal consumer: ${resultSet.size} is the one found? ${resultSet.contains("1000025964669")}" }
+        log.info { "Investigate iteration $iteration - Number total record found: ${resultList.size} is the one found? ${resultList.contains("1000025964669")}" }
         conditionalWait(60000)
     }
 
-    log.info { "Investigate finished Final result: ${resultSet.size}" }
+    log.info { "Investigate finished Final total count: ${resultList.size}" }
+    val setList = resultList.stream().distinct().toList()
+    log.info { "Investigate finished Final unique count: ${setList.size}" }
 
-    resultSet.clear()
+    resultList.clear()
 
     // log.info { "Commencing init count" }
     // val result = getCollectionUnparsed<String, String?>(ws.kafkaConsumerPdlAlternative) // TODO OBS Using original client id
