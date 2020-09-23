@@ -67,6 +67,8 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
     kafkaConsumerPdlFromBeginning.consume { cRecords ->
         if (cRecords.isEmpty) return@consume KafkaConsumerStates.IsFinished
         // Happy go lucky
+
+        workMetrics.initRecordsParsed.inc(cRecords.count().toDouble())
         cRecords.forEach { cr -> result2.add(cr.key()) }
         KafkaConsumerStates.IsOk
     }
