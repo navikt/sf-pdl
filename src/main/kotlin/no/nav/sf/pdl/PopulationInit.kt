@@ -75,6 +75,7 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
     }
 
     if (!resultList.isValid()) {
+        log.error {"Result contains invalid records"}
         return ExitReason.InvalidCache
     }
 
