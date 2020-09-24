@@ -60,7 +60,7 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
     log.info { "Commencing init count traditional consumer" }
     // val result2
 
-    val resultList: MutableList<String> = mutableListOf()
+    val resultList: MutableSet<String> = mutableSetOf()
 
     for (iteration in 0..9) {
 

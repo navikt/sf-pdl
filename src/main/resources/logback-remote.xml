@@ -11,8 +11,8 @@
         </encoder>
     </appender>
 
-    <logger name="no.nav" level="INFO"/>
-    <logger name="org.apache.kafka" level="INFO"/>
+    <logger name="no.nav" level="DEBUG"/>
+    <logger name="org.apache.kafka" level="DEBUG"/>
     <logger name="o.a.k.clients" level="INFO"/>
     <logger name="io.netty" level="INFO"/>
 
