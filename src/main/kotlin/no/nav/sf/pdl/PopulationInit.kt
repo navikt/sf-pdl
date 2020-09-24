@@ -47,6 +47,7 @@ fun List<Pair<String, PersonBase>>.isValid(): Boolean {
     return filterIsInstance<PersonInvalid>().isEmpty()
 }
 
+var heartBeatConsumer: Int = 0
 internal fun initLoad(ws: WorkSettings): ExitReason {
     workMetrics.clearAll()
 
@@ -71,11 +72,16 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
 
         workMetrics.initRecordsParsed.inc(cRecords.count().toDouble())
         cRecords.forEach { cr -> resultList.add(Pair(cr.key(), parsePdlJson(cr))) }
+        if (heartBeatConsumer == 0) {
+            log.debug { "Successfully consumed a batch (This is prompted 1000th consume batch)" }
+        }
+        heartBeatConsumer = ((heartBeatConsumer + 1) % 1000)
+
         KafkaConsumerStates.IsOk
     }
 
     if (!resultList.isValid()) {
-        log.error {"Result contains invalid records"}
+        log.error { "Result contains invalid records" }
         return ExitReason.InvalidCache
     }
 
