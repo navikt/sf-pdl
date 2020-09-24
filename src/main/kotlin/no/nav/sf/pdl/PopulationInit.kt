@@ -101,6 +101,8 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
                     !(r.value as PersonSf).doed &&
                     (!ws.filterEnabled || filter.approved(r.value as PersonSf, true))) }
 
+    log.info { "Do we see the reference person? ${filteredRecords.containsKey("1000025964669")}"}
+
     log.info { "Number of records filtered and ready to send ${filteredRecords.size.toDouble()}" }
     workMetrics.noOfInitialKakfaRecordsPdl.set(filteredRecords.size.toDouble())
 
