@@ -32,6 +32,7 @@ object Bootstrap {
                 } else {
                     log.info { "Filter changed since last run will trigger initial load - will build populationCache from beginning of pdl topic and post latest to sf-person" }
                 }
+                conditionalWait(20000, "Will wait 20 s to give kafka broker grace period")
                 if (!initLoad(ws).isOK()) {
                     log.error { "Failed loading population" }
                     return@enableNAISAPI
@@ -39,7 +40,7 @@ object Bootstrap {
                 log.info { "Initial load done." }
                 conditionalWait()
             }
-            // loop(ws)
+            loop(ws)
         }
         log.info { "Finished!" }
     }
@@ -64,9 +65,9 @@ object Bootstrap {
         }
     }
 
-    private fun conditionalWait(ms: Long = bootstrapWaitTime) =
+    private fun conditionalWait(ms: Long = bootstrapWaitTime, msg: String = "Will wait $ms ms before starting all over") =
             runBlocking {
-                log.info { "Will wait $ms ms before starting all over" }
+                log.info { msg }
 
                 val cr = launch {
                     runCatching { delay(ms) }

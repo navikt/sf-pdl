@@ -115,6 +115,8 @@ sealed class FilterBase {
             }
             if (!initial) {
                 if (approved) workMetrics.filterApproved.inc() else workMetrics.filterDisproved.inc()
+            } else {
+                if (approved) workMetrics.initialFilterApproved.inc() else workMetrics.initialFilterDisproved.inc()
             }
             return approved
         }
@@ -283,6 +285,7 @@ internal fun work(ws: WorkSettings): Triple<WorkSettings, ExitReason, Cache.Exis
 
         val kafkaConsumerPdl = AKafkaConsumer<String, String>(
                 config = ws.kafkaConsumerPdl,
+                topics = listOf(kafkaPDLTopic),
                 fromBeginning = false
         )
         exitReason = ExitReason.NoKafkaConsumer
@@ -308,11 +311,13 @@ internal fun work(ws: WorkSettings): Triple<WorkSettings, ExitReason, Cache.Exis
                         is Query -> {
                             when (val personSf = query.toPersonSf()) {
                                 is PersonSf -> {
-                                    workMetrics.noOfPersonSf.inc()
+                                    // Let´s take a look on the persons and give us some metrics on the kommune in the parsed data
                                     val kommuneLabel = if (personSf.kommunenummer == UKJENT_FRA_PDL) {
                                         UKJENT_FRA_PDL
                                     } else {
-                                        PostnummerService.getPostnummer(personSf.kommunenummer)?.let { it.kommune } ?: NOT_FOUND_IN_REGISTER
+                                        PostnummerService.getPostnummer(personSf.kommunenummer)?.let {
+                                            it.kommune
+                                        } ?: workMetrics.kommune_number_not_found.labels(personSf.kommunenummer).inc().let { NOT_FOUND_IN_REGISTER }
                                     }
                                     workMetrics.kommune.labels(kommuneLabel).inc()
 
@@ -348,8 +353,6 @@ internal fun work(ws: WorkSettings): Triple<WorkSettings, ExitReason, Cache.Exis
                             acc && pair.second?.let {
                                 newRecords[pair.first.aktoerId] = it.hashCode()
                                 send(kafkaPersonTopic, pair.first.toByteArray(), it.toByteArray()).also { workMetrics.publishedPersons.inc() }
-                                // it.k.protobufSafeParseKey().aktoerId to it.v.protobufSafeParseValue().hashCode()
-                                // newRecords[pair.first.aktoerId] = it.hashCode()
                             } ?: sendNullValue(kafkaPersonTopic, pair.first.toByteArray()).also {
                                 workMetrics.publishedTombestones.inc()
                             }

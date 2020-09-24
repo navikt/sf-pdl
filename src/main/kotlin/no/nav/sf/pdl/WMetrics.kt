@@ -194,6 +194,12 @@ data class WMetrics(
             .labelNames("kommune")
             .help("kommune")
             .register(),
+    val kommune_number_not_found: Gauge = Gauge
+            .build()
+            .name("kommune_number_not_found")
+            .labelNames("kommune_number")
+            .help("kommune_number_not_found")
+            .register(),
     val deadPersons: Gauge = Gauge
             .build()
             .name("dead_persons")
@@ -204,11 +210,6 @@ data class WMetrics(
             .name("last_char_parsed")
             .labelNames("char_int")
             .help("last_char_parsed")
-            .register(),
-    val recordsPolledAtInit: Gauge = Gauge
-            .build()
-            .name("records_polled_at_init")
-            .help("records_polled_at_init")
             .register(),
     val invalidPersonsParsed: Gauge = Gauge
             .build()
@@ -223,7 +224,6 @@ data class WMetrics(
     fun clearAll() {
         this.deadPersons.clear()
         this.lastCharParsed.clear()
-        this.recordsPolledAtInit.clear()
         this.invalidPersonsParsed.clear()
 
         this.kommune.clear()
