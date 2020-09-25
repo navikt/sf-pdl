@@ -244,7 +244,9 @@ internal fun work(ws: WorkSettings): Triple<WorkSettings, ExitReason, Cache.Exis
      * -> leaving
      */
 
-    var tmp: Cache
+    var tmp: Cache = ws.cache
+
+    /* TODO Cache is expensive memorywise (8M records) and pointless if we do not expect duplicate messages. Leave it empty for now
     if (ws.cache.isEmpty) {
         log.info { "No cache in memory will load cache from topic $kafkaPersonTopic" }
         tmp = Cache.load(ws.kafkaConsumerPerson, kafkaPersonTopic)
@@ -259,6 +261,8 @@ internal fun work(ws: WorkSettings): Triple<WorkSettings, ExitReason, Cache.Exis
         log.info { "Will use cache from previous work run" }
         tmp = ws.cache
     }
+
+     */
 
     val cache = tmp as Cache.Exist
     val newRecords: MutableMap<String, Int?> = mutableMapOf()
@@ -378,7 +382,7 @@ internal fun work(ws: WorkSettings): Triple<WorkSettings, ExitReason, Cache.Exis
         log.info { "Successful work session finished, will persist filter settings as current cache base" }
         S3Client.persistToS3(json.toJson(FilterBase.Exists.serializer(), personFilter).toString())
         S3Client.persistFlagToS3(filterEnabled)
-        return Triple(ws, exitReason, cache.withNewRecords(newRecords))
+        return Triple(ws, exitReason, cache /*cache.withNewRecords(newRecords) TODO cache left empty for now*/)
     } else {
         log.warn { "Failed work session - will not update cache base" }
     }
