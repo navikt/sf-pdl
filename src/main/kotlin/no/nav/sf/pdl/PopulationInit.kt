@@ -75,7 +75,7 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
     log.info { "Init test run : Total records from topic: ${resultListTest.size}" }
     workMetrics.initRecordsParsedTest.set(resultListTest.size.toDouble())
     log.info { "Init test run : Total unique records from topic: ${resultListTest.stream().distinct().toList().size}" }
-
+    resultListTest.clear() // Free memory
     workMetrics.clearAll()
 
     if (ws.filter is FilterBase.Missing) {
