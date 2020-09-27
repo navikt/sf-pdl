@@ -129,6 +129,11 @@ data class WMetrics(
             .name("init_records_parsed")
             .help("init_records_parsed")
             .register(),
+    val initRecordsParsedTest: Gauge = Gauge
+            .build()
+            .name("init_records_parsed_test")
+            .help("init_records_parsed_test")
+            .register(),
     val noInvalidKommuneNummer: Gauge = Gauge
             .build()
             .name("no_invalid_kommunenummer")
@@ -222,6 +227,7 @@ data class WMetrics(
     }
 
     fun clearAll() {
+        this.initRecordsParsedTest.clear()
         this.deadPersons.clear()
         this.lastCharParsed.clear()
         this.invalidPersonsParsed.clear()

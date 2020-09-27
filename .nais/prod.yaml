@@ -27,11 +27,11 @@ spec:
     path: /metrics
   resources:
     limits:
-      cpu: 1000m
-      memory: 65536Mi
+      cpu: 2000m
+      memory: 64Gi
     requests:
-      cpu: 100m
-      memory: 40000Mi
+      cpu: 200m
+      memory: 32Gi
   vault:
     enabled: true
     paths:

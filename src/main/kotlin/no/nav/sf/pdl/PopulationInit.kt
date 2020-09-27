@@ -1,5 +1,6 @@
 package no.nav.sf.pdl
 
+import kotlin.streams.toList
 import mu.KotlinLogging
 import no.nav.pdlsf.proto.PersonProto
 import no.nav.sf.library.AKafkaConsumer
@@ -49,6 +50,32 @@ fun List<Pair<String, PersonBase>>.isValid(): Boolean {
 
 var heartBeatConsumer: Int = 0
 internal fun initLoad(ws: WorkSettings): ExitReason {
+    workMetrics.clearAll()
+    val kafkaConsumerPdlTest = AKafkaConsumer<String, String?>(
+            config = ws.kafkaConsumerPdl,
+            topics = listOf(kafkaPDLTopic),
+            fromBeginning = true
+    )
+
+    val resultListTest: MutableList<String> = mutableListOf()
+
+    kafkaConsumerPdlTest.consume { cRecords ->
+        if (cRecords.isEmpty) return@consume KafkaConsumerStates.IsFinished
+
+        workMetrics.initRecordsParsedTest.inc(cRecords.count().toDouble())
+        cRecords.forEach { cr -> resultListTest.add(cr.key()) }
+        if (heartBeatConsumer == 0) {
+            log.debug { "Test phase Successfully consumed a batch (This is prompted 1000th consume batch)" }
+        }
+        heartBeatConsumer = ((heartBeatConsumer + 1) % 1000)
+
+        KafkaConsumerStates.IsOk
+    }
+
+    log.info { "Init test run : Total records from topic: ${resultListTest.size}" }
+    workMetrics.initRecordsParsedTest.set(resultListTest.size.toDouble())
+    log.info { "Init test run : Total unique records from topic: ${resultListTest.stream().distinct().toList().size}" }
+
     workMetrics.clearAll()
 
     if (ws.filter is FilterBase.Missing) {
@@ -133,6 +160,7 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
         }
     }
 
+    log.info { "Init load - Done with publishing to topic exitReason is Ok? ${exitReason.isOK()} " }
     if (exitReason.isOK()) {
         // Let´s take a look on the persons and give us some metrics on the kommune in the parsed data
         filteredRecords.filter { cr -> cr.value is PersonSf }.forEach { cr ->
@@ -141,7 +169,7 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
             } else {
                 PostnummerService.getPostnummer((cr.value as PersonSf).kommunenummer)?.let {
                     it.kommune
-                } ?: workMetrics.kommune_number_not_found.labels((cr.value as PersonSf).kommunenummer).inc().let { NOT_FOUND_IN_REGISTER }
+                } ?: /*workMetrics.kommune_number_not_found.labels((cr.value as PersonSf).kommunenummer).inc().let { */NOT_FOUND_IN_REGISTER // }
             }
             workMetrics.kommune.labels(kommuneLabel).inc()
         }
