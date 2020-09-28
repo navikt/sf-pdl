@@ -49,7 +49,8 @@ fun List<Pair<String, PersonBase>>.isValid(): Boolean {
 }
 
 var heartBeatConsumer: Int = 0
-internal fun initLoad(ws: WorkSettings): ExitReason {
+
+internal fun initLoadTest(ws: WorkSettings) {
     workMetrics.clearAll()
     val kafkaConsumerPdlTest = AKafkaConsumer<String, String?>(
             config = ws.kafkaConsumerPdl,
@@ -65,17 +66,23 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
         workMetrics.initRecordsParsedTest.inc(cRecords.count().toDouble())
         cRecords.forEach { cr -> resultListTest.add(cr.key()) }
         if (heartBeatConsumer == 0) {
-            log.debug { "Test phase Successfully consumed a batch (This is prompted 1000th consume batch)" }
+            log.debug { "Test phase Successfully consumed a batch (This is prompted 100000th consume batch)" }
         }
-        heartBeatConsumer = ((heartBeatConsumer + 1) % 1000)
+        heartBeatConsumer = ((heartBeatConsumer + 1) % 100000)
 
         KafkaConsumerStates.IsOk
     }
+    heartBeatConsumer = 0
 
     log.info { "Init test run : Total records from topic: ${resultListTest.size}" }
     workMetrics.initRecordsParsedTest.set(resultListTest.size.toDouble())
     log.info { "Init test run : Total unique records from topic: ${resultListTest.stream().distinct().toList().size}" }
-    resultListTest.clear() // Free memory
+    heartBeatConsumer = 0
+}
+
+internal fun initLoad(ws: WorkSettings): ExitReason {
+    initLoadTest(ws)
+
     workMetrics.clearAll()
 
     if (ws.filter is FilterBase.Missing) {
@@ -100,9 +107,9 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
         workMetrics.initRecordsParsed.inc(cRecords.count().toDouble())
         cRecords.forEach { cr -> resultList.add(Pair(cr.key(), parsePdlJson(cr))) }
         if (heartBeatConsumer == 0) {
-            log.debug { "Successfully consumed a batch (This is prompted 1000th consume batch)" }
+            log.debug { "Successfully consumed a batch (This is prompted 100000th consume batch)" }
         }
-        heartBeatConsumer = ((heartBeatConsumer + 1) % 1000)
+        heartBeatConsumer = ((heartBeatConsumer + 1) % 100000)
 
         KafkaConsumerStates.IsOk
     }
@@ -114,7 +121,7 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
 
     log.info { "Number of records from topic $kafkaPDLTopic is ${resultList.size}" }
 
-    val latestRecords = resultList.toMap()
+    val latestRecords = resultList.toMap() // Remove duplicates
 
     log.info { "Number of unique aktoersIds (and corresponding messages to handle) on topic $kafkaPDLTopic is ${latestRecords.size}" }
 
@@ -126,54 +133,72 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
     val filteredRecords = latestRecords.filter { r -> r.value is PersonTombestone ||
             (r.value is PersonSf &&
                     !(r.value as PersonSf).doed &&
-                    (!ws.filterEnabled || filter.approved(r.value as PersonSf, true))) }
+                    (!ws.filterEnabled || filter.approved(r.value as PersonSf, true)))
+    }.map {
+        if (it.value is PersonSf) {
+            (it.value as PersonSf).measureKommune()
+            if (it.key == "1000025964669") { log.info { "Found reference person in filtering" } }
+            (it.value as PersonSf).toPersonProto()
+        } else {
+            Pair<PersonProto.PersonKey, PersonProto.PersonValue?>((it.value as PersonTombestone).toPersonTombstoneProtoKey(), null)
+        }
+    }.toList().asSequence()
 
-    log.info { "Do we see the reference person? ${filteredRecords.containsKey("1000025964669")}" }
-
-    log.info { "Number of records filtered and ready to send ${filteredRecords.size.toDouble()}" }
-    workMetrics.noOfInitialKakfaRecordsPdl.set(filteredRecords.size.toDouble())
+    log.info { "Number of records filtered, translated and ready to send ${filteredRecords.count().toDouble()}" }
+    workMetrics.noOfInitialKakfaRecordsPdl.set(filteredRecords.count().toDouble())
 
     var exitReason: ExitReason = ExitReason.NoKafkaProducer
 
-    AKafkaProducer<ByteArray, ByteArray>(
-            config = ws.kafkaProducerPerson
-    ).produce {
-        filteredRecords.map {
-            if (it.value is PersonSf) {
-                (it.value as PersonSf).toPersonProto()
-            } else {
-                Pair<PersonProto.PersonKey, PersonProto.PersonValue?>((it.value as PersonTombestone).toPersonTombstoneProtoKey(), null)
-            }
-        }.fold(true) { acc, pair ->
-            acc && pair.second?.let {
-                send(kafkaPersonTopic, pair.first.toByteArray(), it.toByteArray()).also { workMetrics.initiallyPublishedPersons.inc() }
-            } ?: sendNullValue(kafkaPersonTopic, pair.first.toByteArray()).also { workMetrics.initiallyPublishedTombestones.inc() }
-        }.let { sent ->
-            when (sent) {
-                true -> exitReason = ExitReason.Work
-                false -> {
-                    exitReason = ExitReason.InvalidCache
-                    workMetrics.producerIssues.inc()
-                    log.error { "Init load - Producer has issues sending to topic" }
+    var produceCount: Int = 0
+
+    filteredRecords.batch(500000).forEach {
+        log.info { "Creating producer for batch ${produceCount++}" }
+        AKafkaProducer<ByteArray, ByteArray>(
+                config = ws.kafkaProducerPerson
+        ).produce {
+            it.fold(true) { acc, pair ->
+                acc && pair.second?.let {
+                    send(kafkaPersonTopic, pair.first.toByteArray(), it.toByteArray()).also { workMetrics.initiallyPublishedPersons.inc() }
+                } ?: sendNullValue(kafkaPersonTopic, pair.first.toByteArray()).also { workMetrics.initiallyPublishedTombestones.inc() }
+            }.let { sent ->
+                when (sent) {
+                    true -> exitReason = ExitReason.Work
+                    false -> {
+                        exitReason = ExitReason.InvalidCache
+                        workMetrics.producerIssues.inc()
+                        log.error { "Init load - Producer $produceCount has issues sending to topic" }
+                    }
                 }
             }
         }
     }
 
     log.info { "Init load - Done with publishing to topic exitReason is Ok? ${exitReason.isOK()} " }
-    if (exitReason.isOK()) {
-        // Let´s take a look on the persons and give us some metrics on the kommune in the parsed data
-        filteredRecords.filter { cr -> cr.value is PersonSf }.forEach { cr ->
-            val kommuneLabel = if ((cr.value as PersonSf).kommunenummer == UKJENT_FRA_PDL) {
-                UKJENT_FRA_PDL
-            } else {
-                PostnummerService.getPostnummer((cr.value as PersonSf).kommunenummer)?.let {
-                    it.kommune
-                } ?: /*workMetrics.kommune_number_not_found.labels((cr.value as PersonSf).kommunenummer).inc().let { */NOT_FOUND_IN_REGISTER // }
-            }
-            workMetrics.kommune.labels(kommuneLabel).inc()
-        }
-    }
 
     return exitReason
+}
+
+fun PersonSf.measureKommune() {
+    val kommuneLabel = if (this.kommunenummer == UKJENT_FRA_PDL) {
+        UKJENT_FRA_PDL
+    } else {
+        PostnummerService.getPostnummer(this.kommunenummer)?.let {
+            it.kommune
+        } ?: workMetrics.kommune_number_not_found.labels(this.kommunenummer).inc().let { NOT_FOUND_IN_REGISTER }
+    }
+    workMetrics.kommune.labels(kommuneLabel).inc()
+}
+
+fun <T> Sequence<T>.batch(n: Int): Sequence<List<T>> {
+    return BatchingSequence(this, n)
+}
+
+private class BatchingSequence<T>(val source: Sequence<T>, val batchSize: Int) : Sequence<List<T>> {
+    override fun iterator(): Iterator<List<T>> = object : AbstractIterator<List<T>>() {
+        val iterate = if (batchSize > 0) source.iterator() else emptyList<T>().iterator()
+        override fun computeNext() {
+            if (iterate.hasNext()) setNext(iterate.asSequence().take(batchSize).toList())
+            else done()
+        }
+    }
 }
