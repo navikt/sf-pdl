@@ -315,15 +315,7 @@ internal fun work(ws: WorkSettings): Triple<WorkSettings, ExitReason, Cache.Exis
                         is Query -> {
                             when (val personSf = query.toPersonSf()) {
                                 is PersonSf -> {
-                                    // Let´s take a look on the persons and give us some metrics on the kommune in the parsed data
-                                    val kommuneLabel = if (personSf.kommunenummer == UKJENT_FRA_PDL) {
-                                        UKJENT_FRA_PDL
-                                    } else {
-                                        PostnummerService.getPostnummer(personSf.kommunenummer)?.let {
-                                            it.kommune
-                                        } ?: workMetrics.kommune_number_not_found.labels(personSf.kommunenummer).inc().let { NOT_FOUND_IN_REGISTER }
-                                    }
-                                    workMetrics.kommune.labels(kommuneLabel).inc()
+                                    personSf.measureKommune()
 
                                     Pair(KafkaConsumerStates.IsOk, personSf)
                                 }

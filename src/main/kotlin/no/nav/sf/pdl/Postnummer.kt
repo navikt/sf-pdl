@@ -24,7 +24,23 @@ object PostnummerService {
                 )
             }
 
+    private val kommunenummerTable: Map<String, String> =
+            PostnummerService::class.java
+                    .getResourceAsStream(resourcePath)
+                    .bufferedReader()
+                    .lineSequence()
+                    .map { line ->
+                        line.split("\t")
+                                .dropLastWhile(String::isEmpty)
+                                .toTypedArray()
+                    }
+                    .associate {
+                        it[2] to it[3]
+                    }
+
     fun getPostnummer(postnummer: String): PostnummerResponse? = postnummerTable[postnummer]
+
+    fun getKommunenummer(kommunenummer: String): String? = kommunenummerTable[kommunenummer]
 }
 
 data class PostnummerResponse(

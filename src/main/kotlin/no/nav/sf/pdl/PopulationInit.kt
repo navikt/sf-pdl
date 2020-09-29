@@ -151,7 +151,7 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
 
     var produceCount: Int = 0
 
-    filteredRecords.batch(500000).forEach {
+    filteredRecords.chunked(500000).forEach {
         log.info { "Creating producer for batch ${produceCount++}" }
         AKafkaProducer<ByteArray, ByteArray>(
                 config = ws.kafkaProducerPerson
@@ -182,8 +182,8 @@ fun PersonSf.measureKommune() {
     val kommuneLabel = if (this.kommunenummer == UKJENT_FRA_PDL) {
         UKJENT_FRA_PDL
     } else {
-        PostnummerService.getPostnummer(this.kommunenummer)?.let {
-            it.kommune
+        PostnummerService.getKommunenummer(this.kommunenummer)?.let {
+            it
         } ?: workMetrics.kommune_number_not_found.labels(this.kommunenummer).inc().let { NOT_FOUND_IN_REGISTER }
     }
     workMetrics.kommune.labels(kommuneLabel).inc()
