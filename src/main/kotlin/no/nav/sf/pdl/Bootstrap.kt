@@ -26,13 +26,13 @@ object Bootstrap {
     fun start(ws: WorkSettings = WorkSettings()) {
         log.info { "Starting" }
         enableNAISAPI {
+            initLoadTest(ws) // TODO Investigate
             if (ws.initialLoad || FilterBase.filterSettingsDiffer(ws.filterEnabled, ws.filter, ws.prevEnabled, ws.prevFilter)) {
                 if (ws.initialLoad) {
                     log.info { "Initial load flag set will trigger initial load - will build populationCache from beginning of pdl topic and post latest to sf-person" }
                 } else {
                     log.info { "Filter changed since last run will trigger initial load - will build populationCache from beginning of pdl topic and post latest to sf-person" }
                 }
-                conditionalWait(20000, "Will wait 20 s to give kafka broker grace period")
                 if (!initLoad(ws).isOK()) {
                     log.error { "Failed loading population" }
                     return@enableNAISAPI

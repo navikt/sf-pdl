@@ -1,5 +1,6 @@
 package no.nav.sf.pdl
 
+import java.io.File
 import kotlin.streams.toList
 import mu.KotlinLogging
 import no.nav.pdlsf.proto.PersonProto
@@ -60,19 +61,33 @@ internal fun initLoadTest(ws: WorkSettings) {
 
     val resultListTest: MutableList<String> = mutableListOf()
 
+    val a: ArrayList<String?> = arrayListOf() // TODO investigate
+    a.ensureCapacity(10)
+
     kafkaConsumerPdlTest.consume { cRecords ->
         if (cRecords.isEmpty) return@consume KafkaConsumerStates.IsFinished
 
         workMetrics.initRecordsParsedTest.inc(cRecords.count().toDouble())
         cRecords.forEach { cr -> resultListTest.add(cr.key()) }
         if (heartBeatConsumer == 0) {
-            log.debug { "Test phase Successfully consumed a batch (This is prompted 100000th consume batch)" }
+            log.debug { "Investigate Test phase Successfully consumed a batch (This is prompted 100000th consume batch)" }
+            if (cRecords.count() > 9) { // TODO investigate
+                cRecords.forEachIndexed { index, consumerRecord -> if (index < 10) {
+                    a[index] = consumerRecord.value()
+                } }
+            }
         }
         heartBeatConsumer = ((heartBeatConsumer + 1) % 100000)
-
         KafkaConsumerStates.IsOk
     }
     heartBeatConsumer = 0
+
+    // TODO investigate
+    var msg = "Msgs \n"
+    a.forEach { str -> msg += str + "\n" }
+    log.info { "Attempt file storage" }
+    File("/tmp/investigate").writeText(msg)
+    log.info { "File storage done" }
 
     log.info { "Init test run : Total records from topic: ${resultListTest.size}" }
     workMetrics.initRecordsParsedTest.set(resultListTest.size.toDouble())
@@ -81,7 +96,7 @@ internal fun initLoadTest(ws: WorkSettings) {
 }
 
 internal fun initLoad(ws: WorkSettings): ExitReason {
-    initLoadTest(ws)
+    // initLoadTest(ws)
 
     workMetrics.clearAll()
 
