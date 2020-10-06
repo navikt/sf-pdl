@@ -62,7 +62,7 @@ internal fun initLoadTest(ws: WorkSettings) {
     val resultListTest: MutableList<String> = mutableListOf()
 
     val a: ArrayList<String?> = arrayListOf() // TODO investigate
-    a.ensureCapacity(10)
+    for (i in 0..9) { a.add("") }
 
     kafkaConsumerPdlTest.consume { cRecords ->
         if (cRecords.isEmpty) return@consume KafkaConsumerStates.IsFinished
