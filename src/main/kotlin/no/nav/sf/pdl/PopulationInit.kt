@@ -51,6 +51,8 @@ fun List<Pair<String, PersonBase>>.isValid(): Boolean {
 
 var heartBeatConsumer: Int = 0
 
+val target = listOf("1000060614281")
+
 internal fun initLoadTest(ws: WorkSettings) {
     workMetrics.clearAll()
     val kafkaConsumerPdlTest = AKafkaConsumer<String, String?>(
@@ -64,19 +66,32 @@ internal fun initLoadTest(ws: WorkSettings) {
     val a: ArrayList<String?> = arrayListOf() // TODO investigate
     for (i in 0..9) { a.add("") }
 
+    val resultListInvestigate = mutableListOf<String>()
+
     kafkaConsumerPdlTest.consume { cRecords ->
         if (cRecords.isEmpty) return@consume KafkaConsumerStates.IsFinished
 
         workMetrics.initRecordsParsedTest.inc(cRecords.count().toDouble())
         cRecords.forEach { cr -> resultListTest.add(cr.key()) }
+
+        cRecords.filter { cr -> target.any { it == cr.key() } }.forEach {
+            log.info { "Investigate - found target" }
+            resultListInvestigate.add(it.value() ?: "null")
+        }
+
         if (heartBeatConsumer == 0) {
             log.debug { "Investigate Test phase Successfully consumed a batch (This is prompted 100000th consume batch)" }
+            /*
+
             if (cRecords.count() > 9) { // TODO investigate
                 cRecords.forEachIndexed { index, consumerRecord -> if (index < 10) {
                     a[index] = consumerRecord.value()
                 } }
             }
+
+             */
         }
+
         heartBeatConsumer = ((heartBeatConsumer + 1) % 100000)
         KafkaConsumerStates.IsOk
     }
@@ -84,7 +99,8 @@ internal fun initLoadTest(ws: WorkSettings) {
 
     // TODO investigate
     var msg = "Msgs \n"
-    a.forEach { str -> msg += str + "\n" }
+    // a.forEach { str -> msg += str + "\n" }
+    resultListInvestigate.forEach { str -> msg += str + "\n" }
     log.info { "Attempt file storage" }
     File("/tmp/investigate").writeText(msg)
     log.info { "File storage done" }
