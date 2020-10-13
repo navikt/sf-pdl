@@ -9,10 +9,13 @@ import no.nav.sf.library.AKafkaProducer
 import no.nav.sf.library.KafkaConsumerStates
 import no.nav.sf.library.send
 import no.nav.sf.library.sendNullValue
-import org.apache.kafka.clients.consumer.ConsumerRecord
+import no.nav.sf.pdl.nks.InvalidQuery
+import no.nav.sf.pdl.nks.Query
+import no.nav.sf.pdl.nks.getQueryFromJson
 
 private val log = KotlinLogging.logger {}
 
+/*
 internal fun parsePdlJson(cr: ConsumerRecord<String, String?>): PersonBase {
     if (cr.value() == null) {
         workMetrics.noOfInitialTombestone.inc()
@@ -43,7 +46,7 @@ internal fun parsePdlJson(cr: ConsumerRecord<String, String?>): PersonBase {
             }
         }
     }
-}
+}*/
 
 fun List<Pair<String, PersonBase>>.isValid(): Boolean {
     return filterIsInstance<PersonInvalid>().isEmpty()
@@ -53,10 +56,227 @@ var heartBeatConsumer: Int = 0
 
 val target = listOf("1000060614281")
 
+val NOT_FOUND = "<NOT FOUND>"
+class InvestigateGoal {
+    var msgWithFamilieRelation: String = NOT_FOUND
+    var msgWithAdresseBeskyttelse: String = NOT_FOUND
+    var msgWithAdresseBeskyttelse_MoreThenOne: String = NOT_FOUND
+    var msgWithAdresseBeskyttelse_MoreThenOneNotHistoric: String = NOT_FOUND
+    var msgWithSikkerhetsTiltak: String = NOT_FOUND
+    var msgWithSikkerhetsTiltak_MoreThenOne: String = NOT_FOUND
+    var msgWithSikkerhetsTiltak_MoreThenOneNotHistoric: String = NOT_FOUND
+    var msgBostedsadresseWithVegadresseNotHistoric: String = NOT_FOUND
+    var msgBostedsadresseWithMatrikkeladresseNotHistoric: String = NOT_FOUND
+    var msgBostedsadresseWithUkjentBostedNotHistoric: String = NOT_FOUND
+    var msgOppholdsAdresseWithVegadresseNotHistoric: String = NOT_FOUND
+    var msgOppholdsAdresseWithMatrikkeladresseNotHistoric: String = NOT_FOUND
+    var msgOppholdsAdresseWithUtlandsadresseNotHistoric: String = NOT_FOUND
+    var msgWithSivilstand: String = NOT_FOUND
+    var msgWithGeografiskTilknytningWithBydel: String = NOT_FOUND
+    var msgWithDoedsfall: String = NOT_FOUND
+    var msgWithTelefonnummer: String = NOT_FOUND
+    var msgWithUtflyttningFraNorge: String = NOT_FOUND
+    var msgWithTilrettelagtKommunikasjon: String = NOT_FOUND
+
+    // var msgBostedsadresseWithUtlandsadresseNotHistoric: String = NOT_FOUND //not there
+    // var msgOppholdsAdresseWithUkentBostedNotHistoric: String = NOT_FOUND  // not there
+    /*var msgBostedsadresseWithVegadresse: String = NOT_FOUND
+    var msgBostedsadresseWithMatrikkeladresse: String = NOT_FOUND
+    var msgBostedsadresseWithUtlandsadresse: String = NOT_FOUND
+    var msgBostedsadresseWithUkjentBosted: String = NOT_FOUND
+    var msgOppholdsAdresseWithVegadresse: String = NOT_FOUND
+    var msgOppholdsAdresseWithMatrikkeladresse: String = NOT_FOUND
+    var msgOppholdsAdresseWithUtlandsadresse: String = NOT_FOUND
+    var msgOppholdsAdresseWithUkjentBosted: String = NOT_FOUND*/
+
+    var msgFailed: String = NOT_FOUND
+
+    fun investigate(msg: String): Boolean {
+        val queryBase: no.nav.sf.pdl.nks.QueryBase = msg.getQueryFromJson()
+
+        if (queryBase is InvalidQuery) {
+            msgFailed = msg
+            return true // Done
+        } else {
+            val query = (queryBase as Query)
+            if (msgWithFamilieRelation == NOT_FOUND) {
+                if (query.hentPerson.familierelasjoner.isNotEmpty()) {
+                    msgWithFamilieRelation = msg
+                }
+                return false
+            }
+            if (msgWithAdresseBeskyttelse == NOT_FOUND) {
+                if (query.hentPerson.adressebeskyttelse.isNotEmpty()) {
+                    msgWithAdresseBeskyttelse = msg
+                }
+                return false
+            }
+            if (msgWithAdresseBeskyttelse_MoreThenOne == NOT_FOUND) {
+                if (query.hentPerson.adressebeskyttelse.size > 1) {
+                    msgWithAdresseBeskyttelse_MoreThenOne = msg
+                }
+                return false
+            }
+            if (msgWithAdresseBeskyttelse_MoreThenOneNotHistoric == NOT_FOUND) {
+                if (query.hentPerson.adressebeskyttelse.filter { !it.metadata.historisk }.size > 1) {
+                    msgWithAdresseBeskyttelse_MoreThenOneNotHistoric = msg
+                }
+                return false
+            }
+            if (msgWithSikkerhetsTiltak == NOT_FOUND) {
+                if (query.hentPerson.sikkerhetstiltak.isNotEmpty()) {
+                    msgWithSikkerhetsTiltak = msg
+                }
+                return false
+            }
+            if (msgWithSikkerhetsTiltak_MoreThenOne == NOT_FOUND) {
+                if (query.hentPerson.sikkerhetstiltak.size > 1) {
+                    msgWithSikkerhetsTiltak_MoreThenOne = msg
+                }
+                return false
+            }
+            if (msgWithSikkerhetsTiltak_MoreThenOneNotHistoric == NOT_FOUND) {
+                if (query.hentPerson.sikkerhetstiltak.filter { !it.metadata.historisk }.size > 1) {
+                    msgWithSikkerhetsTiltak_MoreThenOneNotHistoric = msg
+                }
+                return false
+            }
+            if (msgWithSivilstand == NOT_FOUND) {
+                if (query.hentPerson.sivilstand.isNotEmpty()) {
+                    msgWithSivilstand = msg
+                }
+                return false
+            }
+            if (msgWithGeografiskTilknytningWithBydel == NOT_FOUND) {
+                if (query.hentPerson.geografiskTilknytning?.gtBydel != null) {
+                    msgWithGeografiskTilknytningWithBydel = msg
+                }
+                return false
+            }
+            if (msgWithDoedsfall == NOT_FOUND) {
+                if (query.hentPerson.doedsfall.isNotEmpty()) {
+                    msgWithDoedsfall = msg
+                }
+                return false
+            }
+            if (msgWithTelefonnummer == NOT_FOUND) {
+                if (query.hentPerson.telefonnummer.isNotEmpty()) {
+                    msgWithTelefonnummer = msg
+                }
+                return false
+            }
+            if (msgWithUtflyttningFraNorge == NOT_FOUND) {
+                if (query.hentPerson.utflyttingFraNorge.isNotEmpty()) {
+                    msgWithUtflyttningFraNorge = msg
+                }
+                return false
+            }
+            if (msgWithTilrettelagtKommunikasjon == NOT_FOUND) {
+                if (query.hentPerson.tilrettelagtKommunikasjon.isNotEmpty()) {
+                    msgWithTilrettelagtKommunikasjon = msg
+                }
+                return false
+            }
+            if (query.hentPerson.bostedsadresse.firstOrNull()?.metadata?.historisk != true) {
+                if (msgBostedsadresseWithVegadresseNotHistoric == NOT_FOUND) {
+                    if (query.hentPerson.bostedsadresse.firstOrNull()?.vegadresse != null) {
+                        msgBostedsadresseWithVegadresseNotHistoric = msg
+                    }
+                    return false
+                }
+                if (msgBostedsadresseWithMatrikkeladresseNotHistoric == NOT_FOUND) {
+                    if (query.hentPerson.bostedsadresse.firstOrNull()?.matrikkeladresse != null) {
+                        msgBostedsadresseWithMatrikkeladresseNotHistoric = msg
+                    }
+                    return false
+                }
+                if (msgBostedsadresseWithUkjentBostedNotHistoric == NOT_FOUND) {
+                    if (query.hentPerson.bostedsadresse.firstOrNull()?.ukjentBosted != null) {
+                        msgBostedsadresseWithUkjentBostedNotHistoric = msg
+                    }
+                    return false
+                }
+            } else if (query.hentPerson.oppholdsadresse.firstOrNull()?.metadata?.historisk != true) {
+                if (msgOppholdsAdresseWithVegadresseNotHistoric == NOT_FOUND) {
+                    if (query.hentPerson.oppholdsadresse.firstOrNull()?.vegadresse != null) {
+                        msgOppholdsAdresseWithVegadresseNotHistoric = msg
+                    }
+                    return false
+                }
+                if (msgOppholdsAdresseWithMatrikkeladresseNotHistoric == NOT_FOUND) {
+                    if (query.hentPerson.oppholdsadresse.firstOrNull()?.matrikkeladresse != null) {
+                        msgOppholdsAdresseWithVegadresseNotHistoric = msg
+                    }
+                    return false
+                }
+                if (msgOppholdsAdresseWithUtlandsadresseNotHistoric == NOT_FOUND) {
+                    if (query.hentPerson.oppholdsadresse.firstOrNull()?.utenlandsAdresse != null) {
+                        msgOppholdsAdresseWithUtlandsadresseNotHistoric = msg
+                    }
+                    return false
+                }
+            }
+            return true
+        }
+    }
+
+    fun resultMsg(): String {
+        return """msgWithFamilieRelation:
+        """ + msgWithFamilieRelation + """
+    msgWithAdresseBeskyttelse: 
+    """ + msgWithAdresseBeskyttelse + """
+    msgWithAdresseBeskyttelse_MoreThenOne: 
+    """ + msgWithAdresseBeskyttelse_MoreThenOne + """
+    msgWithAdresseBeskyttelse_MoreThenOneNotHistoric: 
+    """ + msgWithAdresseBeskyttelse_MoreThenOneNotHistoric + """
+    msgWithSikkerhetsTiltak: 
+    """ + msgWithSikkerhetsTiltak + """
+    msgWithSikkerhetsTiltak_MoreThenOne: 
+    """ + msgWithSikkerhetsTiltak_MoreThenOne + """
+    msgWithSikkerhetsTiltak_MoreThenOneNotHistoric: 
+    """ + msgWithSikkerhetsTiltak_MoreThenOneNotHistoric + """
+    msgBostedsadresseWithVegadresseNotHistoric: 
+    """ + msgBostedsadresseWithVegadresseNotHistoric + """
+    msgBostedsadresseWithMatrikkeladresseNotHistoric: 
+    """ + msgBostedsadresseWithMatrikkeladresseNotHistoric + """
+    msgBostedsadresseWithUkjentBostedNotHistoric: 
+    """ + msgBostedsadresseWithUkjentBostedNotHistoric + """
+    msgOppholdsAdresseWithVegadresseNotHistoric: 
+    """ + msgOppholdsAdresseWithVegadresseNotHistoric + """
+    msgOppholdsAdresseWithMatrikkeladresseNotHistoric: 
+    """ + msgOppholdsAdresseWithMatrikkeladresseNotHistoric + """
+    msgOppholdsAdresseWithUtlandsadresseNotHistoric: 
+    """ + msgOppholdsAdresseWithUtlandsadresseNotHistoric + """
+    msgWithSivilstand: 
+    """ + msgWithSivilstand + """
+    msgWithGeografiskTilknytningWithBydel: 
+    """ + msgWithGeografiskTilknytningWithBydel + """
+    msgWithDoedsfall: 
+    """ + msgWithDoedsfall + """
+    msgWithTelefonnummer: 
+    """ + msgWithTelefonnummer + """
+    msgWithUtflyttningFraNorge: 
+    """ + msgWithUtflyttningFraNorge + """
+    msgWithTilrettelagtKommunikasjon: 
+    """ + msgWithTilrettelagtKommunikasjon
+    }
+}
+
+fun String.watchFor(msg: String, match: String, times: Int = 1): String {
+    if (this == NOT_FOUND) {
+        if (msg.contains(match, true)) {
+            if (times == 1) {
+                return msg
+            }
+        }
+    }
+    return this
+}
+
 internal fun initLoadTest(ws: WorkSettings) {
     workMetrics.clearAll()
     val kafkaConsumerPdlTest = AKafkaConsumer<String, String?>(
-            config = ws.kafkaConsumerPdl,
+            config = ws.kafkaConsumerPdlAlternative,
             topics = listOf(kafkaPDLTopic),
             fromBeginning = true
     )
@@ -68,16 +288,28 @@ internal fun initLoadTest(ws: WorkSettings) {
 
     val resultListInvestigate = mutableListOf<String>()
 
+    val investigateGoal = InvestigateGoal()
+
     kafkaConsumerPdlTest.consume { cRecords ->
         if (cRecords.isEmpty) return@consume KafkaConsumerStates.IsFinished
 
         workMetrics.initRecordsParsedTest.inc(cRecords.count().toDouble())
-        cRecords.forEach { cr -> resultListTest.add(cr.key()) }
+        cRecords.forEach { cr -> resultListTest.add(cr.key())
+            if (cr.value() != null) {
+                val done = investigateGoal.investigate(cr.value() as String)
+                if (done) {
+                    return@consume KafkaConsumerStates.IsFinished
+                }
+            }
+        }
 
+        /*
         cRecords.filter { cr -> target.any { it == cr.key() } }.forEach {
             log.info { "Investigate - found target" }
             resultListInvestigate.add(it.value() ?: "null")
         }
+
+         */
 
         if (heartBeatConsumer == 0) {
             log.debug { "Investigate Test phase Successfully consumed a batch (This is prompted 100000th consume batch)" }
@@ -98,11 +330,11 @@ internal fun initLoadTest(ws: WorkSettings) {
     heartBeatConsumer = 0
 
     // TODO investigate
-    var msg = "Msgs \n"
+    var msg = "Msgs nks\n"
     // a.forEach { str -> msg += str + "\n" }
     resultListInvestigate.forEach { str -> msg += str + "\n" }
-    log.info { "Attempt file storage" }
-    File("/tmp/investigate").writeText(msg)
+    log.info { "Attempt file storage new" }
+    File("/tmp/investigate").writeText(investigateGoal.resultMsg())
     log.info { "File storage done" }
 
     log.info { "Init test run : Total records from topic: ${resultListTest.size}" }
@@ -131,7 +363,7 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
             topics = listOf(kafkaPDLTopic),
             fromBeginning = true
     )
-
+/*
     kafkaConsumerPdl.consume { cRecords ->
         if (cRecords.isEmpty) return@consume KafkaConsumerStates.IsFinished
 
@@ -144,6 +376,8 @@ internal fun initLoad(ws: WorkSettings): ExitReason {
 
         KafkaConsumerStates.IsOk
     }
+
+ */
 
     if (!resultList.isValid()) {
         log.error { "Result contains invalid records" }
