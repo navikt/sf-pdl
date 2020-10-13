@@ -219,7 +219,7 @@ data class HentePerson(
     val gyldigFraOgMed: LocalDate? = null,
         @Serializable(with = IsoLocalDateSerializer::class)
     val gyldigTilOgMed: LocalDate? = null,
-        val kontaktPerson: KontaktPerson?,
+        val kontaktPerson: KontaktPerson? = null,
         val metadata: Metadata
     )
 
