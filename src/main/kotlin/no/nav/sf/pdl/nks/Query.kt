@@ -289,7 +289,7 @@ data class HentePerson(
 
     @Serializable
     data class Tolk(
-        val spraak: String
+        val spraak: String?
     )
 
     @Serializable
