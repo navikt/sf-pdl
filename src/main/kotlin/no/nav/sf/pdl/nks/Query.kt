@@ -152,7 +152,7 @@ data class HentePerson(
     @Serializable
     data class Oppholdsadresse(
         val vegadresse: Vegadresse?,
-        val utenlandsAdresse: UtenlandsAdresse?,
+        val utenlandskAdresse: UtenlandskAdresse?, // utenlandskAdresse
         val matrikkeladresse: Matrikkeladresse?,
         val metadata: Metadata
     ) {
@@ -167,7 +167,7 @@ data class HentePerson(
         )
 
         @Serializable
-        data class UtenlandsAdresse(
+        data class UtenlandskAdresse(
             val adressenavnNummer: String?,
             val bygningEtasjeLeilighet: String?,
             val postboksNummerNavn: String?,

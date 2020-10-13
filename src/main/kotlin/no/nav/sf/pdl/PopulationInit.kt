@@ -210,7 +210,7 @@ class InvestigateGoal {
                     return false
                 }
                 if (msgOppholdsAdresseWithUtlandsadresseNotHistoric == NOT_FOUND) {
-                    if (query.hentPerson.oppholdsadresse.firstOrNull()?.utenlandsAdresse != null) {
+                    if (query.hentPerson.oppholdsadresse.firstOrNull()?.utenlandskAdresse != null) {
                         msgOppholdsAdresseWithUtlandsadresseNotHistoric = msg
                     }
                     return false
