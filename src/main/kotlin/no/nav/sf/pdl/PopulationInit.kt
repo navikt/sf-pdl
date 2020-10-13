@@ -221,8 +221,10 @@ class InvestigateGoal {
     }
 
     fun resultMsg(): String {
-        return """msgWithFamilieRelation:
-        """ + msgWithFamilieRelation + """
+        return """msgFailed:
+    """ + msgFailed + """
+    msgWithFamilieRelation:
+    """ + msgWithFamilieRelation + """
     msgWithAdresseBeskyttelse: 
     """ + msgWithAdresseBeskyttelse + """
     msgWithAdresseBeskyttelse_MoreThenOne: 

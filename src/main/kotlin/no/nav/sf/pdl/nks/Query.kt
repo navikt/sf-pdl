@@ -104,22 +104,22 @@ data class Identliste(
 
 @Serializable
 data class HentePerson(
-    val adressebeskyttelse: List<Adressebeskyttelse>,
-    val bostedsadresse: List<Bostedsadresse>,
-    val oppholdsadresse: List<Oppholdsadresse>,
-    val doedsfall: List<Doedsfall>,
-    var familierelasjoner: List<FamilieRelasjon>,
-    var innflyttingTilNorge: List<InnflyttingTilNorge>,
-    val folkeregisterpersonstatus: List<Folkeregisterpersonstatus>,
-    val sikkerhetstiltak: List<Sikkerhetstiltak>,
-    var statsborgerskap: List<Statsborgerskap>,
-    val sivilstand: List<Sivilstand>,
-    val telefonnummer: List<Telefonnummer>,
-    val kjoenn: List<Kjoenn>,
-    val navn: List<Navn>,
+    val adressebeskyttelse: List<Adressebeskyttelse> = listOf(),
+    val bostedsadresse: List<Bostedsadresse> = listOf(),
+    val oppholdsadresse: List<Oppholdsadresse> = listOf(), // oppholdsadresse
+    val doedsfall: List<Doedsfall> = listOf(),
+    var familierelasjoner: List<FamilieRelasjon> = listOf(),
+    var innflyttingTilNorge: List<InnflyttingTilNorge> = listOf(),
+    val folkeregisterpersonstatus: List<Folkeregisterpersonstatus> = listOf(),
+    val sikkerhetstiltak: List<Sikkerhetstiltak> = listOf(),
+    var statsborgerskap: List<Statsborgerskap> = listOf(),
+    val sivilstand: List<Sivilstand> = listOf(),
+    val telefonnummer: List<Telefonnummer> = listOf(),
+    val kjoenn: List<Kjoenn> = listOf(),
+    val navn: List<Navn> = listOf(),
     val geografiskTilknytning: GeografiskTilknytning? = null,
-    val utflyttingFraNorge: List<UtflyttingFraNorge>,
-    val tilrettelagtKommunikasjon: List<TilrettelagtKommunikasjon>
+    val utflyttingFraNorge: List<UtflyttingFraNorge> = listOf(),
+    val tilrettelagtKommunikasjon: List<TilrettelagtKommunikasjon> = listOf()
 ) {
 
     @Serializable
