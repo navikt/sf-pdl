@@ -64,7 +64,7 @@ enum class Sivilstandstype {
     REGISTRERT_PARTNER,
     SEPARERT_PARTNER,
     SKILT_PARTNER,
-    GJENLEVENDE_PARTNE
+    GJENLEVENDE_PARTNER
 }
 
 @Serializable
