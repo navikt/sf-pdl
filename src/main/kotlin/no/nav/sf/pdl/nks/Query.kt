@@ -192,8 +192,8 @@ data class HentePerson(
 
     @Serializable
     data class InnflyttingTilNorge(
-        val fraflyttingsland: String = "",
-        val fraflyttingsstedIUtlandet: String = "",
+        val fraflyttingsland: String,
+        val fraflyttingsstedIUtlandet: String?,
         val metadata: Metadata
     )
 
@@ -207,8 +207,8 @@ data class HentePerson(
 
     @Serializable
     data class KontaktPerson(
-        val personident: String,
-        val enhet: String
+        val personident: String?,
+        val enhet: String?
     )
 
     @Serializable
@@ -275,14 +275,14 @@ data class HentePerson(
 
     @Serializable
     data class UtflyttingFraNorge(
-        val tilflyttingsland: String = "",
-        val tilflyttingsstedIUtlandet: String = "",
+        val tilflyttingsland: String,
+        val tilflyttingsstedIUtlandet: String?,
         val metadata: Metadata
     )
 
     @Serializable
     data class TilrettelagtKommunikasjon(
-        val talespraaktolk: Tolk,
+        val talespraaktolk: Tolk?,
             // Ignoring PDL as source for tegnspraaktolk
         val metadata: Metadata
     )
@@ -294,9 +294,9 @@ data class HentePerson(
 
     @Serializable
     data class Telefonnummer(
-        val landskode: String = "",
-        val nummer: String = "",
-        val prioritet: String = "",
+        val landskode: String,
+        val nummer: String,
+        val prioritet: String,
         val metadata: Metadata
     )
 }
