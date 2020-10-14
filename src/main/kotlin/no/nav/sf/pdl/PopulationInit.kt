@@ -98,125 +98,142 @@ class InvestigateGoal {
             msgFailed = msg
             return true // Done
         } else {
+            var unAnswered = false
             val query = (queryBase as Query)
             if (msgWithFamilieRelation == NOT_FOUND) {
                 if (query.hentPerson.familierelasjoner.isNotEmpty()) {
                     msgWithFamilieRelation = msg
+                    return false
                 }
-                return false
+                unAnswered = true
             }
             if (msgWithAdresseBeskyttelse == NOT_FOUND) {
                 if (query.hentPerson.adressebeskyttelse.isNotEmpty()) {
                     msgWithAdresseBeskyttelse = msg
+                    return false
                 }
-                return false
+                unAnswered = true
             }
             if (msgWithAdresseBeskyttelse_MoreThenOne == NOT_FOUND) {
                 if (query.hentPerson.adressebeskyttelse.size > 1) {
                     msgWithAdresseBeskyttelse_MoreThenOne = msg
+                    return false
                 }
-                return false
+                unAnswered = true
             }
             if (msgWithAdresseBeskyttelse_MoreThenOneNotHistoric == NOT_FOUND) {
                 if (query.hentPerson.adressebeskyttelse.filter { !it.metadata.historisk }.size > 1) {
                     msgWithAdresseBeskyttelse_MoreThenOneNotHistoric = msg
+                    return false
                 }
-                return false
+                unAnswered = true
             }
             if (msgWithSikkerhetsTiltak == NOT_FOUND) {
                 if (query.hentPerson.sikkerhetstiltak.isNotEmpty()) {
                     msgWithSikkerhetsTiltak = msg
+                    return false
                 }
-                return false
+                unAnswered = true
             }
             if (msgWithSikkerhetsTiltak_MoreThenOne == NOT_FOUND) {
                 if (query.hentPerson.sikkerhetstiltak.size > 1) {
                     msgWithSikkerhetsTiltak_MoreThenOne = msg
+                    return false
                 }
-                return false
+                unAnswered = true
             }
             if (msgWithSikkerhetsTiltak_MoreThenOneNotHistoric == NOT_FOUND) {
                 if (query.hentPerson.sikkerhetstiltak.filter { !it.metadata.historisk }.size > 1) {
                     msgWithSikkerhetsTiltak_MoreThenOneNotHistoric = msg
+                    return false
                 }
-                return false
             }
             if (msgWithSivilstand == NOT_FOUND) {
                 if (query.hentPerson.sivilstand.isNotEmpty()) {
                     msgWithSivilstand = msg
+                    return false
                 }
-                return false
+                unAnswered = true
             }
             if (msgWithGeografiskTilknytningWithBydel == NOT_FOUND) {
                 if (query.hentPerson.geografiskTilknytning?.gtBydel != null) {
                     msgWithGeografiskTilknytningWithBydel = msg
+                    return false
                 }
-                return false
+                unAnswered = true
             }
             if (msgWithDoedsfall == NOT_FOUND) {
                 if (query.hentPerson.doedsfall.isNotEmpty()) {
                     msgWithDoedsfall = msg
+                    return false
                 }
-                return false
+                unAnswered = true
             }
             if (msgWithTelefonnummer == NOT_FOUND) {
                 if (query.hentPerson.telefonnummer.isNotEmpty()) {
                     msgWithTelefonnummer = msg
+                    return false
                 }
-                return false
+                unAnswered = true
             }
             if (msgWithUtflyttningFraNorge == NOT_FOUND) {
                 if (query.hentPerson.utflyttingFraNorge.isNotEmpty()) {
                     msgWithUtflyttningFraNorge = msg
+                    return false
                 }
-                return false
+                unAnswered = true
             }
             if (msgWithTilrettelagtKommunikasjon == NOT_FOUND) {
                 if (query.hentPerson.tilrettelagtKommunikasjon.isNotEmpty()) {
                     msgWithTilrettelagtKommunikasjon = msg
+                    return false
                 }
-                return false
+                unAnswered = true
             }
-            if (query.hentPerson.bostedsadresse.firstOrNull()?.metadata?.historisk != true) {
-                if (msgBostedsadresseWithVegadresseNotHistoric == NOT_FOUND) {
-                    if (query.hentPerson.bostedsadresse.firstOrNull()?.vegadresse != null) {
-                        msgBostedsadresseWithVegadresseNotHistoric = msg
-                    }
+            if (msgBostedsadresseWithVegadresseNotHistoric == NOT_FOUND) {
+                if (query.hentPerson.bostedsadresse.any { !it.metadata.historisk && it.vegadresse != null }) {
+                    msgBostedsadresseWithVegadresseNotHistoric = msg
                     return false
                 }
-                if (msgBostedsadresseWithMatrikkeladresseNotHistoric == NOT_FOUND) {
-                    if (query.hentPerson.bostedsadresse.firstOrNull()?.matrikkeladresse != null) {
-                        msgBostedsadresseWithMatrikkeladresseNotHistoric = msg
-                    }
-                    return false
-                }
-                if (msgBostedsadresseWithUkjentBostedNotHistoric == NOT_FOUND) {
-                    if (query.hentPerson.bostedsadresse.firstOrNull()?.ukjentBosted != null) {
-                        msgBostedsadresseWithUkjentBostedNotHistoric = msg
-                    }
-                    return false
-                }
-            } else if (query.hentPerson.oppholdsadresse.firstOrNull()?.metadata?.historisk != true) {
-                if (msgOppholdsAdresseWithVegadresseNotHistoric == NOT_FOUND) {
-                    if (query.hentPerson.oppholdsadresse.firstOrNull()?.vegadresse != null) {
-                        msgOppholdsAdresseWithVegadresseNotHistoric = msg
-                    }
-                    return false
-                }
-                if (msgOppholdsAdresseWithMatrikkeladresseNotHistoric == NOT_FOUND) {
-                    if (query.hentPerson.oppholdsadresse.firstOrNull()?.matrikkeladresse != null) {
-                        msgOppholdsAdresseWithVegadresseNotHistoric = msg
-                    }
-                    return false
-                }
-                if (msgOppholdsAdresseWithUtlandsadresseNotHistoric == NOT_FOUND) {
-                    if (query.hentPerson.oppholdsadresse.firstOrNull()?.utenlandskAdresse != null) {
-                        msgOppholdsAdresseWithUtlandsadresseNotHistoric = msg
-                    }
-                    return false
-                }
+                unAnswered = true
             }
-            return true
+            if (msgBostedsadresseWithMatrikkeladresseNotHistoric == NOT_FOUND) {
+                if (query.hentPerson.bostedsadresse.any { !it.metadata.historisk && it.matrikkeladresse != null }) {
+                    msgBostedsadresseWithMatrikkeladresseNotHistoric = msg
+                    return false
+                }
+                unAnswered = true
+            }
+            if (msgBostedsadresseWithUkjentBostedNotHistoric == NOT_FOUND) {
+                if (query.hentPerson.bostedsadresse.any { !it.metadata.historisk && it.ukjentBosted != null }) {
+                    msgBostedsadresseWithUkjentBostedNotHistoric = msg
+                    return false
+                }
+                unAnswered = true
+            }
+
+            if (msgOppholdsAdresseWithVegadresseNotHistoric == NOT_FOUND) {
+                if (query.hentPerson.oppholdsadresse.any { !it.metadata.historisk && it.vegadresse != null }) {
+                    msgOppholdsAdresseWithVegadresseNotHistoric = msg
+                    return false
+                }
+                unAnswered = true
+            }
+            if (msgOppholdsAdresseWithMatrikkeladresseNotHistoric == NOT_FOUND) {
+                if (query.hentPerson.oppholdsadresse.any { !it.metadata.historisk && it.matrikkeladresse != null }) {
+                    msgOppholdsAdresseWithMatrikkeladresseNotHistoric = msg
+                    return false
+                }
+                unAnswered = true
+            }
+            if (msgOppholdsAdresseWithUtlandsadresseNotHistoric == NOT_FOUND) {
+                if (query.hentPerson.oppholdsadresse.any { !it.metadata.historisk && it.utenlandskAdresse != null }) {
+                    msgOppholdsAdresseWithUtlandsadresseNotHistoric = msg
+                    return false
+                }
+                unAnswered = true
+            }
+            return !unAnswered // Done if there are no unanswered queries
         }
     }
 
