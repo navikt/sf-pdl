@@ -58,25 +58,28 @@ val target = listOf("1000060614281")
 
 val NOT_FOUND = "<NOT FOUND>"
 class InvestigateGoal {
+    /*
     var msgWithFamilieRelation: String = NOT_FOUND
     var msgWithAdresseBeskyttelse: String = NOT_FOUND
     var msgWithAdresseBeskyttelse_MoreThenOne: String = NOT_FOUND
-    var msgWithAdresseBeskyttelse_MoreThenOneNotHistoric: String = NOT_FOUND
+    var msgWithAdresseBeskyttelse_MoreThenOneNotHistoric: String = NOT_FOUND //NOT_FOUND
     var msgWithSikkerhetsTiltak: String = NOT_FOUND
     var msgWithSikkerhetsTiltak_MoreThenOne: String = NOT_FOUND
-    var msgWithSikkerhetsTiltak_MoreThenOneNotHistoric: String = NOT_FOUND
+    var msgWithSikkerhetsTiltak_MoreThenOneNotHistoric: String = NOT_FOUND //NOT_FOUND
     var msgBostedsadresseWithVegadresseNotHistoric: String = NOT_FOUND
     var msgBostedsadresseWithMatrikkeladresseNotHistoric: String = NOT_FOUND
     var msgBostedsadresseWithUkjentBostedNotHistoric: String = NOT_FOUND
     var msgOppholdsAdresseWithVegadresseNotHistoric: String = NOT_FOUND
-    var msgOppholdsAdresseWithMatrikkeladresseNotHistoric: String = NOT_FOUND
-    var msgOppholdsAdresseWithUtlandsadresseNotHistoric: String = NOT_FOUND
+    var msgOppholdsAdresseWithMatrikkeladresseNotHistoric: String = NOT_FOUND //NOT_FOUND
+    var msgOppholdsAdresseWithUtlandsadresseNotHistoric: String = NOT_FOUND //NOT_FOUND
     var msgWithSivilstand: String = NOT_FOUND
     var msgWithGeografiskTilknytningWithBydel: String = NOT_FOUND
     var msgWithDoedsfall: String = NOT_FOUND
     var msgWithTelefonnummer: String = NOT_FOUND
     var msgWithUtflyttningFraNorge: String = NOT_FOUND
     var msgWithTilrettelagtKommunikasjon: String = NOT_FOUND
+
+     */
 
     // var msgBostedsadresseWithUtlandsadresseNotHistoric: String = NOT_FOUND //not there
     // var msgOppholdsAdresseWithUkentBostedNotHistoric: String = NOT_FOUND  // not there
@@ -91,6 +94,14 @@ class InvestigateGoal {
 
     var msgFailed: String = NOT_FOUND
 
+    var msgWithAdresseBeskyttelse_MoreThenOneDifferent = NOT_FOUND
+    var msgWithSikkerhetsTiltak_MoreThenOneDifferent = NOT_FOUND
+
+    var msgOppholdsAdresseWithMatrikkeladresse: String = NOT_FOUND // NOT_FOUND
+    var msgOppholdsAdresseWithUtlandsadresse: String = NOT_FOUND // NOT_FOUND
+
+    var msgTalesspraak: String = NOT_FOUND
+
     fun investigate(msg: String): Boolean {
         val queryBase: no.nav.sf.pdl.nks.QueryBase = msg.getQueryFromJson()
 
@@ -100,6 +111,8 @@ class InvestigateGoal {
         } else {
             var unAnswered = false
             val query = (queryBase as Query)
+
+            /*
             if (msgWithFamilieRelation == NOT_FOUND) {
                 if (query.hentPerson.familierelasjoner.isNotEmpty()) {
                     msgWithFamilieRelation = msg
@@ -120,14 +133,15 @@ class InvestigateGoal {
                     return false
                 }
                 unAnswered = true
-            }
-            if (msgWithAdresseBeskyttelse_MoreThenOneNotHistoric == NOT_FOUND) {
-                if (query.hentPerson.adressebeskyttelse.filter { !it.metadata.historisk }.size > 1) {
-                    msgWithAdresseBeskyttelse_MoreThenOneNotHistoric = msg
+            }*/
+            if (msgWithAdresseBeskyttelse_MoreThenOneDifferent == NOT_FOUND) {
+                if (query.hentPerson.adressebeskyttelse.size > 1 && query.hentPerson.adressebeskyttelse.map { it.gradering.name }.distinct().size > 1) {
+                    msgWithAdresseBeskyttelse_MoreThenOneDifferent = msg
                     return false
                 }
                 unAnswered = true
             }
+            /*
             if (msgWithSikkerhetsTiltak == NOT_FOUND) {
                 if (query.hentPerson.sikkerhetstiltak.isNotEmpty()) {
                     msgWithSikkerhetsTiltak = msg
@@ -141,13 +155,13 @@ class InvestigateGoal {
                     return false
                 }
                 unAnswered = true
-            }
-            if (msgWithSikkerhetsTiltak_MoreThenOneNotHistoric == NOT_FOUND) {
-                if (query.hentPerson.sikkerhetstiltak.filter { !it.metadata.historisk }.size > 1) {
-                    msgWithSikkerhetsTiltak_MoreThenOneNotHistoric = msg
+            }*/
+            if (msgWithSikkerhetsTiltak_MoreThenOneDifferent == NOT_FOUND) {
+                if (query.hentPerson.sikkerhetstiltak.size > 1 && query.hentPerson.sikkerhetstiltak.map { it.tiltakstype.name }.distinct().size > 1) {
+                    msgWithSikkerhetsTiltak_MoreThenOneDifferent = msg
                     return false
                 }
-            }
+            } /*
             if (msgWithSivilstand == NOT_FOUND) {
                 if (query.hentPerson.sivilstand.isNotEmpty()) {
                     msgWithSivilstand = msg
@@ -218,66 +232,47 @@ class InvestigateGoal {
                     return false
                 }
                 unAnswered = true
-            }
-            if (msgOppholdsAdresseWithMatrikkeladresseNotHistoric == NOT_FOUND) {
-                if (query.hentPerson.oppholdsadresse.any { !it.metadata.historisk && it.matrikkeladresse != null }) {
-                    msgOppholdsAdresseWithMatrikkeladresseNotHistoric = msg
+            }*/
+            if (msgOppholdsAdresseWithMatrikkeladresse == NOT_FOUND) {
+                if (query.hentPerson.oppholdsadresse.any { it.matrikkeladresse != null }) {
+                    msgOppholdsAdresseWithMatrikkeladresse = msg
                     return false
                 }
                 unAnswered = true
             }
-            if (msgOppholdsAdresseWithUtlandsadresseNotHistoric == NOT_FOUND) {
-                if (query.hentPerson.oppholdsadresse.any { !it.metadata.historisk && it.utenlandskAdresse != null }) {
-                    msgOppholdsAdresseWithUtlandsadresseNotHistoric = msg
+            if (msgOppholdsAdresseWithUtlandsadresse == NOT_FOUND) {
+                if (query.hentPerson.oppholdsadresse.any { it.utenlandskAdresse != null }) {
+                    msgOppholdsAdresseWithUtlandsadresse = msg
                     return false
                 }
                 unAnswered = true
             }
+            if (msgTalesspraak == NOT_FOUND) {
+                if (query.hentPerson.tilrettelagtKommunikasjon.any { it.talespraaktolk?.spraak != null }) {
+                    msgTalesspraak = msg
+                    return false
+                }
+                unAnswered = true
+            }
+/*
+             */
             return !unAnswered // Done if there are no unanswered queries
         }
     }
 
     fun resultMsg(): String {
         return """msgFailed:
-    """ + msgFailed + """
-    msgWithFamilieRelation:
-    """ + msgWithFamilieRelation + """
-    msgWithAdresseBeskyttelse: 
-    """ + msgWithAdresseBeskyttelse + """
-    msgWithAdresseBeskyttelse_MoreThenOne: 
-    """ + msgWithAdresseBeskyttelse_MoreThenOne + """
-    msgWithAdresseBeskyttelse_MoreThenOneNotHistoric: 
-    """ + msgWithAdresseBeskyttelse_MoreThenOneNotHistoric + """
-    msgWithSikkerhetsTiltak: 
-    """ + msgWithSikkerhetsTiltak + """
-    msgWithSikkerhetsTiltak_MoreThenOne: 
-    """ + msgWithSikkerhetsTiltak_MoreThenOne + """
-    msgWithSikkerhetsTiltak_MoreThenOneNotHistoric: 
-    """ + msgWithSikkerhetsTiltak_MoreThenOneNotHistoric + """
-    msgBostedsadresseWithVegadresseNotHistoric: 
-    """ + msgBostedsadresseWithVegadresseNotHistoric + """
-    msgBostedsadresseWithMatrikkeladresseNotHistoric: 
-    """ + msgBostedsadresseWithMatrikkeladresseNotHistoric + """
-    msgBostedsadresseWithUkjentBostedNotHistoric: 
-    """ + msgBostedsadresseWithUkjentBostedNotHistoric + """
-    msgOppholdsAdresseWithVegadresseNotHistoric: 
-    """ + msgOppholdsAdresseWithVegadresseNotHistoric + """
-    msgOppholdsAdresseWithMatrikkeladresseNotHistoric: 
-    """ + msgOppholdsAdresseWithMatrikkeladresseNotHistoric + """
-    msgOppholdsAdresseWithUtlandsadresseNotHistoric: 
-    """ + msgOppholdsAdresseWithUtlandsadresseNotHistoric + """
-    msgWithSivilstand: 
-    """ + msgWithSivilstand + """
-    msgWithGeografiskTilknytningWithBydel: 
-    """ + msgWithGeografiskTilknytningWithBydel + """
-    msgWithDoedsfall: 
-    """ + msgWithDoedsfall + """
-    msgWithTelefonnummer: 
-    """ + msgWithTelefonnummer + """
-    msgWithUtflyttningFraNorge: 
-    """ + msgWithUtflyttningFraNorge + """
-    msgWithTilrettelagtKommunikasjon: 
-    """ + msgWithTilrettelagtKommunikasjon
+    """ + msgFailed + """ 
+msgWithAdresseBeskyttelse_MoreThenOneDifferent:
+    """ + msgWithAdresseBeskyttelse_MoreThenOneDifferent + """
+msgWithSikkerhetsTiltak_MoreThenOneDifferent:
+    """ + msgWithSikkerhetsTiltak_MoreThenOneDifferent + """
+msgOppholdsAdresseWithMatrikkeladresse:
+    """ + msgOppholdsAdresseWithMatrikkeladresse + """
+msgOppholdsAdresseWithUtlandsadresse:
+    """ + msgOppholdsAdresseWithUtlandsadresse + """
+msgTalesspraak:
+    """ + msgTalesspraak
     }
 }
 
