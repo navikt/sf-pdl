@@ -135,7 +135,7 @@ class InvestigateGoal {
                 unAnswered = true
             }*/
             if (msgOppholdsAdresseWithVegadressNulls.size < 3) {
-                if (query.hentPerson.oppholdsadresse.any { it.vegadresse == null }) {
+                if (query.hentPerson.oppholdsadresse.any { it.vegadresse == null && it.oppholdAnnetSted == null }) {
                     msgOppholdsAdresseWithVegadressNulls.add(msg)
                     return false
                 }
@@ -157,7 +157,7 @@ class InvestigateGoal {
                 unAnswered = true
             }*/
             if (msgAnyWithUtlendskAdresses.size < 3) {
-                if (msg.contains("utenlandskAdresse")) {
+                if (query.hentPerson.bostedsadresse.any { it.utenlandskAdresse != null }) {
                     msgAnyWithUtlendskAdresses.add(msg)
                     return false
                 }
@@ -262,11 +262,11 @@ class InvestigateGoal {
     }
 
     fun resultMsg(): String {
-        var result: String = "msgOppholdsAdresseWithVegadressNulls:"
+        var result = "msgOppholdsAdresseWithVegadressAndOppholdAnnetStedNulls:"
         msgOppholdsAdresseWithVegadressNulls.forEach {
             result += "\n$it"
         }
-        result += "\n msgAnyWithUtlendskAdresses:"
+        result += "\n msgBostedsAdresseWithUtlendskAdresses:"
         msgAnyWithUtlendskAdresses.forEach {
             result += "\n$it"
         }

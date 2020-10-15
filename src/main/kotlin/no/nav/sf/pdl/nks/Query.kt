@@ -127,6 +127,7 @@ data class HentePerson(
         val vegadresse: Vegadresse?,
         val matrikkeladresse: Matrikkeladresse?,
         val ukjentBosted: UkjentBosted?,
+        val utenlandskAdresse: Oppholdsadresse.UtenlandskAdresse?, // utenlandskAdresse
         val metadata: Metadata
     ) {
         @Serializable
@@ -154,6 +155,7 @@ data class HentePerson(
         val vegadresse: Vegadresse?,
         val utenlandskAdresse: UtenlandskAdresse?, // utenlandskAdresse
         val matrikkeladresse: Matrikkeladresse?,
+        val oppholdAnnetSted: String?,
         val metadata: Metadata
     ) {
 
