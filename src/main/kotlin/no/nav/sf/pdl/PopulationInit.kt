@@ -94,8 +94,8 @@ class InvestigateGoal {
 
     var msgFailed: String = NOT_FOUND
 
-    var msgWithAdresseBeskyttelse_MoreThenOneDifferent = NOT_FOUND
-    var msgWithSikkerhetsTiltak_MoreThenOneDifferent = NOT_FOUND
+    var msgOppholdsAdresseWithVegadressNulls: MutableList<String> = mutableListOf()
+    var msgAnyWithUtlendskAdresses: MutableList<String> = mutableListOf()
 
     var msgOppholdsAdresseWithMatrikkeladresse: String = NOT_FOUND // NOT_FOUND
     var msgOppholdsAdresseWithUtlandsadresse: String = NOT_FOUND // NOT_FOUND
@@ -134,9 +134,9 @@ class InvestigateGoal {
                 }
                 unAnswered = true
             }*/
-            if (msgWithAdresseBeskyttelse_MoreThenOneDifferent == NOT_FOUND) {
-                if (query.hentPerson.adressebeskyttelse.size > 1 && query.hentPerson.adressebeskyttelse.map { it.gradering.name }.distinct().size > 1) {
-                    msgWithAdresseBeskyttelse_MoreThenOneDifferent = msg
+            if (msgOppholdsAdresseWithVegadressNulls.size < 3) {
+                if (query.hentPerson.oppholdsadresse.any { it.vegadresse == null }) {
+                    msgOppholdsAdresseWithVegadressNulls.add(msg)
                     return false
                 }
                 unAnswered = true
@@ -156,11 +156,12 @@ class InvestigateGoal {
                 }
                 unAnswered = true
             }*/
-            if (msgWithSikkerhetsTiltak_MoreThenOneDifferent == NOT_FOUND) {
-                if (query.hentPerson.sikkerhetstiltak.size > 1 && query.hentPerson.sikkerhetstiltak.map { it.tiltakstype.name }.distinct().size > 1) {
-                    msgWithSikkerhetsTiltak_MoreThenOneDifferent = msg
+            if (msgAnyWithUtlendskAdresses.size < 3) {
+                if (msg.contains("utenlandskAdresse")) {
+                    msgAnyWithUtlendskAdresses.add(msg)
                     return false
                 }
+                unAnswered = true
             } /*
             if (msgWithSivilstand == NOT_FOUND) {
                 if (query.hentPerson.sivilstand.isNotEmpty()) {
@@ -261,18 +262,24 @@ class InvestigateGoal {
     }
 
     fun resultMsg(): String {
-        return """msgFailed:
-    """ + msgFailed + """ 
-msgWithAdresseBeskyttelse_MoreThenOneDifferent:
-    """ + msgWithAdresseBeskyttelse_MoreThenOneDifferent + """
-msgWithSikkerhetsTiltak_MoreThenOneDifferent:
-    """ + msgWithSikkerhetsTiltak_MoreThenOneDifferent + """
+        var result: String = "msgOppholdsAdresseWithVegadressNulls:"
+        msgOppholdsAdresseWithVegadressNulls.forEach {
+            result += "\n$it"
+        }
+        result += "\n msgAnyWithUtlendskAdresses:"
+        msgAnyWithUtlendskAdresses.forEach {
+            result += "\n$it"
+        }
+        result += """
+msgFailed:
+    """ + msgFailed + """
 msgOppholdsAdresseWithMatrikkeladresse:
     """ + msgOppholdsAdresseWithMatrikkeladresse + """
 msgOppholdsAdresseWithUtlandsadresse:
     """ + msgOppholdsAdresseWithUtlandsadresse + """
 msgTalesspraak:
     """ + msgTalesspraak
+        return result
     }
 }
 
