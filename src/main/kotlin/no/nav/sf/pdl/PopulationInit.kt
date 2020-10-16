@@ -143,7 +143,7 @@ class InvestigateGoal {
     }
 
     fun resultMsg(): String {
-        var result = "msgFailed:\n"
+        var result = "msgFailed:\n$msgFailed\n"
         result += "msgBostedsadresseWithUtlendskAdresses:\n"
         msgBostedsadresseWithUtlendskAdresses.forEach { result += "$it\n" }
         result += "msgOppholdssadresseWithUtlendskAdresses:\n"
