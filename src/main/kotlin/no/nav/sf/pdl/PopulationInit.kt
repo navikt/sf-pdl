@@ -70,6 +70,8 @@ class InvestigateGoal {
 
     var msgWithFraflyttingsstedIUtlandet: MutableList<String> = mutableListOf()
 
+    var msgWithFraflyttingsstedRegex: MutableList<String> = mutableListOf()
+
     fun investigate(msg: String): Boolean {
         val queryBase: no.nav.sf.pdl.nks.QueryBase = msg.getQueryFromJson()
 
@@ -81,7 +83,7 @@ class InvestigateGoal {
             val query = (queryBase as Query)
 
             if (msgBostedsadresseWithUtlendskAdresses.size < 3) {
-                if (query.hentPerson.bostedsadresse.any { it.utenlandskAdresse == null }) {
+                if (query.hentPerson.bostedsadresse.any { it.utenlandskAdresse != null }) {
                     msgBostedsadresseWithUtlendskAdresses.add(msg)
                     return false
                 }
@@ -97,7 +99,7 @@ class InvestigateGoal {
             }
 
             if (msgAnyJsonWithNotEmptyUtlendskAdresses.size < 3) {
-                if (msg.contains("\"utenlandskAdresse\"|:[{")) {
+                if (msg.contains("\"utenlandskAdresse\":[{")) {
                     msgAnyJsonWithNotEmptyUtlendskAdresses.add(msg)
                     return false
                 }
@@ -128,12 +130,21 @@ class InvestigateGoal {
                 unAnswered = true
             }
 
+            if (msgWithFraflyttingsstedRegex.size < 3) {
+                if (msg.contains("fraflyttingsstedIUtlandet\":\"")) {
+                    msgWithFraflyttingsstedRegex.add(msg)
+                    return false
+                }
+                unAnswered = true
+            }
+
             return !unAnswered // Done if there are no unanswered queries
         }
     }
 
     fun resultMsg(): String {
-        var result = "msgBostedsadresseWithUtlendskAdresses:\n"
+        var result = "msgFailed:\n"
+        result += "msgBostedsadresseWithUtlendskAdresses:\n"
         msgBostedsadresseWithUtlendskAdresses.forEach { result += "$it\n" }
         result += "msgOppholdssadresseWithUtlendskAdresses:\n"
         msgOppholdssadresseWithUtlendskAdresses.forEach { result += "$it\n" }
@@ -141,10 +152,12 @@ class InvestigateGoal {
         msgAnyJsonWithNotEmptyUtlendskAdresses.forEach { result += "$it\n" }
         result += "msgOppholdsAdresseWithMatrikkeladresses:\n"
         msgOppholdsAdresseWithMatrikkeladresses.forEach { result += "$it\n" }
-        result += "msgAnyJsonWithNotEmptyUtlendskAdresses:\n"
+        result += "msgWithFraflyttingsstedIUtlandet:\n"
         msgWithFraflyttingsstedIUtlandet.forEach { result += "$it\n" }
         result += "msgWithTilflyttingsstedIUtlandet:\n"
         msgWithTilflyttingsstedIUtlandet.forEach { result += "$it\n" }
+        result += "msgWithFraflyttingsstedRegex:\n"
+        msgWithFraflyttingsstedRegex.forEach { result += "$it\n" }
 
         return result
     }
