@@ -124,10 +124,10 @@ data class HentePerson(
 
     @Serializable
     data class Bostedsadresse(
-        val vegadresse: Vegadresse? = null,
-        val matrikkelAdresse: MatrikkelAdresse? = null,
-        val ukjentBosted: UkjentBosted? = null,
-        val utenlandskadresse: Utenlandskadresse? = null, // utenlandskAdresse // needed
+        val vegadresse: Vegadresse?,
+        val matrikkeladresse: Matrikkeladresse?,
+        val utenlandskAdresse: UtenlandskAdresse?,
+        val ukjentBosted: UkjentBosted?,
         val metadata: Metadata
     ) {
         @Serializable
@@ -136,16 +136,27 @@ data class HentePerson(
             val adressenavn: String?,
             val husnummer: String?,
             val husbokstav: String?,
-            val postnummer: String?
+            val postnummer: String?,
+            val koordinater: Koordinater?
         )
 
         @Serializable
-        data class MatrikkelAdresse(
-            val kommunenummer: String?
+        data class Koordinater(
+            val x: Float?,
+            val y: Float?,
+            val z: Float?
         )
 
         @Serializable
-        data class Utenlandskadresse(
+        data class Matrikkeladresse(
+            val kommunenummer: String?,
+            val postnummer: String?,
+            val bydelsnummer: String?,
+            val koordinater: Koordinater
+        )
+
+        @Serializable
+        data class UtenlandskAdresse(
             val adressenavnNummer: String?,
             val bygningEtasjeLeilighet: String?,
             val postboksNummerNavn: String?,
@@ -163,36 +174,46 @@ data class HentePerson(
 
     @Serializable
     data class Oppholdsadresse(
-        val vegadresse: Vegadresse? = null,
-        val utenlandskadresse: Utenlandskadresse? = null, // utenlandskAdresse
-        val matrikkelAdresse: Matrikkeladresse? = null,
-        val oppholdAnnetSted: String? = null,
+        val vegadresse: Vegadresse?,
+        val utenlandskAdresse: UtenlandskAdresse?, // utenlandskAdresse
+        val matrikkeladresse: Matrikkeladresse?,
+        val oppholdAnnetSted: String?,
         val metadata: Metadata
     ) {
-
         @Serializable
         data class Vegadresse(
             val kommunenummer: String?,
             val adressenavn: String?,
             val husnummer: String?,
             val husbokstav: String?,
-            val postnummer: String?
+            val postnummer: String?,
+            val koordinater: Koordinater?
         )
 
         @Serializable
-        data class Utenlandskadresse(
+        data class Matrikkeladresse(
+            val kommunenummer: String?,
+            val postnummer: String?,
+            val bydelsnummer: String?,
+            val koordinater: Bostedsadresse.Koordinater
+        )
+
+        @Serializable
+        data class UtenlandskAdresse(
             val adressenavnNummer: String?,
             val bygningEtasjeLeilighet: String?,
             val postboksNummerNavn: String?,
             val postkode: String?,
             val bySted: String?,
             val regionDistriktOmraade: String?,
-            val landkode: String = ""
+            val landkode: String?
         )
 
         @Serializable
-        data class Matrikkeladresse(
-            val kommunenummer: String?
+        data class Koordinater(
+            val x: Float?,
+            val y: Float?,
+            val z: Float?
         )
     }
 
@@ -219,7 +240,7 @@ data class HentePerson(
     )
 
     @Serializable
-    data class KontaktPerson(
+    data class Kontaktperson(
         val personident: String?,
         val enhet: String?
     )
@@ -229,10 +250,10 @@ data class HentePerson(
         val tiltakstype: Tiltakstype,
         val beskrivelse: String,
         @Serializable(with = IsoLocalDateSerializer::class)
-    val gyldigFraOgMed: LocalDate? = null,
+        val gyldigFraOgMed: LocalDate? = null,
         @Serializable(with = IsoLocalDateSerializer::class)
-    val gyldigTilOgMed: LocalDate? = null,
-        val kontaktPerson: KontaktPerson? = null,
+        val gyldigTilOgMed: LocalDate? = null,
+        val kontaktperson: Kontaktperson? = null,
         val metadata: Metadata
     )
 
@@ -260,7 +281,7 @@ data class HentePerson(
     data class Sivilstand(
         val type: Sivilstandstype,
         @Serializable(with = IsoLocalDateSerializer::class)
-    val gyldigFraOgMed: LocalDate? = null,
+        val gyldigFraOgMed: LocalDate? = null,
         val relatertVedSivilstand: String?,
         val metadata: Metadata
     )
@@ -309,7 +330,7 @@ data class HentePerson(
     data class Telefonnummer(
         val landskode: String,
         val nummer: String,
-        val prioritet: String,
+        val prioritet: Int,
         val metadata: Metadata
     )
 }
