@@ -157,7 +157,7 @@ class InvestigateGoal {
                 unAnswered = true
             }*/
             if (msgAnyWithUtlendskAdresses.size < 3) {
-                if (query.hentPerson.bostedsadresse.any { it.utenlandskAdresse != null }) {
+                if (query.hentPerson.bostedsadresse.any { it.utenlandskadresse != null }) {
                     msgAnyWithUtlendskAdresses.add(msg)
                     return false
                 }
@@ -235,14 +235,14 @@ class InvestigateGoal {
                 unAnswered = true
             }*/
             if (msgOppholdsAdresseWithMatrikkeladresse == NOT_FOUND) {
-                if (query.hentPerson.oppholdsadresse.any { it.matrikkeladresse != null }) {
+                if (query.hentPerson.oppholdsadresse.any { it.matrikkelAdresse != null }) {
                     msgOppholdsAdresseWithMatrikkeladresse = msg
                     return false
                 }
                 unAnswered = true
             }
             if (msgOppholdsAdresseWithUtlandsadresse == NOT_FOUND) {
-                if (query.hentPerson.oppholdsadresse.any { it.utenlandskAdresse != null }) {
+                if (query.hentPerson.oppholdsadresse.any { it.utenlandskadresse != null }) {
                     msgOppholdsAdresseWithUtlandsadresse = msg
                     return false
                 }
@@ -266,16 +266,16 @@ class InvestigateGoal {
         msgOppholdsAdresseWithVegadressNulls.forEach {
             result += "\n$it"
         }
-        result += "\n msgBostedsAdresseWithUtlendskAdresses:"
+        result += "\n msgBostedsAdresseWithUtlendskadresses:"
         msgAnyWithUtlendskAdresses.forEach {
             result += "\n$it"
         }
         result += """
 msgFailed:
     """ + msgFailed + """
-msgOppholdsAdresseWithMatrikkeladresse:
+msgOppholdsAdresseWithMatrikkelAdresse:
     """ + msgOppholdsAdresseWithMatrikkeladresse + """
-msgOppholdsAdresseWithUtlandsadresse:
+msgOppholdsAdresseWithUtlendskadresse:
     """ + msgOppholdsAdresseWithUtlandsadresse + """
 msgTalesspraak:
     """ + msgTalesspraak

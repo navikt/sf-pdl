@@ -125,9 +125,9 @@ data class HentePerson(
     @Serializable
     data class Bostedsadresse(
         val vegadresse: Vegadresse? = null,
-        val matrikkeladresse: Matrikkeladresse? = null,
+        val matrikkelAdresse: MatrikkelAdresse? = null,
         val ukjentBosted: UkjentBosted? = null,
-        val utenlandskAdresse: UtenlandskAdresse? = null, // utenlandskAdresse // needed
+        val utenlandskadresse: Utenlandskadresse? = null, // utenlandskAdresse // needed
         val metadata: Metadata
     ) {
         @Serializable
@@ -140,12 +140,12 @@ data class HentePerson(
         )
 
         @Serializable
-        data class Matrikkeladresse(
+        data class MatrikkelAdresse(
             val kommunenummer: String?
         )
 
         @Serializable
-        data class UtenlandskAdresse(
+        data class Utenlandskadresse(
             val adressenavnNummer: String?,
             val bygningEtasjeLeilighet: String?,
             val postboksNummerNavn: String?,
@@ -164,8 +164,8 @@ data class HentePerson(
     @Serializable
     data class Oppholdsadresse(
         val vegadresse: Vegadresse? = null,
-        val utenlandskAdresse: UtenlandskAdresse? = null, // utenlandskAdresse
-        val matrikkeladresse: Matrikkeladresse? = null,
+        val utenlandskadresse: Utenlandskadresse? = null, // utenlandskAdresse
+        val matrikkelAdresse: Matrikkeladresse? = null,
         val oppholdAnnetSted: String? = null,
         val metadata: Metadata
     ) {
@@ -180,7 +180,7 @@ data class HentePerson(
         )
 
         @Serializable
-        data class UtenlandskAdresse(
+        data class Utenlandskadresse(
             val adressenavnNummer: String?,
             val bygningEtasjeLeilighet: String?,
             val postboksNummerNavn: String?,
