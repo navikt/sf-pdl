@@ -58,19 +58,13 @@ val NOT_FOUND = "<NOT FOUND>"
 class InvestigateGoal {
     var msgFailed: String = NOT_FOUND
 
-    var msgBostedsadresseWithUtlendskAdresses: MutableList<String> = mutableListOf()
+    var msgWithoutGtKommuneNrButWithAdresseKommunenr: MutableList<String> = mutableListOf()
 
-    var msgOppholdssadresseWithUtlendskAdresses: MutableList<String> = mutableListOf()
+    var msgWithMoreThenOneAddressNotHistoric: MutableList<String> = mutableListOf()
 
-    var msgAnyJsonWithNotEmptyUtlendskAdresses: MutableList<String> = mutableListOf()
+    var msgWithBydelsnummer: MutableList<String> = mutableListOf()
 
-    var msgOppholdsAdresseWithMatrikkeladresses: MutableList<String> = mutableListOf()
-
-    var msgWithTilflyttingsstedIUtlandet: MutableList<String> = mutableListOf()
-
-    var msgWithFraflyttingsstedIUtlandet: MutableList<String> = mutableListOf()
-
-    var msgWithFraflyttingsstedRegex: MutableList<String> = mutableListOf()
+    var msgWithHusnummer: MutableList<String> = mutableListOf()
 
     fun investigate(msg: String): Boolean {
         val queryBase: no.nav.sf.pdl.nks.QueryBase = msg.getQueryFromJson()
@@ -82,57 +76,35 @@ class InvestigateGoal {
             var unAnswered = false
             val query = (queryBase as Query)
 
-            if (msgBostedsadresseWithUtlendskAdresses.size < 3) {
-                if (query.hentPerson.bostedsadresse.any { it.utenlandskAdresse != null }) {
-                    msgBostedsadresseWithUtlendskAdresses.add(msg)
+            if (msgWithoutGtKommuneNrButWithAdresseKommunenr.size < 8) {
+                if (query.hentPerson.geografiskTilknytning.let { it == null || (it.gtKommune == null && it.gtBydel == null) }) {
+                    if (query.findAdresseKommunenummer() != UKJENT_FRA_PDL) {
+                        msgWithoutGtKommuneNrButWithAdresseKommunenr.add(msg)
+                    }
                     return false
                 }
                 unAnswered = true
             }
 
-            if (msgOppholdssadresseWithUtlendskAdresses.size < 3) {
-                if (query.hentPerson.oppholdsadresse.any { it.utenlandskAdresse != null }) {
-                    msgOppholdssadresseWithUtlendskAdresses.add(msg)
+            if (msgWithMoreThenOneAddressNotHistoric.size < 8) {
+                if (query.hentPerson.bostedsadresse.filter { !it.metadata.historisk }.size > 1) {
+                    msgWithMoreThenOneAddressNotHistoric.add(msg)
                     return false
                 }
                 unAnswered = true
             }
 
-            if (msgAnyJsonWithNotEmptyUtlendskAdresses.size < 3) {
-                if (msg.contains("\"utenlandskAdresse\":[{")) {
-                    msgAnyJsonWithNotEmptyUtlendskAdresses.add(msg)
+            if (msgWithBydelsnummer.size < 3) {
+                if (query.hentPerson.bostedsadresse.any { it.matrikkeladresse?.bydelsnummer != null }) {
+                    msgWithBydelsnummer.add(msg)
                     return false
                 }
                 unAnswered = true
             }
 
-            if (msgOppholdsAdresseWithMatrikkeladresses.size < 3) {
-                if (query.hentPerson.oppholdsadresse.any { it.matrikkeladresse != null }) {
-                    msgOppholdsAdresseWithMatrikkeladresses.add(msg)
-                    return false
-                }
-                unAnswered = true
-            }
-
-            if (msgWithFraflyttingsstedIUtlandet.size < 3) {
-                if (query.hentPerson.innflyttingTilNorge.any { it.fraflyttingsstedIUtlandet != null }) {
-                    msgWithFraflyttingsstedIUtlandet.add(msg)
-                    return false
-                }
-                unAnswered = true
-            }
-
-            if (msgWithTilflyttingsstedIUtlandet.size < 3) {
-                if (query.hentPerson.utflyttingFraNorge.any { it.tilflyttingsstedIUtlandet != null }) {
-                    msgWithTilflyttingsstedIUtlandet.add(msg)
-                    return false
-                }
-                unAnswered = true
-            }
-
-            if (msgWithFraflyttingsstedRegex.size < 3) {
-                if (msg.contains("fraflyttingsstedIUtlandet\":\"")) {
-                    msgWithFraflyttingsstedRegex.add(msg)
+            if (msgWithHusnummer.size < 3) {
+                if (query.hentPerson.bostedsadresse.any { it.vegadresse?.husnummer != null }) {
+                    msgWithHusnummer.add(msg)
                     return false
                 }
                 unAnswered = true
@@ -144,22 +116,44 @@ class InvestigateGoal {
 
     fun resultMsg(): String {
         var result = "msgFailed:\n$msgFailed\n"
-        result += "msgBostedsadresseWithUtlendskAdresses:\n"
-        msgBostedsadresseWithUtlendskAdresses.forEach { result += "$it\n" }
-        result += "msgOppholdssadresseWithUtlendskAdresses:\n"
-        msgOppholdssadresseWithUtlendskAdresses.forEach { result += "$it\n" }
-        result += "msgAnyJsonWithNotEmptyUtlendskAdresses:\n"
-        msgAnyJsonWithNotEmptyUtlendskAdresses.forEach { result += "$it\n" }
-        result += "msgOppholdsAdresseWithMatrikkeladresses:\n"
-        msgOppholdsAdresseWithMatrikkeladresses.forEach { result += "$it\n" }
-        result += "msgWithFraflyttingsstedIUtlandet:\n"
-        msgWithFraflyttingsstedIUtlandet.forEach { result += "$it\n" }
-        result += "msgWithTilflyttingsstedIUtlandet:\n"
-        msgWithTilflyttingsstedIUtlandet.forEach { result += "$it\n" }
-        result += "msgWithFraflyttingsstedRegex:\n"
-        msgWithFraflyttingsstedRegex.forEach { result += "$it\n" }
+        result += "msgWithoutGtKommuneNrButWithAdresseKommunenr:\n"
+        msgWithoutGtKommuneNrButWithAdresseKommunenr.forEach { result += "$it\n" }
+        result += "msgWithMoreThenOneAddressNotHistoric:\n"
+        msgWithMoreThenOneAddressNotHistoric.forEach { result += "$it\n" }
+        result += "msgWithBydelsnummer:\n"
+        msgWithBydelsnummer.forEach { result += "$it\n" }
+        result += "msgWithHusnummer:\n"
+        msgWithHusnummer.forEach { result += "$it\n" }
 
         return result
+    }
+}
+
+fun no.nav.sf.pdl.nks.Query.findAdresseKommunenummer(): String {
+    return this.hentPerson.bostedsadresse.let { bostedsadresse ->
+        if (bostedsadresse.isNullOrEmpty()) {
+            // workMetrics.usedAddressTypes.labels(WMetrics.AddressType.INGEN.name).inc()
+            UKJENT_FRA_PDL
+        } else {
+            bostedsadresse.firstOrNull { !it.metadata.historisk }?.let {
+                it.vegadresse?.let { vegadresse ->
+                    if (vegadresse.kommunenummer?.isNotBlank() == true) {
+                        // workMetrics.usedAddressTypes.labels(WMetrics.AddressType.VEGAADRESSE.name).inc()
+                        vegadresse.kommunenummer
+                    } else null
+                } ?: it.matrikkeladresse?.let { matrikkeladresse ->
+                    if (matrikkeladresse.kommunenummer?.isNotBlank() == true) {
+                        // workMetrics.usedAddressTypes.labels(WMetrics.AddressType.MATRIKKELADRESSE.name).inc()
+                        matrikkeladresse.kommunenummer
+                    } else null
+                } ?: it.ukjentBosted?.let { ukjentBosted ->
+                    if (ukjentBosted.bostedskommune?.isNotBlank() == true) {
+                        // workMetrics.usedAddressTypes.labels(WMetrics.AddressType.UKJENTBOSTED.name).inc()
+                        ukjentBosted.bostedskommune
+                    } else null
+                }
+            } ?: UKJENT_FRA_PDL // .also { workMetrics.usedAddressTypes.labels(WMetrics.AddressType.INGEN.name).inc() }
+        }
     }
 }
 
