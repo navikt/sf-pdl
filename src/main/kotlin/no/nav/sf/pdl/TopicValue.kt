@@ -172,7 +172,7 @@ private fun Query.findGtKommunenummer(): String {
                     Kommunenummer.Missing
                 } else if ((gt.gtBydel.length == 6) || gt.gtBydel.all { c -> c.isDigit() }) {
                     workMetrics.gtKommunenrFraBydel.inc()
-                    Kommunenummer.Exist(gt.gtBydel.substring(0, 3))
+                    Kommunenummer.Exist(gt.gtBydel.substring(0, 4))
                 } else {
                     workMetrics.gtBydelInvalid.inc()
                     Kommunenummer.Invalid
