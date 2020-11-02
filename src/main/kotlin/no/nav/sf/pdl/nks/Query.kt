@@ -137,6 +137,7 @@ data class HentePerson(
             val husnummer: String?,
             val husbokstav: String?,
             val postnummer: String?,
+            val bydelsnummer: String? = null, // Data fields missing in preprod, this makes it optional
             val koordinater: Koordinater? = null
         )
 
@@ -149,9 +150,9 @@ data class HentePerson(
 
         @Serializable
         data class Matrikkeladresse(
-            val kommunenummer: String?,
-            val postnummer: String?,
-            val bydelsnummer: String? = null,
+            val kommunenummer: String? = null,
+            val postnummer: String? = null,
+            val bydelsnummer: String? = null, // Data fields missing in preprod, this makes it optional
             val koordinater: Koordinater? = null
         )
 
@@ -174,19 +175,20 @@ data class HentePerson(
 
     @Serializable
     data class Oppholdsadresse(
-        val vegadresse: Vegadresse?,
+        val vegadresse: Vegadresse? = null,
         val utenlandskAdresse: UtenlandskAdresse? = null, // utenlandskAdresse
-        val matrikkeladresse: Matrikkeladresse?,
-        val oppholdAnnetSted: String?,
+        val matrikkeladresse: Matrikkeladresse? = null,
+        val oppholdAnnetSted: String? = null,
         val metadata: Metadata
     ) {
         @Serializable
         data class Vegadresse(
-            val kommunenummer: String?,
-            val adressenavn: String?,
-            val husnummer: String?,
-            val husbokstav: String?,
-            val postnummer: String?,
+            val kommunenummer: String? = null,
+            val adressenavn: String? = null,
+            val husnummer: String? = null,
+            val husbokstav: String? = null,
+            val postnummer: String? = null,
+            val bydelsnummer: String? = null,
             val koordinater: Koordinater? = null
         )
 
@@ -195,7 +197,7 @@ data class HentePerson(
             val kommunenummer: String?,
             val postnummer: String?,
             val bydelsnummer: String? = null,
-            val koordinater: Koordinater? = null
+            val koordinater: Bostedsadresse.Koordinater?
         )
 
         @Serializable
@@ -211,9 +213,9 @@ data class HentePerson(
 
         @Serializable
         data class Koordinater(
-            val x: Float?,
-            val y: Float?,
-            val z: Float?
+            val x: Float? = null,
+            val y: Float? = null,
+            val z: Float? = null
         )
     }
 
@@ -226,7 +228,7 @@ data class HentePerson(
 
     @Serializable
     data class InnflyttingTilNorge(
-        val fraflyttingsland: String,
+        val fraflyttingsland: String?,
         val fraflyttingsstedIUtlandet: String?,
         val metadata: Metadata
     )
@@ -309,7 +311,7 @@ data class HentePerson(
 
     @Serializable
     data class UtflyttingFraNorge(
-        val tilflyttingsland: String,
+        val tilflyttingsland: String?,
         val tilflyttingsstedIUtlandet: String?,
         val metadata: Metadata
     )
