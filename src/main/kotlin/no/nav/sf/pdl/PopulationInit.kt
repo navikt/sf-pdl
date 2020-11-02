@@ -58,6 +58,7 @@ val NOT_FOUND = "<NOT FOUND>"
 class InvestigateGoal {
     var msgFailed: String = NOT_FOUND
 
+    /*
     var msgWithoutGtKommuneNrButWithAdresseKommunenr: MutableList<String> = mutableListOf()
 
     var msgWithMoreThenOneAddressNotHistoric: MutableList<String> = mutableListOf()
@@ -66,6 +67,12 @@ class InvestigateGoal {
 
     var msgWithHusnummer: MutableList<String> = mutableListOf()
 
+     */
+
+    var msgWithTarget1: MutableList<String> = mutableListOf()
+    var msgWithTarget2: MutableList<String> = mutableListOf()
+    var msgWithTarget3: MutableList<String> = mutableListOf()
+
     fun investigate(msg: String): Boolean {
         val queryBase: no.nav.sf.pdl.nks.QueryBase = msg.getQueryFromJson()
 
@@ -73,9 +80,19 @@ class InvestigateGoal {
             msgFailed = msg
             return true // Done
         } else {
-            var unAnswered = false
+            var unAnswered = true // TODO Normally false to conclude when all is found - true forces to run through all
             val query = (queryBase as Query)
 
+            if (query.hentIdenter.identer.any { it.ident == "15016730030" }) {
+                msgWithTarget1.add(msg)
+            }
+            if (query.hentIdenter.identer.any { it.ident == "19118549425" }) {
+                msgWithTarget2.add(msg)
+            }
+            if (query.hentIdenter.identer.any { it.ident == "16098625201" }) {
+                msgWithTarget3.add(msg)
+            }
+            /*
             if (msgWithoutGtKommuneNrButWithAdresseKommunenr.size < 8) {
                 if (query.hentPerson.geografiskTilknytning.let { it == null || (it.gtKommune == null && it.gtBydel == null) }) {
                     if (query.findAdresseKommunenummer() != UKJENT_FRA_PDL) {
@@ -108,7 +125,7 @@ class InvestigateGoal {
                     return false
                 }
                 unAnswered = true
-            }
+            }*/
 
             return !unAnswered // Done if there are no unanswered queries
         }
@@ -116,14 +133,12 @@ class InvestigateGoal {
 
     fun resultMsg(): String {
         var result = "msgFailed:\n$msgFailed\n"
-        result += "msgWithoutGtKommuneNrButWithAdresseKommunenr:\n"
-        msgWithoutGtKommuneNrButWithAdresseKommunenr.forEach { result += "$it\n" }
-        result += "msgWithMoreThenOneAddressNotHistoric:\n"
-        msgWithMoreThenOneAddressNotHistoric.forEach { result += "$it\n" }
-        result += "msgWithBydelsnummer:\n"
-        msgWithBydelsnummer.forEach { result += "$it\n" }
-        result += "msgWithHusnummer:\n"
-        msgWithHusnummer.forEach { result += "$it\n" }
+        result += "msgWithTarget1:\n"
+        msgWithTarget1.forEach { result += "$it\n" }
+        result += "msgWithTarget2:\n"
+        msgWithTarget2.forEach { result += "$it\n" }
+        result += "msgWithTarget3:\n"
+        msgWithTarget3.forEach { result += "$it\n" }
 
         return result
     }
