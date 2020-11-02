@@ -84,11 +84,11 @@ configurations {
 dependencies {
     compile "com.amazonaws:aws-java-sdk-s3:1.11.703"
 
+    compile "no.nav.sf.library:crm-utilities:$crm_utilities_version"
+
     implementation platform('org.jetbrains.kotlin:kotlin-bom')
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlin_coroutine"
     implementation "org.jetbrains.kotlinx:kotlinx-serialization-runtime:$kotlin_serialization"
-
-    implementation "no.nav.sf.library:crm-utilities:$crm_utilities_version"
 
     implementation "org.http4k:http4k-core:$http4k_version"
     implementation "org.http4k:http4k-server-netty:$http4k_version"
