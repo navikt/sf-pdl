@@ -119,8 +119,20 @@ data class HentePerson(
     val navn: List<Navn> = listOf(),
     val geografiskTilknytning: GeografiskTilknytning? = null,
     val utflyttingFraNorge: List<UtflyttingFraNorge> = listOf(),
-    val tilrettelagtKommunikasjon: List<TilrettelagtKommunikasjon> = listOf()
+    val tilrettelagtKommunikasjon: List<TilrettelagtKommunikasjon> = listOf(),
+    val fullmakt: List<Fullmakt> = listOf(),
+    val vergemaalEllerFremtidsfullmakt: List<VergemaalEllerFremtidsfullmakt> = listOf()
 ) {
+
+    @Serializable
+    data class Fullmakt(
+        val motpartsPersonident: String? = null
+    )
+
+    @Serializable
+    data class VergemaalEllerFremtidsfullmakt(
+        val type: String? = null
+    )
 
     @Serializable
     data class Bostedsadresse(

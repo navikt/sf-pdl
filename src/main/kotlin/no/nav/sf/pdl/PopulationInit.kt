@@ -80,18 +80,28 @@ class InvestigateGoal {
             msgFailed = msg
             return true // Done
         } else {
-            var unAnswered = true // TODO Normally false to conclude when all is found - true forces to run through all
+            var unAnswered = false // TODO Normally false to conclude when all is found - true forces to run through all
             val query = (queryBase as Query)
 
-            if (query.hentIdenter.identer.any { it.ident == "15016730030" }) {
-                msgWithTarget1.add(msg)
+            if (msgWithTarget1.size < 10) {
+                if (query.hentPerson.fullmakt.isNotEmpty()) {
+                    msgWithTarget1.add(msg)
+                    return false
+                }
+                unAnswered = true
             }
-            if (query.hentIdenter.identer.any { it.ident == "19118549425" }) {
-                msgWithTarget2.add(msg)
+
+            if (msgWithTarget2.size < 10) {
+                if (query.hentPerson.vergemaalEllerFremtidsfullmakt.isNotEmpty()) {
+                    msgWithTarget2.add(msg)
+                    return false
+                }
+                unAnswered = true
             }
-            if (query.hentIdenter.identer.any { it.ident == "16098625201" }) {
-                msgWithTarget3.add(msg)
-            }
+
+            // if (query.hentIdenter.identer.any { it.ident == "16098625201" }) {
+                // msgWithTarget3.add(msg)
+            // }
             /*
             if (msgWithoutGtKommuneNrButWithAdresseKommunenr.size < 8) {
                 if (query.hentPerson.geografiskTilknytning.let { it == null || (it.gtKommune == null && it.gtBydel == null) }) {
@@ -133,12 +143,12 @@ class InvestigateGoal {
 
     fun resultMsg(): String {
         var result = "msgFailed:\n$msgFailed\n"
-        result += "msgWithTarget1:\n"
+        result += "msgWithTarget1 Fullmakt:\n"
         msgWithTarget1.forEach { result += "$it\n" }
-        result += "msgWithTarget2:\n"
+        result += "msgWithTarget2 Vergemaal...:\n"
         msgWithTarget2.forEach { result += "$it\n" }
-        result += "msgWithTarget3:\n"
-        msgWithTarget3.forEach { result += "$it\n" }
+        // result += "msgWithTarget3:\n"
+        // msgWithTarget3.forEach { result += "$it\n" }
 
         return result
     }
@@ -193,9 +203,6 @@ internal fun initLoadTest(ws: WorkSettings) {
 
     val resultListTest: MutableList<String> = mutableListOf()
 
-    val a: ArrayList<String?> = arrayListOf() // TODO investigate
-    for (i in 0..9) { a.add("") }
-
     val resultListInvestigate = mutableListOf<String>()
 
     val investigateGoal = InvestigateGoal()
@@ -218,7 +225,6 @@ internal fun initLoadTest(ws: WorkSettings) {
             log.info { "Investigate - found target" }
             resultListInvestigate.add(it.value() ?: "null")
         }
-
          */
 
         if (heartBeatConsumer == 0) {
