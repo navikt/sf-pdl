@@ -120,7 +120,7 @@ class InvestigateGoal {
 
     fun resultMsg(): String {
         var result = "hits: ${targetMap.size} msgFailed:\n$msgFailed\n"
-        targetMap.forEach { "msgOf fnr ${it.key}:\n${it.value}\n" }
+        targetMap.forEach { result += "msgOf fnr ${it.key}:\n${it.value}\n" }
 
         return result
     }
