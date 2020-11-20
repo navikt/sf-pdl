@@ -69,7 +69,7 @@ class InvestigateGoal {
 
      */
 
-    val targets: List<String> = listOf("30107229449", "30108534415", "31106031951", "30116323903", "30045743078", "31108149682", "31016030271", "31129433062", "31076236014", "31077949693", "31089029484")
+    val targets: List<String> = listOf("18021094826"/*Reference*/, "30107229449", "30108534415", "31106031951", "30116323903", "30045743078", "31108149682", "31016030271", "31129433062", "31076236014", "31077949693", "31089029484")
 
     val targetMap: MutableMap<String, String> = mutableMapOf()
     var msgWithTarget1: MutableList<String> = mutableListOf()
@@ -119,7 +119,7 @@ class InvestigateGoal {
     }
 
     fun resultMsg(): String {
-        var result = "msgFailed:\n$msgFailed\n"
+        var result = "hits: ${targetMap.size} msgFailed:\n$msgFailed\n"
         targetMap.forEach { "msgOf fnr ${it.key}:\n${it.value}\n" }
 
         return result
