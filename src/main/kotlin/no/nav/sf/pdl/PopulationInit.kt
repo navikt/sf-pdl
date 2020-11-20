@@ -69,6 +69,9 @@ class InvestigateGoal {
 
      */
 
+    val targets: List<String> = listOf("30107229449", "30108534415", "31106031951", "30116323903", "30045743078", "31108149682", "31016030271", "31129433062", "31076236014", "31077949693", "31089029484")
+
+    val targetMap: MutableMap<String, String> = mutableMapOf()
     var msgWithTarget1: MutableList<String> = mutableListOf()
     var msgWithTarget2: MutableList<String> = mutableListOf()
     var msgWithTarget3: MutableList<String> = mutableListOf()
@@ -80,9 +83,15 @@ class InvestigateGoal {
             msgFailed = msg
             return true // Done
         } else {
-            var unAnswered = false // TODO Normally false to conclude when all is found - true forces to run through all
+            var unAnswered = true // TODO Normally false to conclude when all is found - true forces to run through all
             val query = (queryBase as Query)
 
+            if (query.hentIdenter.identer.any { targets.contains(it.ident) }) {
+                val t = query.hentIdenter.identer.first { targets.contains(it.ident) }.ident
+                targetMap[t] = msg
+            }
+
+            /*
             if (msgWithTarget1.size < 10) {
                 if (query.hentPerson.fullmakt.isNotEmpty()) {
                     msgWithTarget1.add(msg)
@@ -99,43 +108,11 @@ class InvestigateGoal {
                 unAnswered = true
             }
 
+             */
+
             // if (query.hentIdenter.identer.any { it.ident == "16098625201" }) {
                 // msgWithTarget3.add(msg)
             // }
-            /*
-            if (msgWithoutGtKommuneNrButWithAdresseKommunenr.size < 8) {
-                if (query.hentPerson.geografiskTilknytning.let { it == null || (it.gtKommune == null && it.gtBydel == null) }) {
-                    if (query.findAdresseKommunenummer() != UKJENT_FRA_PDL) {
-                        msgWithoutGtKommuneNrButWithAdresseKommunenr.add(msg)
-                    }
-                    return false
-                }
-                unAnswered = true
-            }
-
-            if (msgWithMoreThenOneAddressNotHistoric.size < 8) {
-                if (query.hentPerson.bostedsadresse.filter { !it.metadata.historisk }.size > 1) {
-                    msgWithMoreThenOneAddressNotHistoric.add(msg)
-                    return false
-                }
-                unAnswered = true
-            }
-
-            if (msgWithBydelsnummer.size < 3) {
-                if (query.hentPerson.bostedsadresse.any { it.matrikkeladresse?.bydelsnummer != null }) {
-                    msgWithBydelsnummer.add(msg)
-                    return false
-                }
-                unAnswered = true
-            }
-
-            if (msgWithHusnummer.size < 3) {
-                if (query.hentPerson.bostedsadresse.any { it.vegadresse?.husnummer != null }) {
-                    msgWithHusnummer.add(msg)
-                    return false
-                }
-                unAnswered = true
-            }*/
 
             return !unAnswered // Done if there are no unanswered queries
         }
@@ -143,12 +120,7 @@ class InvestigateGoal {
 
     fun resultMsg(): String {
         var result = "msgFailed:\n$msgFailed\n"
-        result += "msgWithTarget1 Fullmakt:\n"
-        msgWithTarget1.forEach { result += "$it\n" }
-        result += "msgWithTarget2 Vergemaal...:\n"
-        msgWithTarget2.forEach { result += "$it\n" }
-        // result += "msgWithTarget3:\n"
-        // msgWithTarget3.forEach { result += "$it\n" }
+        targetMap.forEach { "msgOf fnr ${it.key}:\n${it.value}\n" }
 
         return result
     }
