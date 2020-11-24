@@ -125,16 +125,6 @@ data class HentePerson(
 ) {
 
     @Serializable
-    data class Fullmakt(
-        val motpartsPersonident: String? = null
-    )
-
-    @Serializable
-    data class VergemaalEllerFremtidsfullmakt(
-        val type: String? = null
-    )
-
-    @Serializable
     data class Bostedsadresse(
         val vegadresse: Vegadresse?,
         val matrikkeladresse: Matrikkeladresse?,
@@ -276,7 +266,7 @@ data class HentePerson(
         val fornavn: String,
         val mellomnavn: String?,
         val etternavn: String,
-        val metadata: Metadata
+        val metadata: Metadata? = null // Only present on first level
     )
 
     @Serializable
@@ -346,5 +336,33 @@ data class HentePerson(
         val nummer: String,
         val prioritet: Int,
         val metadata: Metadata
+    )
+
+    @Serializable
+    data class Fullmakt( // TODO Do not turn any enum repr. as strings to anything but strings
+        val motpartsRolle: String?, // RolleDto
+        val motpartsPersonident: String?,
+        val omraader: List<String> = listOf(),
+        @Serializable(with = IsoLocalDateSerializer::class)
+        val gyldigFraOgMed: LocalDate? = null,
+        @Serializable(with = IsoLocalDateSerializer::class)
+        val gyldigTilOgMed: LocalDate? = null,
+        val metadata: Metadata
+    )
+
+    @Serializable
+    data class VergemaalEllerFremtidsfullmakt(
+        val type: String?,
+        val embete: String?,
+        val vergeEllerFullmektig: VergeEllerFullmektig,
+        val metadata: Metadata
+    )
+
+    @Serializable
+    data class VergeEllerFullmektig(
+        val navn: Navn?,
+        val motpartsPersonident: String?,
+        val omfang: String?,
+        val omfangetErInnenPersonligOmraade: Boolean
     )
 }
