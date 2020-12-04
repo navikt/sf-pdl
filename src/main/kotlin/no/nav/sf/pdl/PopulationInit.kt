@@ -9,7 +9,6 @@ import no.nav.sf.library.AKafkaProducer
 import no.nav.sf.library.KafkaConsumerStates
 import no.nav.sf.library.send
 import no.nav.sf.library.sendNullValue
-import no.nav.sf.pdl.nks.HentePerson
 import no.nav.sf.pdl.nks.InvalidQuery
 import no.nav.sf.pdl.nks.Query
 import no.nav.sf.pdl.nks.getQueryFromJson
@@ -57,101 +56,6 @@ var heartBeatConsumer: Int = 0
 
 val NOT_FOUND = "<NOT FOUND>"
 
-private fun Query.findGtKommunenr(): String {
-    val kommunenr: Kommunenummer = this.hentPerson.geografiskTilknytning?.let { gt ->
-        when (gt.gtType) {
-            GtType.KOMMUNE -> {
-                if (gt.gtKommune.isNullOrEmpty()) {
-                    Kommunenummer.Missing
-                } else if ((gt.gtKommune.length == 4) || gt.gtKommune.all { c -> c.isDigit() }) {
-                    Kommunenummer.Exist(gt.gtKommune)
-                } else {
-                    Kommunenummer.Invalid
-                }
-            }
-            GtType.BYDEL -> {
-                if (gt.gtBydel.isNullOrEmpty()) {
-                    Kommunenummer.Missing
-                } else if ((gt.gtBydel.length == 6) || gt.gtBydel.all { c -> c.isDigit() }) {
-                    Kommunenummer.Exist(gt.gtBydel.substring(0, 4))
-                } else {
-                    Kommunenummer.Invalid
-                }
-            }
-            GtType.UTLAND -> {
-                Kommunenummer.GtUtland
-            }
-            GtType.UDEFINERT -> {
-                Kommunenummer.GtUdefinert
-            }
-            else -> Kommunenummer.Missing
-        }
-    } ?: Kommunenummer.Missing
-
-    return if (kommunenr is Kommunenummer.Exist)
-        kommunenr.knummer
-    else {
-        UKJENT_FRA_PDL
-    }
-}
-
-fun HentePerson.Bostedsadresse.Vegadresse.findKommuneNummer(): Kommunenummer {
-    if (this.kommunenummer.isNullOrEmpty()) {
-        return Kommunenummer.Missing
-    } else if ((this.kommunenummer.length == 4) || this.kommunenummer.all { c -> c.isDigit() }) {
-        return Kommunenummer.Exist(this.kommunenummer)
-    } else {
-        log.error { "Found invalid kommunenummer ${this.kommunenummer}" }
-        return Kommunenummer.Invalid
-    }
-}
-
-fun HentePerson.Bostedsadresse.Matrikkeladresse.findKommuneNummer(): Kommunenummer {
-    if (this.kommunenummer.isNullOrEmpty()) {
-        return Kommunenummer.Missing
-    } else if ((this.kommunenummer.length == 4) || this.kommunenummer.all { c -> c.isDigit() }) {
-        return Kommunenummer.Exist(this.kommunenummer)
-    } else {
-        log.error { "Found invalid kommunenummer ${this.kommunenummer}" }
-        return Kommunenummer.Invalid
-    }
-}
-
-fun HentePerson.Bostedsadresse.UkjentBosted.findKommuneNummer(): Kommunenummer {
-    if (this.bostedskommune.isNullOrEmpty()) {
-        return Kommunenummer.Missing
-    } else if ((this.bostedskommune.length == 4) || this.bostedskommune.all { c -> c.isDigit() }) {
-        return Kommunenummer.Exist(this.bostedskommune)
-    } else {
-        log.error { "Invalid kommunenr found: ${this.bostedskommune}" }
-        return Kommunenummer.Invalid
-    }
-}
-
-fun Query.findAdresseKommunenr(): String {
-    return this.hentPerson.bostedsadresse.let { bostedsadresse ->
-        if (bostedsadresse.isNullOrEmpty()) {
-            UKJENT_FRA_PDL
-        } else {
-            bostedsadresse.firstOrNull { !it.metadata.historisk }?.let {
-                it.vegadresse?.let { vegadresse ->
-                    if (vegadresse.findKommuneNummer() is Kommunenummer.Exist) {
-                        vegadresse.kommunenummer
-                    } else null
-                } ?: it.matrikkeladresse?.let { matrikkeladresse ->
-                    if (matrikkeladresse.findKommuneNummer() is Kommunenummer.Exist) {
-                        matrikkeladresse.kommunenummer
-                    } else null
-                } ?: it.ukjentBosted?.let { ukjentBosted ->
-                    if (ukjentBosted.findKommuneNummer() is Kommunenummer.Exist) {
-                        ukjentBosted.bostedskommune
-                    } else null
-                }
-            } ?: UKJENT_FRA_PDL
-        }
-    }
-}
-
 class InvestigateGoal {
     var msgFailed: String = NOT_FOUND
 
@@ -190,7 +94,7 @@ class InvestigateGoal {
              */
 
             if (msgWithTarget1.size < 1000) {
-                if (query.findAdresseKommunenr() != UKJENT_FRA_PDL && query.findGtKommunenr() != UKJENT_FRA_PDL && query.findAdresseKommunenr() != query.findGtKommunenr()) {
+                if (query.hentIdenter.identer.any { it.ident == "1000051771875" }) {
                     msgWithTarget1.add(msg)
                     return false
                 }
